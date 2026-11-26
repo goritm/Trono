@@ -574,6 +574,50 @@ class AppStrings {
   String get youBadge => _t('Tú', 'You');
   String get groupNotFoundError => _t('No existe ningún grupo con ese código', 'No group found with that code');
   String get authGenericError => _t('No se pudo completar. Revisa tus datos o conexión.', 'Could not complete. Check your details or connection.');
+
+  // V2.1 Trono Social+ (Synced Duo, Group Badges, Group Weekly Wrapped)
+  String get socialBadgesTitle => _t('Logros de grupo', 'Group awards');
+  String syncedDuoPill(String partnerEmoji, String partnerName, int gapMins) =>
+      gapMins == 0
+          ? _t(
+              '¡Dúo Sincronizado con $partnerEmoji $partnerName (a la vez)!',
+              'Synced Duo with $partnerEmoji $partnerName (at the same time)!',
+            )
+          : _t(
+              '¡Dúo Sincronizado con $partnerEmoji $partnerName (${gapMins}m)!',
+              'Synced Duo with $partnerEmoji $partnerName (${gapMins}m apart)!',
+            );
+
+  String socialBadgeTitle(String id) => switch (id) {
+    'social_founder' => _t('Fundador', 'Founder'),
+    'synced_duo' => _t('Dúo Sincro', 'Synced Duo'),
+    'weekly_king' => _t('Rey Semanal', 'Weekly King'),
+    'hype_squad' => _t('Fan #1', 'Hype Squad'),
+    'crowd_favorite' => _t('Ídolo', 'Fan Favorite'),
+    'away_mvp' => _t('MVP Fuera', 'Away MVP'),
+    _ => id,
+  };
+
+  String socialBadgeDesc(String id) => switch (id) {
+    'social_founder' => _t('Crea o únete a tu primer grupo privado', 'Create or join your first private group'),
+    'synced_duo' => _t('Coincide con alguien del grupo en menos de 15 min', 'Log a poop within 15 min of a group mate'),
+    'weekly_king' => _t('Sé #1 en el ranking semanal de tu grupo', 'Hold #1 on your group’s 7-day leaderboard'),
+    'hype_squad' => _t('Envía 5 reacciones a pupús de tus amigos', 'Send 5 reactions to friends’ poops'),
+    'crowd_favorite' => _t('Recibe 5 reacciones de tus amigos', 'Receive 5 reactions from friends'),
+    'away_mvp' => _t('Lidera los pupús fuera de casa esta semana', 'Lead away-from-home poops this week'),
+    _ => '',
+  };
+
+  String get groupWrappedButton => _t('Wrapped Semanal', 'Weekly Wrapped');
+  String get groupWrappedTitle => _t('Wrapped del Grupo', 'Group Wrapped');
+  String get groupWrappedBadge => _t('Resumen Semanal · 7 días', 'Weekly Recap · 7 days');
+  String get weeklyKingLabel => _t('Rey de la Semana', 'King of the Week');
+  String get groupTotalPoopsLabel => _t('Pupús totales', 'Total poops');
+  String get syncedDuosLabel => _t('Dúos sincro', 'Synced duos');
+  String get reactionsLabel => _t('Reacciones', 'Reactions');
+  String get podiumTitle => _t('Podio semanal', 'Weekly podium');
+  String get awayMvpLabel => _t('MVP Fuera de casa', 'Away MVP');
+  String get shareGroupWrappedButton => _t('Compartir resumen del grupo', 'Share group recap');
   String relativeTime(DateTime dt) {
     final diff = DateTime.now().difference(dt);
     if (diff.inSeconds < 60) return _t('ahora mismo', 'just now');
