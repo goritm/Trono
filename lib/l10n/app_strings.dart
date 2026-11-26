@@ -29,7 +29,7 @@ class AppStrings {
   // Home screen
   String get homeSubtitle => _t('¿Listo para registrar?', 'Ready to log?');
   String get oneTapHint => _t('1 toque guarda al instante', '1 tap logs instantly');
-  String get heroLogTitle => _t('Registrar Pupu', 'Log Poop');
+  String get heroLogTitle => _t('Registrar Pupú', 'Log Poop');
   String get heroLoggedFlash => _t('¡Registrado!', 'Logged!');
   String get heroLogSubtitle => _t(
     'Toca para guardar al instante · detalles opcionales después',
@@ -46,7 +46,7 @@ class AppStrings {
   String get recentHistory => _t('Últimos registros', 'Recent visits');
   String get noLogsYetTitle => _t('Tu historial está vacío', 'No visits logged yet');
   String get noLogsYetBody => _t(
-    'Toca el botón de arriba para registrar tu primer pupu en 1 segundo.',
+    'Toca el botón de arriba para registrar tu primer pupú en 1 segundo.',
     'Tap the button above to log your first poop in 1 second.',
   );
   String get savedInstantToast => _t('¡Registrado! (+10 XP)', 'Logged! (+10 XP)');
@@ -67,7 +67,7 @@ class AppStrings {
 
   // Bathroom types
   String typeName(BathroomType type) => switch (type) {
-    BathroomType.poop => _t('Pupu', 'Poop'),
+    BathroomType.poop => _t('Pupú', 'Poop'),
     BathroomType.falseAlarm => _t('Falsa alarma', 'False alarm'),
   };
 
@@ -212,7 +212,7 @@ class AppStrings {
   String get mapScreenTitle => _t('Mapa de Tronos', 'Throne Map');
   String get mapEmptyTitle => _t('Tu mapa espera conquistas', 'No pins on your map yet');
   String get mapEmptyBody => _t(
-    'Activa el GPS en Ajustes o toca "Fijar pin GPS" al registrar un pupu para ir marcando tu territorio en el mapa.',
+    'Activa el GPS en Ajustes o toca "Fijar pin GPS" al registrar un pupú para ir marcando tu territorio en el mapa.',
     'Enable GPS in Settings or tap "Pin current GPS" when logging to map your conquered spots.',
   );
   String get homePinLabel => _t('Tu Casa (Base)', 'Home Base');
@@ -276,7 +276,7 @@ class AppStrings {
     String str = '',
   }) => switch (typeName) {
     'busiestWeekday' => _t(
-        'Tu día estrella son los ${weekdayFull(int1)} ($int2 pupus).',
+        'Tu día estrella son los ${weekdayFull(int1)} ($int2 pupús).',
         'Your busiest day is ${weekdayFull(int1)} ($int2 poops).',
       ),
     'topBristol' => _t(
@@ -284,11 +284,11 @@ class AppStrings {
         'Your signature: Bristol ${bristolShort(int1)} ($int2% of logs).',
       ),
     'topTriggerTag' => _t(
-        '${tagLabel(str)} aparece en el $int1% de tus pupus ($int2 veces).',
+        '${tagLabel(str)} aparece en el $int1% de tus pupús ($int2 veces).',
         '${tagLabel(str)} shows up in $int1% of your poops ($int2 times).',
       ),
     'awaySuperpower' => _t(
-        'Superpoder activo: $int1% de tus pupus son fuera de casa ($int2).',
+        'Superpoder activo: $int1% de tus pupús son fuera de casa ($int2).',
         'Superpower unlocked: $int1% of your poops are away from home ($int2).',
       ),
     'timeMovies' => _t(
@@ -321,7 +321,7 @@ class AppStrings {
   String get mapFilterAway => _t('🌍 Fuera', '🌍 Away');
   String get mapFilterWork => _t('💼 Trabajo', '💼 Work');
   String get mapFilterHome => _t('🏠 Casa', '🏠 Home');
-  String clusterHeader(int count) => _t('$count pupus en este lugar', '$count poops at this spot');
+  String clusterHeader(int count) => _t('$count pupús en este lugar', '$count poops at this spot');
 
   String shareLevelName(ShareLevel level) => switch (level) {
     ShareLevel.private => _t('🔒 Privado', '🔒 Private'),
@@ -348,7 +348,7 @@ class AppStrings {
   String get periodMonth => _t('30 días', '30 days');
   String get periodAll => _t('Histórico', 'All time');
   String get totalVisitsPerDay => _t('Visitas / día', 'Visits / day');
-  String get poopPerDay => _t('Pupu / día', 'Poop / day');
+  String get poopPerDay => _t('Pupú / día', 'Poop / day');
   String visitsTotalSub(int n, int days) =>
       _t('$n en $days días', '$n across $days days');
   String get heatmapTitle => _t('Mapa de calor mensual', 'Monthly heatmap');
@@ -431,10 +431,10 @@ class AppStrings {
 
   String achievementDesc(String id) => switch (id) {
     'first_visit' => _t('Registra tu primera visita', 'Log your very first visit'),
-    'survival_fittest' => _t('5 pupus fuera de casa (superpoder)', '5 poops away from home (superpower)'),
-    'throne_nomad' => _t('15 pupus fuera de casa', '15 poops away from home'),
+    'survival_fittest' => _t('5 pupús fuera de casa (superpoder)', '5 poops away from home (superpower)'),
+    'throne_nomad' => _t('15 pupús fuera de casa', '15 poops away from home'),
     'territory_conqueror' => _t('Marca 5 ubicaciones distintas en el mapa', 'Pin 5 distinct spots on the map'),
-    'international_drop' => _t('Un pupu a +50 km de tu casa', 'A poop 50+ km away from home'),
+    'international_drop' => _t('Un pupú a +50 km de tu casa', 'A poop 50+ km away from home'),
     'hat_trick' => _t('3 o más visitas en un solo día', '3+ visits in a single day'),
     'turbo_day' => _t('6 o más visitas en un solo día', '6+ visits in a single day'),
     'streak_7' => _t('Registra 7 días seguidos', 'Log 7 days in a row'),
@@ -451,7 +451,7 @@ class AppStrings {
     'detail_scientist' => _t('Añade detalles en 15 visitas', 'Add details to 15 visits'),
     'spicy_survivor' => _t('5 registros con el tag Picante', '5 logs tagged Spicy'),
     'century_club' => _t('Alcanza 100 visitas totales', 'Reach 100 total visits'),
-    'poop_veteran' => _t('Alcanza 50 pupus registrados', 'Reach 50 Poop visits'),
+    'poop_veteran' => _t('Alcanza 50 pupús registrados', 'Reach 50 Poop visits'),
     _ => '',
   };
 
@@ -562,13 +562,13 @@ class AppStrings {
   String get socialTabRanking => _t('Ranking', 'Leaderboard');
   String get emptyFeedTitle => _t('El trono está tranquilo', 'All quiet on the throne');
   String get emptyFeedBody => _t(
-    'Cuando alguien del grupo registre un pupu compartido (Solo resumen o Completo), aparecerá aquí al instante.',
+    'Cuando alguien del grupo registre un pupú compartido (Solo resumen o Completo), aparecerá aquí al instante.',
     'Whenever someone in the group logs a shared poop (Summary or Full), it appears here live.',
   );
   String get rankingPeriodWeek => _t('7 días', '7 days');
   String get rankingPeriodMonth => _t('30 días', '30 days');
   String get rankingPeriodAll => _t('Histórico', 'All time');
-  String get poopsUnit => _t('pupus', 'poops');
+  String get poopsUnit => _t('pupús', 'poops');
   String awayPctShort(int pct) => _t('$pct% fuera', '$pct% away');
   String get summaryOnlyBadge => _t('Solo resumen', 'Summary only');
   String get youBadge => _t('Tú', 'You');
@@ -603,7 +603,7 @@ class AppStrings {
 
   String get widgetSection => _t('Widget de Android', 'Android Home Widget');
   String get widgetGuideBody => _t(
-    'Mantén pulsada tu pantalla de inicio → Widgets → Trono para registrar un pupu en 1 toque sin abrir la app.',
+    'Mantén pulsada tu pantalla de inicio → Widgets → Trono para registrar un pupú en 1 toque sin abrir la app.',
     'Long-press your home screen → Widgets → Trono to log a poop in 1 tap without opening the app.',
   );
 
