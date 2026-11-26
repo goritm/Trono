@@ -1029,14 +1029,14 @@ void main() {
       // Weekly trend chart renders 8 bars and defaults selection to current week (idx 7)
       expect(find.text('EVOLUCIÓN SEMANAL · 8 SEMANAS'), findsOneWidget);
       expect(find.text('Esta semana'), findsOneWidget);
-      expect(find.text('2 pupús'), findsOneWidget);
+      expect(find.text('2 tronos'), findsOneWidget);
 
-      // Tap prior week bar (idx 6, week of 16/11 with 1 poop & Bristol 5.0)
+      // Tap prior week bar (idx 6, week of 16/11 with 1 log & Bristol 5.0)
       await tester.tap(find.byKey(const ValueKey('weekly_trend_bar_6')));
       await tester.pumpAndSettle();
 
       expect(find.text('Esta semana'), findsNothing);
-      expect(find.text('1 pupú'), findsOneWidget);
+      expect(find.text('1 trono'), findsOneWidget);
       expect(find.text('Bristol 5.0'), findsOneWidget);
     });
   });

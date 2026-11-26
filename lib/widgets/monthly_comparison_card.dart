@@ -814,7 +814,7 @@ class _WeeklyTrendChartCardState extends State<WeeklyTrendChartCard> {
                       runSpacing: 6,
                       children: [
                         _InspectorChip(
-                          emoji: '💩',
+                          emoji: '👑',
                           text: s.poopsCountLabel(selected.poopCount),
                           highlight: selected.isCurrentWeek,
                         ),

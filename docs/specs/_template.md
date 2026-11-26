@@ -18,7 +18,7 @@
 ## 4. User Experience & Copy (ES / EN)
 - Entry points & navigation placement.
 - Key states: empty, loading, populated, offline, error, light & dark mode.
-- Spanish copy reminder: always use `pupú` / `Pupú` / `pupús`.
+- Copy reminder: use brand-first `throne` / `thrones` (EN) and `trono` / `tronos` (ES) with `👑` (no `poop` / `pupú` in user-facing text).
 
 ## 5. Acceptance Criteria (Given / When / Then)
 1. **Given** ..., **when** ..., **then** ...

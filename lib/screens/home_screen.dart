@@ -764,7 +764,7 @@ class _AnimatedHeroLogButtonState extends State<_AnimatedHeroLogButton>
                       borderRadius: BorderRadius.circular(20),
                     ),
                     alignment: Alignment.center,
-                    child: const Text('💩', style: TextStyle(fontSize: 36)),
+                    child: const Text('👑', style: TextStyle(fontSize: 36)),
                   ),
                 ),
                 const SizedBox(width: 16),

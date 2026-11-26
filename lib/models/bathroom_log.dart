@@ -12,7 +12,7 @@ enum BathroomType {
   bool get includesPoop => this == BathroomType.poop;
 
   String get emoji => switch (this) {
-    BathroomType.poop => '💩',
+    BathroomType.poop => '👑',
     BathroomType.falseAlarm => '💨',
   };
 
