@@ -87,7 +87,7 @@ Before writing production code for any new feature, schema change, or non-trivia
 - **Copy & Terminology:**
   - App name: **Trono** (package `trono`, Android `com.trono.trono`). Never use old draft names.
   - English default (`Locale('en')`) + full Spanish parity (`Locale('es')`) in `lib/l10n/app_strings.dart`.
-  - In Spanish, ALWAYS write **`pupú` / `Pupú` / `pupús`** (with accent on `ú`). Never `popó` or unaccented `pupu` in user-facing text.
+  - Use brand-first copy: **`throne` / `thrones`** (`Claim Throne`) in English and **`trono` / `tronos`** (`Registrar Trono`) in Spanish, paired with `👑`. Avoid juvenile words (`poop`, `pupú`, `popó`) in user-facing text.
 - **Visual Design System (Tactile Chunky 3D):**
   - Palette (`lib/theme/app_theme.dart`): Terracotta (`#E05A2B`), Warm Gold (`#F5B82E`), Obsidian (`#1E222B`), Sage (`#2F855A`), Coral (`#D64545`), on Warm Cream (`#F7F4EE`, light) / Deep Obsidian (`#13161C`, dark).
   - Use `ChunkyButton`, `ChunkyCard` (Material-backed so `ListTile` ink splashes work cleanly), and `ChunkyHudPill` from `lib/widgets/chunky_widgets.dart`.

@@ -134,7 +134,7 @@ class _LogTileState extends State<LogTile> with SingleTickerProviderStateMixin {
             ),
             alignment: Alignment.center,
             child: isPoop
-                ? const Text('💩', style: TextStyle(fontSize: 22))
+                ? const Text('👑', style: TextStyle(fontSize: 22))
                 : Icon(Icons.air_rounded, color: accent, size: 22),
           ),
           const SizedBox(width: 13),

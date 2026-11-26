@@ -1,6 +1,6 @@
 # 👑 Trono
 
-> **Offline-first Flutter mobile app (Android-first, iOS-ready) for tracking bathroom visits (*pupús*), mapping conquered territory, unlocking XP ranks, and competing in private Supabase friend groups.**
+> **Offline-first Flutter mobile app (Android-first, iOS-ready) for claiming your throne, mapping conquered territory, unlocking XP ranks, and competing in private Supabase friend groups.**
 
 [![Download Latest APK](https://img.shields.io/github/v/release/goritm/Trono?label=Download%20Android%20APK&color=E05A2B&style=for-the-badge)](https://github.com/goritm/Trono/releases/latest)
 
@@ -20,7 +20,7 @@
   - Offline-first cloud sync with strict Postgres Row-Level Security (RLS).
   - Private 6-letter invite-code groups, live Realtime feed with **⚡ Dúo Sincronizado** detection (≤15 min apart) and emoji reactions (`👑`, `🔥`, `💀`, `👏`), 7d/30d/All leaderboards, 6 group awards, and shareable **Group Weekly Wrapped** cards.
 - **🔒 Privacy by Design:** Exact GPS coordinates (`latitude`, `longitude`), Favorite Places coordinates, and work salary **never leave your device**. Per-log share levels (`private`, `summary_only`, `full`) are enforced at the Postgres trigger level.
-- **📱 Android Extras:** Flicker-free 2×2 **Home Screen Widget** (`+1 Pupú` with silent GPS), optional Biometric/PIN lock, 3-step welcome onboarding, JSON/CSV backup, ES/EN bilingual UI, light/dark themes, and automatic **in-app GitHub Releases update checker**.
+- **📱 Android Extras:** Flicker-free 2×2 **Home Screen Widget** (`👑 +1 Trono` with silent GPS), optional Biometric/PIN lock, 3-step welcome onboarding, JSON/CSV backup, EN/ES bilingual UI, light/dark themes, and automatic **in-app GitHub Releases update checker**.
 
 ---
 
