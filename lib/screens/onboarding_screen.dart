@@ -562,7 +562,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          if (signedIn) ...[
+          if (signedIn)
             ChunkyButton(
               width: double.infinity,
               color: TronoColors.terracotta,
@@ -579,38 +579,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            ChunkyButton(
-              width: double.infinity,
-              color: TronoColors.surface(context),
-              lipColor: TronoColors.lip(context),
-              borderColor: TronoColors.border(context),
-              lipHeight: 4,
-              onPressed: () async {
-                await widget.social.signOut();
-              },
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.logout_rounded,
-                    color: TronoColors.coral,
-                    size: 19,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    s.signOutBtn,
-                    style: const TextStyle(
-                      color: TronoColors.coral,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 14.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ] else ...[
+            )
+          else ...[
             ChunkyButton(
               width: double.infinity,
               color: TronoColors.terracotta,
