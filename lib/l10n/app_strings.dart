@@ -371,6 +371,35 @@ class AppStrings {
   String get noVisitsThisDay => _t('Sin registros este día', 'No visits on this day');
   String get addForThisDay => _t('Añadir visita en este día', 'Add visit on this day');
 
+  // V2.2 Monthly Comparison & 8-Week Trend
+  String get monthlyComparisonTitle =>
+      _t('Este mes vs Mes pasado', 'This month vs Last month');
+  String get comparisonEmptyHint => _t(
+    'Registra tus pupús para comparar tu evolución mes a mes.',
+    'Log your poops to compare your month-over-month progress.',
+  );
+  String get comparisonDeltaNew => _t('Nuevo', 'New');
+  String get comparisonAwayLabel => _t('% Fuera de casa', '% Away from home');
+  String get comparisonBristolLabel => _t('Media Bristol', 'Avg Bristol');
+  String get bristolZoneIdeal => _t('Zona ideal', 'Ideal zone');
+  String get bristolZoneFirm => _t('Más firme', 'Firmer');
+  String get bristolZoneSoft => _t('Más blando', 'Softer');
+  String idealBristolPctSub(int pct) =>
+      _t('$pct% en zona ideal (3–4)', '$pct% in ideal zone (3–4)');
+  String get weeklyTrendTitle =>
+      _t('Evolución semanal · 8 semanas', 'Weekly trend · 8 weeks');
+  String weeklyAvgPill(double avg) =>
+      _t('Media ${avg.toStringAsFixed(1)}/sem', 'Avg ${avg.toStringAsFixed(1)}/wk');
+  String get currentWeekBadge => _t('Esta semana', 'This week');
+  String weekRangeLabel(String start, String end) =>
+      _t('Sem. $start – $end', 'Wk $start – $end');
+  String get perDayShort => _t('/día', '/day');
+  String get bristolShortLabel => _t('Bristol', 'Bristol');
+  String get tapBarInspectHint => _t('Toca una barra', 'Tap a bar');
+  String poopUnitFor(int count) =>
+      count == 1 ? _t('pupú', 'poop') : _t('pupús', 'poops');
+  String poopsCountLabel(int count) => '$count ${poopUnitFor(count)}';
+
   // Weekday initials (Mon..Sun)
   List<String> get weekdayShorts => isEs
       ? const ['L', 'M', 'X', 'J', 'V', 'S', 'D']

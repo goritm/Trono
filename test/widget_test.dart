@@ -1,12 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:trono/l10n/app_strings.dart';
 import 'package:trono/models/achievement.dart';
 import 'package:trono/models/bathroom_log.dart';
 import 'package:trono/models/insights.dart';
+import 'package:trono/models/monthly_comparison.dart';
 import 'package:trono/models/social_models.dart';
 import 'package:trono/models/social_plus.dart';
 import 'package:trono/models/stats_summary.dart';
 import 'package:trono/services/location_service.dart';
+import 'package:trono/widgets/monthly_comparison_card.dart';
 import 'package:trono/widgets/trono_toast.dart';
 
 void main() {
@@ -488,6 +491,263 @@ void main() {
       expect(wrapped.awayMvp?.displayName, 'Jose');
       expect(wrapped.totalReactions, 10);
       expect(wrapped.topReactionEmoji, '👑');
+    });
+  });
+
+  group('MonthlyComparisonEngine & Charts (V2.2)', () {
+    BathroomLog makeLog({
+      required String id,
+      required DateTime ts,
+      BathroomType type = BathroomType.poop,
+      int? bristol,
+      LocationKind? loc,
+      double? lat,
+      double? lng,
+    }) {
+      return BathroomLog(
+        id: id,
+        type: type,
+        timestamp: ts,
+        bristolType: bristol,
+        locationKind: loc,
+        latitude: lat,
+        longitude: lng,
+        createdAt: ts,
+        updatedAt: ts,
+      );
+    }
+
+    test('computes delta %, daily averages, Bristol avg & ideal %, away %, and 8-week buckets', () {
+      // Thursday, Nov 26, 2026 (days elapsed in Nov = 26, Oct has 31 days)
+      // Current week Monday = Nov 23, 2026 (4 days elapsed in current week: Mon..Thu)
+      final now = DateTime(2026, 11, 26, 14, 0);
+      const homeLat = 40.4168;
+      const homeLng = -3.7038;
+
+      final logs = [
+        // Current month (Nov 2026): 5 poops + 1 falseAlarm (excluded)
+        makeLog(
+          id: 'c1',
+          ts: DateTime(2026, 11, 26, 9, 0), // Current week (idx 7)
+          bristol: 4,
+          loc: LocationKind.home,
+        ),
+        makeLog(
+          id: 'c2',
+          ts: DateTime(2026, 11, 24, 11, 0), // Current week (idx 7)
+          bristol: 3,
+          loc: LocationKind.work, // away
+        ),
+        makeLog(
+          id: 'c3',
+          ts: DateTime(2026, 11, 18, 10, 0), // Previous week (idx 6, Mon Nov 16)
+          bristol: 4,
+          // No explicit loc -> far from home coords -> auto-classified away
+          lat: 41.3874,
+          lng: 2.1686,
+        ),
+        makeLog(
+          id: 'c4',
+          ts: DateTime(2026, 11, 10, 8, 0), // 2 weeks ago (idx 5, Mon Nov 9)
+          bristol: 6,
+          // No explicit loc -> at home coords -> auto-classified home
+          lat: 40.4168,
+          lng: -3.7038,
+        ),
+        makeLog(
+          id: 'c5',
+          ts: DateTime(2026, 11, 3, 19, 0), // 3 weeks ago (idx 4, Mon Nov 2)
+          loc: LocationKind.away,
+        ),
+        makeLog(
+          id: 'c-false',
+          ts: DateTime(2026, 11, 25, 16, 0),
+          type: BathroomType.falseAlarm,
+          bristol: 1,
+          loc: LocationKind.away,
+        ),
+
+        // Previous month (Oct 2026): 4 poops
+        makeLog(
+          id: 'p1',
+          ts: DateTime(2026, 10, 28, 9, 0), // idx 3 (Mon Oct 26)
+          bristol: 2,
+          loc: LocationKind.home,
+        ),
+        makeLog(
+          id: 'p2',
+          ts: DateTime(2026, 10, 20, 9, 0), // idx 2 (Mon Oct 19)
+          bristol: 4,
+          loc: LocationKind.home,
+        ),
+        makeLog(
+          id: 'p3',
+          ts: DateTime(2026, 10, 12, 9, 0), // idx 1 (Mon Oct 12)
+          bristol: 4,
+          loc: LocationKind.away,
+        ),
+        makeLog(
+          id: 'p4',
+          ts: DateTime(2026, 10, 5, 9, 0), // idx 0 (Mon Oct 5 — oldest of 8 weeks)
+          loc: LocationKind.home,
+        ),
+        // Too old (before Oct 5): outside 8-week window & outside prev month
+        makeLog(
+          id: 'old1',
+          ts: DateTime(2026, 9, 20, 9, 0),
+          bristol: 7,
+          loc: LocationKind.away,
+        ),
+      ];
+
+      final snap = MonthlyComparisonEngine.compute(
+        logs,
+        now: now,
+        homeLat: homeLat,
+        homeLng: homeLng,
+      );
+
+      expect(snap.currentMonthPoops, 5);
+      expect(snap.previousMonthPoops, 4);
+      // ((5 - 4) * 100 / 4).round() == 25
+      expect(snap.poopsDeltaPercent, 25);
+      expect(snap.currentMonthAvgPerDay, closeTo(5 / 26, 0.001));
+      expect(snap.previousMonthAvgPerDay, closeTo(4 / 31, 0.001));
+
+      // Current month away: 3 away (c2 work, c3 far GPS, c5 away) / 5 classified = 60%
+      expect(snap.currentMonthAwayPercent, 60);
+      // Previous month away: 1 away / 4 classified = 25%
+      expect(snap.previousMonthAwayPercent, 25);
+
+      // Current month Bristol: (4 + 3 + 4 + 6) / 4 = 4.25; 3 of 4 are in {3, 4} = 75%
+      expect(snap.currentMonthAvgBristol, closeTo(4.25, 0.001));
+      expect(snap.idealBristolPercent, 75);
+      // Previous month Bristol: (2 + 4 + 4) / 3 = 3.333
+      expect(snap.previousMonthAvgBristol, closeTo(10 / 3, 0.001));
+
+      // 8-week Monday–Sunday buckets ordered oldest to newest
+      expect(snap.weeklyTrend, hasLength(8));
+      expect(snap.weeklyTrend.first.weekStart, DateTime(2026, 10, 5));
+      expect(snap.weeklyTrend.first.weekStart.weekday, DateTime.monday);
+      expect(snap.weeklyTrend.last.weekStart, DateTime(2026, 11, 23));
+      expect(snap.weeklyTrend.last.isCurrentWeek, isTrue);
+
+      // Verify per-week counts & averages
+      expect(snap.weeklyTrend[0].poopCount, 1); // Oct 5
+      expect(snap.weeklyTrend[1].poopCount, 1); // Oct 12
+      expect(snap.weeklyTrend[2].poopCount, 1); // Oct 19
+      expect(snap.weeklyTrend[3].poopCount, 1); // Oct 26
+      expect(snap.weeklyTrend[4].poopCount, 1); // Nov 2
+      expect(snap.weeklyTrend[5].poopCount, 1); // Nov 9
+      expect(snap.weeklyTrend[6].poopCount, 1); // Nov 16
+      expect(snap.weeklyTrend[7].poopCount, 2); // Nov 23 (current week)
+      expect(snap.weeklyTrend[7].avgPerDay, closeTo(2 / 4, 0.001));
+      expect(snap.weeklyTrend[7].avgBristol, closeTo(3.5, 0.001));
+      expect(snap.weeklyTrend[6].avgPerDay, closeTo(1 / 7, 0.001));
+    });
+
+    test('handles zero previous month and missing Bristol/location safely', () {
+      final now = DateTime(2026, 1, 1, 10, 0); // Jan 1 -> prev month is Dec 2025
+      final logs = [
+        makeLog(id: 'j1', ts: DateTime(2026, 1, 1, 8, 0)),
+        makeLog(id: 'j2', ts: DateTime(2026, 1, 1, 9, 30)),
+      ];
+
+      final snap = MonthlyComparisonEngine.compute(logs, now: now);
+
+      expect(snap.currentMonth, DateTime(2026, 1, 1));
+      expect(snap.previousMonth, DateTime(2025, 12, 1));
+      expect(snap.currentMonthPoops, 2);
+      expect(snap.previousMonthPoops, 0);
+      expect(snap.poopsDeltaPercent, isNull);
+      expect(snap.currentMonthAvgPerDay, closeTo(2.0, 0.001));
+      expect(snap.previousMonthAvgPerDay, 0.0);
+      expect(snap.currentMonthAwayPercent, isNull);
+      expect(snap.previousMonthAwayPercent, isNull);
+      expect(snap.currentMonthAvgBristol, isNull);
+      expect(snap.previousMonthAvgBristol, isNull);
+      expect(snap.idealBristolPercent, isNull);
+      expect(snap.weeklyTrend, hasLength(8));
+      expect(snap.weeklyTrend.last.poopCount, 2);
+    });
+
+    testWidgets('MonthlyComparisonCard and WeeklyTrendChartCard render and respond to bar taps', (tester) async {
+      final now = DateTime(2026, 11, 26, 15, 0);
+      final logs = [
+        makeLog(
+          id: 'w1',
+          ts: DateTime(2026, 11, 25, 10, 0),
+          bristol: 4,
+          loc: LocationKind.home,
+        ),
+        makeLog(
+          id: 'w2',
+          ts: DateTime(2026, 11, 24, 10, 0),
+          bristol: 3,
+          loc: LocationKind.away,
+        ),
+        makeLog(
+          id: 'w3',
+          ts: DateTime(2026, 11, 17, 10, 0),
+          bristol: 5,
+          loc: LocationKind.home,
+        ),
+        makeLog(
+          id: 'w4',
+          ts: DateTime(2026, 10, 15, 10, 0),
+          bristol: 4,
+          loc: LocationKind.home,
+        ),
+        makeLog(
+          id: 'w5',
+          ts: DateTime(2026, 10, 10, 10, 0),
+          bristol: 4,
+          loc: LocationKind.away,
+        ),
+      ];
+      final snap = MonthlyComparisonEngine.compute(logs, now: now);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('es'),
+          supportedLocales: const [Locale('es'), Locale('en')],
+          localizationsDelegates: const [
+            AppStrings.delegate,
+            ...GlobalMaterialLocalizations.delegates,
+          ],
+          home: Scaffold(
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  MonthlyComparisonCard(snapshot: snap),
+                  const SizedBox(height: 16),
+                  WeeklyTrendChartCard(weeks: snap.weeklyTrend),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Monthly comparison renders delta (+50%) and ideal Bristol zone pill
+      expect(find.text('ESTE MES VS MES PASADO'), findsOneWidget);
+      expect(find.text('+50%'), findsOneWidget);
+      expect(find.text('Zona ideal'), findsOneWidget);
+
+      // Weekly trend chart renders 8 bars and defaults selection to current week (idx 7)
+      expect(find.text('EVOLUCIÓN SEMANAL · 8 SEMANAS'), findsOneWidget);
+      expect(find.text('Esta semana'), findsOneWidget);
+      expect(find.text('2 pupús'), findsOneWidget);
+
+      // Tap prior week bar (idx 6, week of 16/11 with 1 poop & Bristol 5.0)
+      await tester.tap(find.byKey(const ValueKey('weekly_trend_bar_6')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Esta semana'), findsNothing);
+      expect(find.text('1 pupú'), findsOneWidget);
+      expect(find.text('Bristol 5.0'), findsOneWidget);
     });
   });
 }
