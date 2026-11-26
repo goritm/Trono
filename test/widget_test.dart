@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:trono/models/achievement.dart';
 import 'package:trono/models/bathroom_log.dart';
 import 'package:trono/models/insights.dart';
@@ -226,6 +227,20 @@ void main() {
         gam.achievements.firstWhere((a) => a.id == 'paid_throne_pro').isUnlocked,
         isTrue,
       );
+    });
+  });
+
+  group('Animation curves safety', () {
+    test('TweenSequence bounce curve stays safely within [0, 1]', () {
+      final seq = TweenSequence<double>([
+        TweenSequenceItem(tween: Tween(begin: 0.97, end: 1.02), weight: 55),
+        TweenSequenceItem(tween: Tween(begin: 1.02, end: 1.0), weight: 45),
+      ]);
+      for (int i = 0; i <= 100; i++) {
+        final t = Curves.easeOutCubic.transform(i / 100.0);
+        expect(t, inInclusiveRange(0.0, 1.0));
+        expect(seq.transform(t), inInclusiveRange(0.95, 1.05));
+      }
     });
   });
 }

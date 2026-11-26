@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -6,25 +7,85 @@ import '../models/bathroom_log.dart';
 import '../theme/app_theme.dart';
 import 'chunky_widgets.dart';
 
-class LogTile extends StatelessWidget {
+class LogTile extends StatefulWidget {
   const LogTile({
     super.key,
     required this.log,
     required this.onTap,
+    this.onDelete,
     this.showDate = false,
   });
 
   final BathroomLog log;
   final VoidCallback onTap;
+  final VoidCallback? onDelete;
   final bool showDate;
+
+  @override
+  State<LogTile> createState() => _LogTileState();
+}
+
+class _LogTileState extends State<LogTile> with SingleTickerProviderStateMixin {
+  static const double _actionWidth = 124.0;
+
+  late final AnimationController _slideCtrl;
+  bool _isDragging = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _slideCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    );
+  }
+
+  @override
+  void dispose() {
+    _slideCtrl.dispose();
+    super.dispose();
+  }
+
+  void _close() {
+    _slideCtrl.animateTo(0.0, curve: Curves.easeOutCubic);
+  }
+
+  void _open() {
+    HapticFeedback.selectionClick();
+    _slideCtrl.animateTo(1.0, curve: Curves.easeOutCubic);
+  }
+
+  void _onHorizontalDragUpdate(DragUpdateDetails details) {
+    if (widget.onDelete == null) return;
+    _isDragging = true;
+    final delta = -details.primaryDelta! / _actionWidth;
+    _slideCtrl.value = (_slideCtrl.value + delta).clamp(0.0, 1.0);
+  }
+
+  void _onHorizontalDragEnd(DragEndDetails details) {
+    if (!_isDragging) return;
+    _isDragging = false;
+    final velocity = details.primaryVelocity ?? 0.0;
+    if (velocity < -260) {
+      _open();
+    } else if (velocity > 260) {
+      _close();
+    } else if (_slideCtrl.value >= 0.42) {
+      _open();
+    } else {
+      _close();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
+    final log = widget.log;
     final isPoop = log.type == BathroomType.poop;
     final accent = isPoop ? TronoColors.terracotta : TronoColors.muted(context);
-    final timeStr = showDate
-        ? DateFormat('d MMM · HH:mm', s.locale.languageCode).format(log.timestamp)
+    final timeStr = widget.showDate
+        ? DateFormat('d MMM · HH:mm', s.locale.languageCode)
+            .format(log.timestamp)
         : DateFormat('HH:mm').format(log.timestamp);
 
     final chips = <String>[];
@@ -52,8 +113,14 @@ class LogTile extends StatelessWidget {
       chips.add(s.tagLabel(tag));
     }
 
-    return ChunkyCard(
-      onTap: onTap,
+    final card = ChunkyCard(
+      onTap: () {
+        if (_slideCtrl.value > 0.05) {
+          _close();
+        } else {
+          widget.onTap();
+        }
+      },
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -161,6 +228,110 @@ class LogTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+
+    if (widget.onDelete == null) return card;
+
+    return GestureDetector(
+      onHorizontalDragUpdate: _onHorizontalDragUpdate,
+      onHorizontalDragEnd: _onHorizontalDragEnd,
+      child: Stack(
+        alignment: Alignment.centerRight,
+        children: [
+          // Revealed right-side drawer actions (Edit + Delete) — 100% hidden when closed
+          Positioned.fill(
+            child: AnimatedBuilder(
+              animation: _slideCtrl,
+              builder: (context, child) {
+                final t = _slideCtrl.value;
+                if (t <= 0.01) return const SizedBox.shrink();
+                return Opacity(
+                  opacity: (t * 2.4).clamp(0.0, 1.0),
+                  child: IgnorePointer(ignoring: t < 0.25, child: child),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(0, 2, 2, 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    _DrawerActionBtn(
+                      icon: Icons.edit_rounded,
+                      color: TronoColors.obsidian,
+                      iconColor: TronoColors.gold,
+                      tooltip: s.editLogTitle,
+                      onTap: () {
+                        _close();
+                        widget.onTap();
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    _DrawerActionBtn(
+                      icon: Icons.delete_outline_rounded,
+                      color: TronoColors.coral,
+                      iconColor: Colors.white,
+                      tooltip: s.deleteButton,
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _close();
+                        widget.onDelete?.call();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Sliding foreground card
+          AnimatedBuilder(
+            animation: _slideCtrl,
+            builder: (context, child) {
+              return Transform.translate(
+                offset: Offset(-_slideCtrl.value * _actionWidth, 0),
+                child: child,
+              );
+            },
+            child: card,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DrawerActionBtn extends StatelessWidget {
+  const _DrawerActionBtn({
+    required this.icon,
+    required this.color,
+    required this.iconColor,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final Color iconColor;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: SizedBox(
+            width: 54,
+            height: double.infinity,
+            child: Icon(icon, color: iconColor, size: 22),
+          ),
+        ),
       ),
     );
   }

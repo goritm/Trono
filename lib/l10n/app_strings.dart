@@ -29,6 +29,7 @@ class AppStrings {
   String get homeSubtitle => _t('¿Listo para registrar?', 'Ready to log?');
   String get oneTapHint => _t('1 toque guarda al instante', '1 tap logs instantly');
   String get heroLogTitle => _t('Registrar Pupu', 'Log Poop');
+  String get heroLoggedFlash => _t('¡Registrado!', 'Logged!');
   String get heroLogSubtitle => _t(
     'Toca para guardar al instante · detalles opcionales después',
     'Tap to save instantly · optional details right after',
@@ -89,7 +90,7 @@ class AppStrings {
   String get effortField => _t('Sensación / Esfuerzo', 'Effort / Feeling');
   String get durationField => _t('Duración', 'Duration');
   String get colorField => _t('Color', 'Color');
-  String get tagsField => _t('Tags rápidos', 'Quick tags');
+  String get tagsField => _t('Comida y detonantes', 'Food & triggers');
   String get noteField => _t('Nota libre', 'Note');
   String get notePlaceholder => _t('Algo que quieras recordar...', 'Anything worth noting...');
   String get privacyField => _t('Privacidad (para V2 amigos)', 'Privacy (for V2 friends)');
