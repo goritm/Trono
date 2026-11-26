@@ -759,6 +759,28 @@ class AppStrings {
     'Long-press your home screen → Widgets → Trono to log a poop in 1 tap without opening the app.',
   );
 
+  // V2.4 In-App GitHub Releases Update Checker
+  String get updatesSection => _t('Actualizaciones', 'App Updates');
+  String updateAvailableTitle(String tag) =>
+      _t('¡Nueva versión $tag disponible!', 'New version $tag available!');
+  String get updateAvailableSub => _t(
+    'Actualiza tu APK sin perder datos',
+    'Update your APK without losing data',
+  );
+  String get updateDownloadBtn => _t('Descargar', 'Download');
+  String get checkUpdatesLabel => _t('Buscar actualizaciones', 'Check for updates');
+  String installedVersionSub(String version) =>
+      _t('Versión instalada: v$version', 'Installed version: v$version');
+  String get upToDateToast => _t('¡Ya tienes la última versión de Trono!', 'You’re on the latest version of Trono!');
+  String get updateCheckFailedToast => _t(
+    'No se pudo comprobar ahora (revisa tu conexión)',
+    'Could not check right now (check connection)',
+  );
+  String get updateOpenFailedToast => _t(
+    'No se pudo abrir el enlace de descarga',
+    'Could not open download link',
+  );
+
   // Lock screen
   String get lockTitle => _t('Trono está bloqueado', 'Trono is locked');
   String get lockSubtitle => _t('Desbloquea para ver tu historial', 'Unlock to view your log');

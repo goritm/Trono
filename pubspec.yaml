@@ -1,5 +1,5 @@
 name: trono
-description: "A new Flutter project."
+description: "Offline-first Flutter bathroom tracker with territory map, XP ranks, Wrapped cards & private Supabase friend groups."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2.3.0+3
+version: 2.4.0+4
 
 environment:
   sdk: ^3.14.0
@@ -52,6 +52,8 @@ dependencies:
   flutter_map: ^8.3.2
   latlong2: ^0.10.1
   supabase_flutter: ^2.18.3
+  package_info_plus: ^10.2.2
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   flutter_test:

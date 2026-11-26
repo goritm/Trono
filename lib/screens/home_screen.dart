@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_strings.dart';
 import '../models/bathroom_log.dart';
+import '../services/update_checker_service.dart';
 import '../state/trono_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/achievement_unlock_dialog.dart';
@@ -10,6 +11,7 @@ import '../widgets/chunky_widgets.dart';
 import '../widgets/log_detail_sheet.dart';
 import '../widgets/log_tile.dart';
 import '../widgets/trono_toast.dart';
+import '../widgets/update_banner_card.dart';
 
 enum _QuickLocationMode { auto, home, work, away }
 
@@ -273,6 +275,22 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
           sliver: SliverList.list(
             children: [
+              if (controller.showHomeUpdateBanner &&
+                  controller.availableUpdate != null) ...[
+                UpdateBannerCard(
+                  release: controller.availableUpdate!,
+                  onDownload: () async {
+                    final ok = await UpdateCheckerService.openDownload(
+                      controller.availableUpdate!,
+                    );
+                    if (!ok && context.mounted) {
+                      showTronoToast(context, s.updateOpenFailedToast);
+                    }
+                  },
+                  onDismiss: controller.dismissUpdateBanner,
+                ),
+                const SizedBox(height: 16),
+              ],
               // Clean Bold Numbers Strip (Today + 7d Avg)
               ChunkyCard(
                 padding: const EdgeInsets.symmetric(

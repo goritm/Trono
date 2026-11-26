@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import '../data/database_helper.dart';
 import '../models/achievement.dart';
+import '../models/app_update.dart';
 import '../models/bathroom_log.dart';
 import '../models/favorite_place.dart';
 import '../models/insights.dart';
@@ -12,6 +13,7 @@ import '../models/monthly_comparison.dart';
 import '../models/stats_summary.dart';
 import '../services/location_service.dart';
 import '../services/settings_service.dart';
+import '../services/update_checker_service.dart';
 import '../services/widget_sync_service.dart';
 
 class UnlockEvent {
@@ -30,11 +32,15 @@ class TronoController extends ChangeNotifier {
   TronoController({
     required BathroomRepository repository,
     required SettingsService settings,
+    UpdateCheckerService? updateChecker,
   }) : _repo = repository,
-       _settings = settings;
+       _settings = settings,
+       _updateChecker =
+           updateChecker ?? UpdateCheckerService(settings: settings);
 
   final BathroomRepository _repo;
   final SettingsService _settings;
+  final UpdateCheckerService _updateChecker;
   final _uuid = const Uuid();
   VoidCallback? _onLogsMutated;
 
@@ -81,6 +87,12 @@ class TronoController extends ChangeNotifier {
   List<FavoritePlace> _favoritePlaces = const [];
   List<TopPlaceStat> _topPlaces = const [];
 
+  // V2.4 In-App Update Checker mirrors
+  String _installedVersion = '2.4.0';
+  AppReleaseInfo? _availableUpdate;
+  bool _isCheckingUpdate = false;
+  bool _disposed = false;
+
   List<BathroomLog> get logs => _logs;
   StatsSummary get stats => _stats;
   GamificationSnapshot get gamification => _gamification;
@@ -111,6 +123,12 @@ class TronoController extends ChangeNotifier {
   String get currencySymbol => _currencySymbol;
   bool get onboardingCompleted => _onboardingCompleted;
 
+  String get installedVersion => _installedVersion;
+  AppReleaseInfo? get availableUpdate => _availableUpdate;
+  bool get isCheckingUpdate => _isCheckingUpdate;
+  bool get showHomeUpdateBanner =>
+      _updateChecker.shouldShowHomeBanner(_availableUpdate);
+
   List<BathroomLog> get geotaggedLogs =>
       _logs.where((l) => l.hasCoordinates).toList();
 
@@ -138,7 +156,44 @@ class TronoController extends ChangeNotifier {
       _onboardingCompleted = true;
       await _settings.setOnboardingCompleted(true);
     }
+    _installedVersion = await _updateChecker.getInstalledVersion();
     _isLoading = false;
+    notifyListeners();
+
+    // Non-blocking, 12h-throttled update check (silent when offline)
+    unawaited(checkForUpdates(force: false));
+  }
+
+  Future<UpdateCheckResult> checkForUpdates({bool force = false}) async {
+    if (_disposed || _isCheckingUpdate) {
+      return const UpdateCheckResult(status: UpdateCheckStatus.throttled);
+    }
+    _isCheckingUpdate = true;
+    notifyListeners();
+    try {
+      final result = await _updateChecker.checkForUpdate(force: force);
+      if (_disposed) return result;
+      if (result.installedVersion != null) {
+        _installedVersion = result.installedVersion!;
+      }
+      if (result.status == UpdateCheckStatus.updateAvailable) {
+        _availableUpdate = result.release;
+      } else if (result.status == UpdateCheckStatus.upToDate) {
+        _availableUpdate = null;
+      }
+      return result;
+    } finally {
+      _isCheckingUpdate = false;
+      if (!_disposed) {
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> dismissUpdateBanner() async {
+    final tag = _availableUpdate?.tagName;
+    if (tag == null) return;
+    await _updateChecker.dismissRelease(tag);
     notifyListeners();
   }
 
@@ -514,6 +569,7 @@ class TronoController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _ticker?.cancel();
     super.dispose();
   }
