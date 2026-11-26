@@ -14,11 +14,10 @@ class SocialController extends ChangeNotifier {
   SocialController({
     required TronoController tronoController,
     required BathroomRepository repository,
-    required SettingsService settings,
+    required this._settings,
     SupabaseSyncService? service,
   }) : _trono = tronoController,
        _repo = repository,
-       _settings = settings,
        _service = service ?? SupabaseSyncService.instance;
 
   final TronoController _trono;

@@ -38,12 +38,11 @@ typedef NowProviderFn = DateTime Function();
 /// Zero user data is ever sent; automatic checks are throttled to once per 12h.
 class UpdateCheckerService {
   UpdateCheckerService({
-    required SettingsService settings,
+    required this._settings,
     VersionProviderFn? currentVersionProvider,
     HttpGetFn? httpGet,
     NowProviderFn? nowProvider,
-  }) : _settings = settings,
-       _versionProvider = currentVersionProvider ?? _defaultVersionProvider,
+  }) : _versionProvider = currentVersionProvider ?? _defaultVersionProvider,
        _httpGet = httpGet ?? _defaultHttpGet,
        _nowProvider = nowProvider ?? DateTime.now;
 

@@ -3,6 +3,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_strings.dart';
+import '../models/app_update.dart';
 import '../models/bathroom_log.dart';
 import '../services/backup_service.dart';
 import '../services/update_checker_service.dart';
@@ -11,6 +12,7 @@ import '../state/trono_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/chunky_widgets.dart';
 import '../widgets/trono_toast.dart';
+import '../widgets/update_banner_card.dart';
 import 'achievements_screen.dart';
 import 'favorite_places_screen.dart';
 import 'social_screen.dart';
@@ -877,7 +879,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           s.updateAvailableTitle(ctrl.availableUpdate!.tagName),
                           style: const TextStyle(fontWeight: FontWeight.w900),
                         ),
-                        subtitle: Text(s.updateAvailableSub),
+                        subtitle: Text(
+                          ReleaseNotesFormatter.extractLines(
+                            ctrl.availableUpdate!.releaseNotes,
+                          ).isNotEmpty
+                              ? '${s.updateAvailableSub} · ${s.updateWhatsNewBtn}'
+                              : s.updateAvailableSub,
+                        ),
+                        onTap: () {
+                          final release = ctrl.availableUpdate!;
+                          final hasNotes = ReleaseNotesFormatter.extractLines(
+                            release.releaseNotes,
+                          ).isNotEmpty;
+                          if (hasNotes) {
+                            showReleaseNotesSheet(
+                              context,
+                              release: release,
+                              onDownload: () async {
+                                final ok =
+                                    await UpdateCheckerService.openDownload(
+                                  release,
+                                );
+                                if (!ok && context.mounted) {
+                                  showTronoToast(
+                                    context,
+                                    s.updateOpenFailedToast,
+                                  );
+                                }
+                              },
+                            );
+                          }
+                        },
                         trailing: FilledButton(
                           style: FilledButton.styleFrom(
                             backgroundColor: TronoColors.terracotta,

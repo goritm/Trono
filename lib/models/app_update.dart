@@ -113,3 +113,29 @@ class AppUpdateParser {
     }
   }
 }
+
+/// Converts raw GitHub Release markdown bodies into clean, readable lines
+/// without requiring a full Markdown rendering package.
+class ReleaseNotesFormatter {
+  static final RegExp _leadingMarkers = RegExp(r'^(?:#+\s*|[-*•]\s*)');
+  static final RegExp _markdownLinks = RegExp(r'\[([^\]]+)\]\([^)]+\)');
+  static final RegExp _bareUrl = RegExp(r'^https?://\S+$');
+
+  static List<String> extractLines(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return const [];
+    final result = <String>[];
+    for (final rawLine in raw.split('\n')) {
+      var line = rawLine.trim();
+      if (line.isEmpty) continue;
+      if (_bareUrl.hasMatch(line)) continue;
+      line = line.replaceFirst(_leadingMarkers, '').trim();
+      if (line.isEmpty) continue;
+      line = line.replaceAllMapped(_markdownLinks, (m) => m.group(1) ?? '');
+      line = line.replaceAll('**', '').replaceAll('__', '').replaceAll('`', '');
+      line = line.trim();
+      if (line.isEmpty || _bareUrl.hasMatch(line)) continue;
+      result.add(line);
+    }
+    return result;
+  }
+}

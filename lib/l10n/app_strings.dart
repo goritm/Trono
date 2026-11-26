@@ -803,6 +803,12 @@ class AppStrings {
     'Update your APK without losing data',
   );
   String get updateDownloadBtn => _t('Descargar', 'Download');
+  String get updateWhatsNewBtn => _t('Ver novedades', 'What’s new');
+  String releaseNotesTitle(String tag) =>
+      _t('Novedades de $tag', 'What’s new in $tag');
+  String get releaseNotesCloseBtn => _t('Cerrar', 'Close');
+  String get shortcutTimerStartedToast =>
+      _t('Cronómetro iniciado ⏱️', 'Timer started ⏱️');
   String get checkUpdatesLabel => _t('Buscar actualizaciones', 'Check for updates');
   String installedVersionSub(String version) =>
       _t('Versión instalada: v$version', 'Installed version: v$version');

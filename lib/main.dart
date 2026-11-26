@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'data/database_helper.dart';
 import 'l10n/app_strings.dart';
+import 'models/bathroom_log.dart';
 import 'screens/calendar_stats_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/lock_screen.dart';
@@ -11,12 +12,14 @@ import 'screens/map_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/social_screen.dart';
+import 'services/app_shortcut_service.dart';
 import 'services/settings_service.dart';
 import 'services/supabase_sync_service.dart';
 import 'services/widget_sync_service.dart';
 import 'state/social_controller.dart';
 import 'state/trono_controller.dart';
 import 'theme/app_theme.dart';
+import 'widgets/trono_toast.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -100,6 +103,8 @@ class _TronoShell extends StatefulWidget {
 class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
   int _tabIndex = 0;
   final _statsSubTab = ValueNotifier<int>(0);
+  final _shortcutService = AppShortcutService();
+  AppShortcutAction? _pendingShortcut;
   late bool _locked;
 
   @override
@@ -107,11 +112,56 @@ class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _locked = widget.controller.lockEnabled;
+    _shortcutService.startListening(_onShortcutAction);
+    unawaited(_initShortcuts());
+  }
+
+  Future<void> _initShortcuts() async {
+    final initial = await _shortcutService.consumeInitialShortcut();
+    if (initial != null && mounted) {
+      _onShortcutAction(initial);
+    }
+  }
+
+  void _onShortcutAction(AppShortcutAction action) {
+    if (!mounted) return;
+    if ((_locked && widget.controller.lockEnabled) ||
+        !widget.controller.onboardingCompleted) {
+      _pendingShortcut = action;
+      return;
+    }
+    _pendingShortcut = null;
+    unawaited(_executeShortcutAction(action));
+  }
+
+  Future<void> _executeShortcutAction(AppShortcutAction action) async {
+    if (!mounted) return;
+    if (_tabIndex != 0) {
+      setState(() => _tabIndex = 0);
+    }
+    final s = AppStrings.of(context);
+    switch (action) {
+      case AppShortcutAction.claimThrone:
+        final (log, _) = await widget.controller.quickLog(BathroomType.poop);
+        if (!mounted) return;
+        showTronoToast(
+          context,
+          s.savedInstantToast,
+          actionLabel: s.undoAction,
+          onAction: () => widget.controller.deleteLog(log.id),
+        );
+      case AppShortcutAction.startTimer:
+        if (!widget.controller.isTimerRunning) {
+          widget.controller.startTimer();
+        }
+        showTronoToast(context, s.shortcutTimerStartedToast);
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _shortcutService.dispose();
     _statsSubTab.dispose();
     super.dispose();
   }
@@ -151,7 +201,15 @@ class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
     if (_locked && widget.controller.lockEnabled) {
       return LockScreen(
         controller: widget.controller,
-        onUnlocked: () => setState(() => _locked = false),
+        onUnlocked: () {
+          setState(() => _locked = false);
+          final pending = _pendingShortcut;
+          if (pending != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _onShortcutAction(pending);
+            });
+          }
+        },
       );
     }
 
@@ -160,6 +218,14 @@ class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
         controller: widget.controller,
         social: widget.socialController,
       );
+    }
+
+    if (_pendingShortcut != null) {
+      final pending = _pendingShortcut!;
+      _pendingShortcut = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_executeShortcutAction(pending));
+      });
     }
 
     final s = AppStrings.of(context);

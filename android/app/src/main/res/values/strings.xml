@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shortcut_claim_short">Claim Throne</string>
+    <string name="shortcut_claim_long">Claim Throne (+1)</string>
+    <string name="shortcut_timer_short">Start Timer</string>
+    <string name="shortcut_timer_long">Start Throne Timer</string>
+</resources>
