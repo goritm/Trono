@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/bathroom_log.dart';
+import '../models/favorite_place.dart';
 
 class SettingsService {
   static const _kThemeMode = 'theme_mode';
@@ -23,6 +24,7 @@ class SettingsService {
   static const _kCurrencySymbol = 'currency_symbol';
   static const _kSelectedGroupId = 'selected_group_id';
   static const _kOnboardingCompleted = 'onboarding_completed';
+  static const _kFavoritePlaces = 'favorite_places';
 
   late final SharedPreferences _prefs;
 
@@ -179,5 +181,27 @@ class SettingsService {
 
   Future<void> setOnboardingCompleted(bool completed) async {
     await _prefs.setBool(_kOnboardingCompleted, completed);
+  }
+
+  // V2.2 Favorite Places (100% local on device)
+  List<FavoritePlace> get favoritePlaces {
+    final raw = _prefs.getString(_kFavoritePlaces);
+    if (raw == null || raw.isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return const [];
+      return decoded
+          .whereType<Map<String, dynamic>>()
+          .map(FavoritePlace.fromJson)
+          .where((p) => p.id.isNotEmpty && p.name.trim().isNotEmpty)
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<void> setFavoritePlaces(List<FavoritePlace> places) async {
+    final encoded = jsonEncode(places.map((p) => p.toJson()).toList());
+    await _prefs.setString(_kFavoritePlaces, encoded);
   }
 }

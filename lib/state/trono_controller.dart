@@ -6,7 +6,9 @@ import 'package:uuid/uuid.dart';
 import '../data/database_helper.dart';
 import '../models/achievement.dart';
 import '../models/bathroom_log.dart';
+import '../models/favorite_place.dart';
 import '../models/insights.dart';
+import '../models/monthly_comparison.dart';
 import '../models/stats_summary.dart';
 import '../services/location_service.dart';
 import '../services/settings_service.dart';
@@ -48,6 +50,8 @@ class TronoController extends ChangeNotifier {
     hourlyRate: null,
   );
   List<TronoInsight> _insights = const [];
+  MonthlyComparisonSnapshot _monthlyComparison =
+      MonthlyComparisonEngine.compute(const []);
 
   bool _isLoading = true;
   DateTime? _activeTimerStart;
@@ -73,11 +77,18 @@ class TronoController extends ChangeNotifier {
   // V2.2 Onboarding mirror
   bool _onboardingCompleted = false;
 
+  // V2.2 Favorite Places & Top Bathrooms mirrors
+  List<FavoritePlace> _favoritePlaces = const [];
+  List<TopPlaceStat> _topPlaces = const [];
+
   List<BathroomLog> get logs => _logs;
   StatsSummary get stats => _stats;
   GamificationSnapshot get gamification => _gamification;
   PaidOnThroneSummary get paidOnThrone => _paidOnThrone;
   List<TronoInsight> get insights => _insights;
+  List<FavoritePlace> get favoritePlaces => _favoritePlaces;
+  List<TopPlaceStat> get topPlaces => _topPlaces;
+  MonthlyComparisonSnapshot get monthlyComparison => _monthlyComparison;
   bool get isLoading => _isLoading;
 
   bool get isTimerRunning => _activeTimerStart != null;
@@ -115,6 +126,7 @@ class TronoController extends ChangeNotifier {
     _hourlyRate = _settings.hourlyRate;
     _currencySymbol = _settings.currencySymbol;
     _onboardingCompleted = _settings.onboardingCompleted;
+    _favoritePlaces = _settings.favoritePlaces;
 
     _activeTimerStart = _settings.activeTimerStart;
     if (_activeTimerStart != null) {
@@ -166,6 +178,12 @@ class TronoController extends ChangeNotifier {
       hourlyRate: _hourlyRate,
     );
     _insights = InsightsEngine.generateInsights(_logs, _stats);
+    _topPlaces = FavoritePlacesEngine.computeTopPlaces(_logs, _favoritePlaces);
+    _monthlyComparison = MonthlyComparisonEngine.compute(
+      _logs,
+      homeLat: _homeLat,
+      homeLng: _homeLng,
+    );
   }
 
   WrappedSnapshot buildWrapped(WrappedPeriod period) {
@@ -247,8 +265,15 @@ class TronoController extends ChangeNotifier {
     final current = _logs[idx];
     if (current.hasCoordinates) return;
 
+    final matched = FavoritePlacesEngine.matchPlace(
+      pos.latitude,
+      pos.longitude,
+      _favoritePlaces,
+    );
+
     final inferredKind = explicitKind ??
         current.locationKind ??
+        matched?.locationKind ??
         LocationService.classifyAgainstHome(
           pos.latitude,
           pos.longitude,
@@ -256,10 +281,15 @@ class TronoController extends ChangeNotifier {
           homeLng: _homeLng,
         );
 
+    final hasExistingPlace =
+        current.placeLabel != null && current.placeLabel!.trim().isNotEmpty;
+    final inferredPlace = hasExistingPlace ? current.placeLabel : matched?.name;
+
     final enriched = current.copyWith(
       latitude: pos.latitude,
       longitude: pos.longitude,
       locationKind: inferredKind,
+      placeLabel: inferredPlace,
       syncStatus: SyncStatus.pendingSync,
       updatedAt: DateTime.now(),
     );
@@ -352,6 +382,39 @@ class TronoController extends ChangeNotifier {
       // Prompt once nicely when user enables auto-GPS
       await LocationService.requestAndGetPosition();
     }
+    notifyListeners();
+  }
+
+  // V2.2 Favorite Places controls (100% local on device)
+  Future<FavoritePlace> addFavoritePlace({
+    required String name,
+    required String emoji,
+    required LocationKind locationKind,
+    required double latitude,
+    required double longitude,
+    double radiusMeters = 150.0,
+  }) async {
+    final place = FavoritePlace(
+      id: _uuid.v4(),
+      name: name.trim(),
+      emoji: emoji,
+      locationKind: locationKind,
+      latitude: latitude,
+      longitude: longitude,
+      radiusMeters: radiusMeters,
+      createdAt: DateTime.now(),
+    );
+    _favoritePlaces = [place, ..._favoritePlaces];
+    await _settings.setFavoritePlaces(_favoritePlaces);
+    _recomputeDerived();
+    notifyListeners();
+    return place;
+  }
+
+  Future<void> deleteFavoritePlace(String id) async {
+    _favoritePlaces = _favoritePlaces.where((p) => p.id != id).toList();
+    await _settings.setFavoritePlaces(_favoritePlaces);
+    _recomputeDerived();
     notifyListeners();
   }
 

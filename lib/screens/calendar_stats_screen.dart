@@ -13,6 +13,7 @@ import '../widgets/achievement_unlock_dialog.dart';
 import '../widgets/chunky_widgets.dart';
 import '../widgets/log_detail_sheet.dart';
 import '../widgets/log_tile.dart';
+import '../widgets/monthly_comparison_card.dart';
 import '../widgets/trono_toast.dart';
 import 'map_screen.dart';
 import 'settings_screen.dart';
@@ -102,6 +103,8 @@ class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
                                 initialDate: day,
                                 defaultShareLevel:
                                     widget.controller.defaultShareLevel,
+                                favoritePlaces:
+                                    widget.controller.favoritePlaces,
                               );
                               if (res?.savedLog != null) {
                                 final unlocks = await widget.controller.saveLog(
@@ -197,6 +200,7 @@ class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
       mode: LogSheetMode.editExisting,
       initialLog: log,
       defaultShareLevel: widget.controller.defaultShareLevel,
+      favoritePlaces: widget.controller.favoritePlaces,
     );
     if (res == null) return;
     if (res.deleted) {
@@ -331,6 +335,18 @@ class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 16),
+
+              // 1.1 Monthly Comparison (Current Month vs Previous Month)
+              MonthlyComparisonCard(
+                snapshot: widget.controller.monthlyComparison,
+              ),
+              const SizedBox(height: 16),
+
+              // 1.2 8-Week Rolling Trend Chart
+              WeeklyTrendChartCard(
+                weeks: widget.controller.monthlyComparison.weeklyTrend,
               ),
               const SizedBox(height: 16),
 

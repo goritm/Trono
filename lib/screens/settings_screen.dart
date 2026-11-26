@@ -10,6 +10,7 @@ import '../state/trono_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/chunky_widgets.dart';
 import '../widgets/trono_toast.dart';
+import 'favorite_places_screen.dart';
 import 'social_screen.dart';
 
 Future<void> showSalaryConfigDialog(
@@ -603,6 +604,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onTap: ctrl.clearHomeLocation,
                       ),
                     ],
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: _ColorIcon(
+                        Icons.star_rounded,
+                        TronoColors.gold,
+                      ),
+                      title: Text(
+                        s.favoritePlacesMenuTitle,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      subtitle: Text(
+                        s.favoritePlacesMenuSub(ctrl.favoritePlaces.length),
+                      ),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) =>
+                                FavoritePlacesScreen(controller: ctrl),
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
