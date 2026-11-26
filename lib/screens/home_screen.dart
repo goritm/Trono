@@ -10,10 +10,27 @@ import '../widgets/chunky_widgets.dart';
 import '../widgets/log_detail_sheet.dart';
 import '../widgets/log_tile.dart';
 
-class HomeScreen extends StatelessWidget {
+enum _QuickLocationMode { auto, home, away }
+
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.controller});
 
   final TronoController controller;
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  _QuickLocationMode _locationMode = _QuickLocationMode.auto;
+
+  TronoController get controller => widget.controller;
+
+  LocationKind? get _selectedLocationKind => switch (_locationMode) {
+    _QuickLocationMode.auto => null,
+    _QuickLocationMode.home => LocationKind.home,
+    _QuickLocationMode.away => LocationKind.away,
+  };
 
   Future<void> _handleQuickTap(
     BuildContext context,
@@ -84,8 +101,8 @@ class HomeScreen extends StatelessWidget {
         newRank: followUpUnlocks.newRank ?? initialUnlocks.newRank,
       );
       if (context.mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(
           SnackBar(
             content: Text(s.detailsSavedToast),
             duration: const Duration(seconds: 2),
@@ -163,6 +180,12 @@ class HomeScreen extends StatelessWidget {
         : controller.logs.take(5).toList();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final heroSub = switch (_locationMode) {
+      _QuickLocationMode.auto => s.oneTapHint,
+      _QuickLocationMode.home => '🏠 ${s.quickHomeButton} · ${s.oneTapHint}',
+      _QuickLocationMode.away => '🌍 ${s.quickAwayButton} · ${s.oneTapHint}',
+    };
+
     return CustomScrollView(
       slivers: [
         SliverAppBar(
@@ -195,7 +218,7 @@ class HomeScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
           sliver: SliverList.list(
             children: [
-              // Clean Bold Numbers Dashboard Strip (Today + 7d Avg)
+              // Clean Bold Numbers Strip (Today + 7d Avg)
               ChunkyCard(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
@@ -290,7 +313,20 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 18),
 
-              // THE GIANT CHUNKY 3D TERRACOTTA HERO BUTTON
+              // Compact Location Mode Selector (Auto · Casa · Fuera)
+              _LocationModeSelector(
+                selected: _locationMode,
+                autoLabel: s.quickAutoChip,
+                homeLabel: s.quickHomeButton,
+                awayLabel: s.quickAwayButton,
+                onChanged: (mode) {
+                  HapticFeedback.selectionClick();
+                  setState(() => _locationMode = mode);
+                },
+              ),
+              const SizedBox(height: 10),
+
+              // THE SINGLE CHUNKY 3D HERO BUTTON
               ChunkyButton(
                 width: double.infinity,
                 color: TronoColors.terracotta,
@@ -299,20 +335,24 @@ class HomeScreen extends StatelessWidget {
                 borderRadius: 26,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 22,
-                  vertical: 22,
+                  vertical: 24,
                 ),
-                onPressed: () => _handleQuickTap(context, BathroomType.poop),
+                onPressed: () => _handleQuickTap(
+                  context,
+                  BathroomType.poop,
+                  locationKind: _selectedLocationKind,
+                ),
                 child: Row(
                   children: [
                     Container(
-                      width: 62,
-                      height: 62,
+                      width: 64,
+                      height: 64,
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       alignment: Alignment.center,
-                      child: const Text('💩', style: TextStyle(fontSize: 34)),
+                      child: const Text('💩', style: TextStyle(fontSize: 36)),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -330,10 +370,12 @@ class HomeScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            s.oneTapHint,
+                            heroSub,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.9),
-                              fontSize: 13,
+                              fontSize: 12.5,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -358,97 +400,7 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              // 1-Tap Location Shortcuts: Home vs Away (+1 Pupu immediately!)
-              Row(
-                children: [
-                  Expanded(
-                    child: ChunkyButton(
-                      color: TronoColors.surface(context),
-                      lipColor: TronoColors.goldLip,
-                      borderColor: TronoColors.gold,
-                      lipHeight: 4,
-                      borderRadius: 18,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 12,
-                      ),
-                      onPressed: () => _handleQuickTap(
-                        context,
-                        BathroomType.poop,
-                        locationKind: LocationKind.home,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.home_rounded,
-                            size: 19,
-                            color: TronoColors.goldLip,
-                          ),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              '${s.quickHomeButton} +1',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 13.5,
-                                color: TronoColors.ink(context),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ChunkyButton(
-                      color: TronoColors.surface(context),
-                      lipColor: TronoColors.terracottaLip,
-                      borderColor: TronoColors.terracotta,
-                      lipHeight: 4,
-                      borderRadius: 18,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 12,
-                      ),
-                      onPressed: () => _handleQuickTap(
-                        context,
-                        BathroomType.poop,
-                        locationKind: LocationKind.away,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.public_rounded,
-                            size: 19,
-                            color: TronoColors.terracotta,
-                          ),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              '${s.quickAwayButton} +1',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 13.5,
-                                color: TronoColors.ink(context),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-
-              // Live Timer Active Card OR Chunky Secondary Actions Row
+              // Active Live Timer Pill OR Clean Subtle Utility Strip
               if (controller.isTimerRunning)
                 ChunkyCard(
                   color: TronoColors.obsidian,
@@ -461,8 +413,8 @@ class HomeScreen extends StatelessWidget {
                   child: Row(
                     children: [
                       Container(
-                        width: 40,
-                        height: 40,
+                        width: 38,
+                        height: 38,
                         decoration: BoxDecoration(
                           color: TronoColors.gold.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
@@ -470,6 +422,7 @@ class HomeScreen extends StatelessWidget {
                         child: const Icon(
                           Icons.timer_rounded,
                           color: TronoColors.gold,
+                          size: 20,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -480,7 +433,7 @@ class HomeScreen extends StatelessWidget {
                             Text(
                               '${s.timerRunning} ${_formatClock(controller.elapsedTimerSeconds)}',
                               style: const TextStyle(
-                                fontSize: 16,
+                                fontSize: 15.5,
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
                                 fontFeatures: [FontFeature.tabularFigures()],
@@ -489,7 +442,7 @@ class HomeScreen extends StatelessWidget {
                             Text(
                               s.timerHint,
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 11.5,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white.withValues(alpha: 0.72),
                               ),
@@ -509,109 +462,65 @@ class HomeScreen extends StatelessWidget {
                   ),
                 )
               else
-                Row(
-                  children: [
-                    Expanded(
-                      child: ChunkyButton(
-                        color: TronoColors.surface(context),
-                        lipColor: TronoColors.lip(context),
-                        borderColor: TronoColors.border(context),
-                        lipHeight: 4,
-                        borderRadius: 18,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 14,
-                        ),
-                        onPressed: () =>
-                            _handleQuickTap(context, BathroomType.falseAlarm),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.air_rounded,
-                              size: 19,
-                              color: TronoColors.muted(context),
-                            ),
-                            const SizedBox(width: 7),
-                            Flexible(
-                              child: Text(
-                                s.typeName(BathroomType.falseAlarm),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 13.5,
-                                  color: TronoColors.ink(context),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: TronoColors.surface(context),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: TronoColors.border(context),
+                      width: 1.6,
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ChunkyButton(
-                        color: isDark
-                            ? const Color(0xFF282E3C)
-                            : TronoColors.obsidian,
-                        lipColor: TronoColors.obsidianLip,
-                        lipHeight: 4,
-                        borderRadius: 18,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 14,
-                        ),
-                        onPressed: controller.startTimer,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.timer_rounded,
-                              size: 19,
-                              color: TronoColors.gold,
-                            ),
-                            const SizedBox(width: 7),
-                            Flexible(
-                              child: Text(
-                                s.startTimer,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 13.5,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              const SizedBox(height: 10),
-
-              // Subtle Past Visit Action
-              Align(
-                alignment: Alignment.center,
-                child: TextButton.icon(
-                  onPressed: () => _handleAddPast(context),
-                  icon: Icon(
-                    Icons.history_rounded,
-                    size: 18,
-                    color: TronoColors.muted(context),
                   ),
-                  label: Text(
-                    s.addPastVisit,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: TronoColors.muted(context),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _UtilityAction(
+                            icon: Icons.timer_outlined,
+                            label: s.timerShort,
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              controller.startTimer();
+                            },
+                          ),
+                        ),
+                        VerticalDivider(
+                          width: 1,
+                          thickness: 1.4,
+                          indent: 10,
+                          endIndent: 10,
+                          color: TronoColors.border(context),
+                        ),
+                        Expanded(
+                          child: _UtilityAction(
+                            icon: Icons.air_rounded,
+                            label: s.typeName(BathroomType.falseAlarm),
+                            onTap: () => _handleQuickTap(
+                              context,
+                              BathroomType.falseAlarm,
+                              locationKind: _selectedLocationKind,
+                            ),
+                          ),
+                        ),
+                        VerticalDivider(
+                          width: 1,
+                          thickness: 1.4,
+                          indent: 10,
+                          endIndent: 10,
+                          color: TronoColors.border(context),
+                        ),
+                        Expanded(
+                          child: _UtilityAction(
+                            icon: Icons.history_rounded,
+                            label: s.pastVisitShort,
+                            onTap: () => _handleAddPast(context),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 22),
 
               // Today / Recent History Header
               Text(
@@ -681,6 +590,166 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _LocationModeSelector extends StatelessWidget {
+  const _LocationModeSelector({
+    required this.selected,
+    required this.autoLabel,
+    required this.homeLabel,
+    required this.awayLabel,
+    required this.onChanged,
+  });
+
+  final _QuickLocationMode selected;
+  final String autoLabel;
+  final String homeLabel;
+  final String awayLabel;
+  final ValueChanged<_QuickLocationMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1E27) : const Color(0xFFECE6DA),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          _ModeTab(
+            icon: Icons.my_location_rounded,
+            label: autoLabel,
+            active: selected == _QuickLocationMode.auto,
+            onTap: () => onChanged(_QuickLocationMode.auto),
+          ),
+          _ModeTab(
+            icon: Icons.home_rounded,
+            label: homeLabel,
+            active: selected == _QuickLocationMode.home,
+            activeColor: TronoColors.goldLip,
+            onTap: () => onChanged(_QuickLocationMode.home),
+          ),
+          _ModeTab(
+            icon: Icons.public_rounded,
+            label: awayLabel,
+            active: selected == _QuickLocationMode.away,
+            activeColor: TronoColors.terracotta,
+            onTap: () => onChanged(_QuickLocationMode.away),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModeTab extends StatelessWidget {
+  const _ModeTab({
+    required this.icon,
+    required this.label,
+    required this.active,
+    this.activeColor,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool active;
+  final Color? activeColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = active
+        ? (activeColor ?? TronoColors.ink(context))
+        : TronoColors.muted(context);
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: active ? TronoColors.surface(context) : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: active
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 15, color: fg),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: active ? FontWeight.w900 : FontWeight.w700,
+                    color: fg,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _UtilityAction extends StatelessWidget {
+  const _UtilityAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = TronoColors.muted(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 17, color: muted),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: TronoColors.ink(context),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

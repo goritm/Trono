@@ -38,6 +38,8 @@ class AppStrings {
   String get streakLabel => _t('Racha', 'Streak');
   String daysShort(int n) => _t('${n}d', '${n}d');
   String get addPastVisit => _t('Registrar visita pasada', 'Log past visit');
+  String get pastVisitShort => _t('Pasada', 'Past');
+  String get timerShort => _t('Cronómetro', 'Timer');
   String get todayHistory => _t('Hoy en el baño', 'Today’s visits');
   String get recentHistory => _t('Últimos registros', 'Recent visits');
   String get noLogsYetTitle => _t('Tu historial está vacío', 'No visits logged yet');
