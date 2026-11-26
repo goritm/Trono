@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../models/bathroom_log.dart';
+import '../models/group_challenges.dart';
 import '../models/trigger_lab.dart';
 
 class AppStrings {
@@ -761,6 +762,40 @@ class AppStrings {
   String get podiumTitle => _t('Podio semanal', 'Weekly podium');
   String get awayMvpLabel => _t('MVP Fuera de casa', 'Away MVP');
   String get shareGroupWrappedButton => _t('Compartir resumen del grupo', 'Share group recap');
+
+  // V2.5 Group Weekly Challenges & Group Streak (Social++)
+  String get groupChallengesTitle => _t('Retos semanales', 'Weekly challenges');
+  String groupStreakPill(int days) => _t('Racha ${days}d', '${days}d streak');
+  String groupActiveDaysLabel(int active) =>
+      _t('$active/7 días activos', '$active/7 active days');
+  String get groupChallengesAllDoneTitle => _t(
+    '¡Todos los retos completados!',
+    'All weekly challenges cleared!',
+  );
+  String get groupChallengesAllDoneSub => _t(
+    'Tu grupo arrasó con todas las misiones esta semana 👑',
+    'Your crew crushed every mission this week 👑',
+  );
+  String groupChallengeTitle(GroupChallengeType type) => switch (type) {
+    GroupChallengeType.teamVolume => _t('Meta del Grupo', 'Squad Goal'),
+    GroupChallengeType.awaySquad => _t('Escuadrón Fuera', 'Away Squad'),
+    GroupChallengeType.syncedDuo => _t('Dúo Sincronizado', 'Synced Duo'),
+  };
+  String groupChallengeSubtitle(GroupChallengeType type, int target) =>
+      switch (type) {
+        GroupChallengeType.teamVolume => _t(
+            'Registren $target tronos en grupo esta semana',
+            'Log $target group thrones this week',
+          ),
+        GroupChallengeType.awaySquad => _t(
+            'Registren $target tronos fuera o en el trabajo',
+            'Claim $target away or work thrones',
+          ),
+        GroupChallengeType.syncedDuo => _t(
+            'Dos miembros en menos de 15 min',
+            'Two members within 15 min',
+          ),
+      };
   String relativeTime(DateTime dt) {
     final diff = DateTime.now().difference(dt);
     if (diff.inSeconds < 60) return _t('ahora mismo', 'just now');
