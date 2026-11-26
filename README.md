@@ -1,22 +1,42 @@
 # 👑 Trono
 
-Aplicación móvil (Flutter · Android + lista para iOS) para registrar tus idas al baño de forma ultra rápida, conocer tu promedio diario real y desbloquear rangos y logros graciosos.
+> **Offline-first Flutter mobile app (Android-first, iOS-ready) for tracking bathroom visits (*pupús*), mapping conquered territory, unlocking XP ranks, and competing in private Supabase friend groups.**
 
-## Funciones (V1.6)
-- **Registro en 1 toque + Deshacer**: botón principal gigante para registrar **Pupu** al instante + atajos de 1 toque **🏠 En casa +1** / **🌍 Fuera +1**, botón **Deshacer** inmediato (+ opción secundaria para **Falsa alarma**).
-- **Mapa de Tronos & Territorio**: porcentaje **En casa vs Fuera**, auto-detección GPS de tu Casa (radio 150 m), **filtros y clustering de pines** sobre OpenStreetMap, GPS automático desde el Widget de Android y logros de supervivencia.
-- **Pagado en el Trono, Insights & Trono Wrapped**: calculadora 100% local de dinero ganado en horario laboral, detección automática de patrones y tarjeta visual **Trono Wrapped** lista para compartir por WhatsApp/Instagram.
-- **Detalles rápidos opcionales**: Escala de Bristol (1–7), tamaño, esfuerzo/sensación, duración (chips rápidos + cronómetro en vivo), color, tags rápidos y nota libre.
-- **Historial flexible**: añade visitas pasadas y edita o elimina cualquier registro.
-- **Calendario y Estadísticas**: promedio diario (7 días / 30 días / histórico), mapa de calor mensual interactivo, gráfica de horas pico y récords personales.
-- **Gamificación**: XP por registro, 7 rangos (*Novato del Baño* → *Deidad del Trono*) y 17 insignias desbloqueables con celebración.
-- **Extras prácticos**: Widget de pantalla de inicio en Android (`+1 Pupu` en 1 toque), bloqueo opcional con huella/PIN, respaldo JSON/CSV e interfaz bilingüe (ES/EN) con modo claro/oscuro.
-- **Preparada para V2 (Multiplayer)**: SQLite local con UUIDs, borrado lógico, `sync_status` y nivel de privacidad por registro.
+[![Download Latest APK](https://img.shields.io/github/v/release/goritm/Trono?label=Download%20Android%20APK&color=E05A2B&style=for-the-badge)](https://github.com/goritm/Trono/releases/latest)
 
-## Comandos útiles
+---
+
+## ✨ Highlights
+
+- **⚡ 1-Tap Instant Logging (`Registrar`):** Tactile 3D hero button with animations, instant 0 ms local SQLite save, quick location selector (`Auto · Casa · Trabajo · Fuera`), live session timer, false alarm, past visits, and swipe-to-edit/delete with Undo.
+- **📊 Deep Stats & Trends (`Stats`):**
+  - **Calendario:** Interactive monthly heatmap, peak hours chart, and personal records.
+  - **Análisis:** Daily averages (7d / 30d / all-time), **Monthly Comparison** (*This Month vs Last Month*), **8-week trend chart**, **Paid on the Throne** (100% local salary estimate), automatic pattern insights, and shareable **Trono Wrapped** PNG cards.
+  - **Logros:** 7 XP ranks (*Novato del Baño* → *Deidad del Trono*) and 22 unlockable badges with real confetti celebrations.
+- **🗺️ Interactive Territory Map & Favorite Places (`Mapa`):**
+  - OpenStreetMap (`flutter_map`) with filters (`All · Month · Away · Work · Home`) and clustered pins.
+  - **Lugares ⭐:** Home vs Away survival ratio, saved GPS **Favorite Places** with 150 m auto-labeling, **1–5 ⭐ bathroom ratings**, and **Top Bathrooms** ranking.
+- **👥 Private Multiplayer Groups (`Amigos` · Supabase):**
+  - Offline-first cloud sync with strict Postgres Row-Level Security (RLS).
+  - Private 6-letter invite-code groups, live Realtime feed with **⚡ Dúo Sincronizado** detection (≤15 min apart) and emoji reactions (`👑`, `🔥`, `💀`, `👏`), 7d/30d/All leaderboards, 6 group awards, and shareable **Group Weekly Wrapped** cards.
+- **🔒 Privacy by Design:** Exact GPS coordinates (`latitude`, `longitude`), Favorite Places coordinates, and work salary **never leave your device**. Per-log share levels (`private`, `summary_only`, `full`) are enforced at the Postgres trigger level.
+- **📱 Android Extras:** Flicker-free 2×2 **Home Screen Widget** (`+1 Pupú` with silent GPS), optional Biometric/PIN lock, 3-step welcome onboarding, JSON/CSV backup, ES/EN bilingual UI, light/dark themes, and automatic **in-app GitHub Releases update checker**.
+
+---
+
+## 📥 Download & Install (Android)
+
+Download the latest signed release APK directly from [**GitHub Releases**](https://github.com/goritm/Trono/releases/latest) — future updates install seamlessly in place without losing data.
+
+---
+
+## 🛠️ Local Development
+
+We follow **SDD (Spec-Driven Development) + TDD (Test-Driven Development)** documented in [AGENTS.md](AGENTS.md) and [docs/specs/_template.md](docs/specs/_template.md).
+
 ```bash
 flutter pub get
+dart analyze
 flutter test
 flutter build apk --release
 ```
-El APK compilado se genera en `build/app/outputs/flutter-apk/app-release.apk`.
