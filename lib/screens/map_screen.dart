@@ -26,9 +26,16 @@ class _PinCluster {
 }
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({super.key, required this.controller});
+  const MapScreen({
+    super.key,
+    required this.controller,
+    this.isRootTab = false,
+    this.onOpenSettings,
+  });
 
   final TronoController controller;
+  final bool isRootTab;
+  final VoidCallback? onOpenSettings;
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -38,6 +45,7 @@ class _MapScreenState extends State<MapScreen> {
   final _mapController = MapController();
   _MapFilter _filter = _MapFilter.all;
   _PinCluster? _selectedCluster;
+  int _subTab = 0; // 0 = Interactive Map, 1 = Favorite Places & Top Bathrooms
 
   List<BathroomLog> _filteredLogs() {
     final now = DateTime.now();
@@ -221,21 +229,10 @@ class _MapScreenState extends State<MapScreen> {
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(s.mapScreenTitle),
+            automaticallyImplyLeading: !widget.isRootTab,
+            title: Text(widget.isRootTab ? s.navMap : s.mapScreenTitle),
             actions: [
-              IconButton(
-                tooltip: s.favoritePlacesTitle,
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) =>
-                          FavoritePlacesScreen(controller: widget.controller),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.star_rounded, color: TronoColors.gold),
-              ),
-              if (hasHome)
+              if (_subTab == 0 && hasHome)
                 IconButton(
                   tooltip: s.homePinLabel,
                   onPressed: () {
@@ -249,9 +246,47 @@ class _MapScreenState extends State<MapScreen> {
                   },
                   icon: const Icon(Icons.home_rounded),
                 ),
+              if (widget.onOpenSettings != null)
+                IconButton(
+                  tooltip: s.navSettings,
+                  onPressed: widget.onOpenSettings,
+                  icon: const Icon(Icons.settings_outlined),
+                ),
             ],
           ),
-          body: Stack(
+          body: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<int>(
+                    segments: [
+                      ButtonSegment(
+                        value: 0,
+                        icon: const Icon(Icons.map_rounded, size: 17),
+                        label: Text(s.mapSubTabMap),
+                      ),
+                      ButtonSegment(
+                        value: 1,
+                        icon: const Icon(Icons.star_rounded, size: 17),
+                        label: Text(s.mapSubTabPlaces),
+                      ),
+                    ],
+                    selected: {_subTab},
+                    onSelectionChanged: (set) =>
+                        setState(() => _subTab = set.first),
+                    showSelectedIcon: false,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _subTab == 1
+                    ? FavoritePlacesScreen(
+                        controller: widget.controller,
+                        embedded: true,
+                      )
+                    : Stack(
             children: [
               FlutterMap(
                 mapController: _mapController,
@@ -454,6 +489,9 @@ class _MapScreenState extends State<MapScreen> {
                               setState(() => _selectedCluster = null),
                         ),
                 ),
+            ],
+                  ),
+              ),
             ],
           ),
         );

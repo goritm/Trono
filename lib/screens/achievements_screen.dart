@@ -9,9 +9,14 @@ import '../widgets/chunky_widgets.dart';
 enum _BadgeFilter { all, unlocked, locked }
 
 class AchievementsScreen extends StatefulWidget {
-  const AchievementsScreen({super.key, required this.controller});
+  const AchievementsScreen({
+    super.key,
+    required this.controller,
+    this.embedded = false,
+  });
 
   final TronoController controller;
+  final bool embedded;
 
   @override
   State<AchievementsScreen> createState() => _AchievementsScreenState();
@@ -38,14 +43,15 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
         return b.progress.compareTo(a.progress);
       });
 
-    return CustomScrollView(
+    final scroll = CustomScrollView(
       slivers: [
-        SliverAppBar(
-          floating: true,
-          title: Text(s.achievementsTitle),
-        ),
+        if (!widget.embedded)
+          SliverAppBar(
+            floating: true,
+            title: Text(s.achievementsTitle),
+          ),
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 28),
+          padding: EdgeInsets.fromLTRB(16, widget.embedded ? 4 : 6, 16, 28),
           sliver: SliverList.list(
             children: [
               // Sleek Obsidian 3D Rank Hero Card with Warm Gold Progress
@@ -313,6 +319,8 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
         ),
       ],
     );
+
+    return widget.embedded ? scroll : Scaffold(body: scroll);
   }
 }
 

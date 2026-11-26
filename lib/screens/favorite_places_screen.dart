@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../l10n/app_strings.dart';
 import '../models/bathroom_log.dart';
 import '../models/favorite_place.dart';
+import '../models/stats_summary.dart';
 import '../services/location_service.dart';
 import '../state/trono_controller.dart';
 import '../theme/app_theme.dart';
@@ -11,9 +12,14 @@ import '../widgets/chunky_widgets.dart';
 import '../widgets/trono_toast.dart';
 
 class FavoritePlacesScreen extends StatefulWidget {
-  const FavoritePlacesScreen({super.key, required this.controller});
+  const FavoritePlacesScreen({
+    super.key,
+    required this.controller,
+    this.embedded = false,
+  });
 
   final TronoController controller;
+  final bool embedded;
 
   @override
   State<FavoritePlacesScreen> createState() => _FavoritePlacesScreenState();
@@ -277,19 +283,22 @@ class _FavoritePlacesScreenState extends State<FavoritePlacesScreen> {
       builder: (context, _) {
         final places = widget.controller.favoritePlaces;
         final topPlaces = widget.controller.topPlaces;
+        final stats = widget.controller.stats;
 
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(
-              s.favoritePlacesTitle,
-              style: const TextStyle(fontSize: 20),
-            ),
+        final content = ListView(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            widget.embedded ? 4 : 8,
+            16,
+            32,
           ),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-            children: [
-              // Primary CTA: Save current location
-              ChunkyButton(
+          children: [
+            // Territory Home vs Away ratio summary
+            _TerritorySummaryCard(stats: stats),
+            const SizedBox(height: 16),
+
+            // Primary CTA: Save current location
+            ChunkyButton(
                 width: double.infinity,
                 color: TronoColors.terracotta,
                 lipColor: TronoColors.terracottaLip,
@@ -439,9 +448,130 @@ class _FavoritePlacesScreenState extends State<FavoritePlacesScreen> {
                   );
                 }),
             ],
+        );
+
+        if (widget.embedded) return content;
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(
+              s.favoritePlacesTitle,
+              style: const TextStyle(fontSize: 20),
+            ),
           ),
+          body: content,
         );
       },
+    );
+  }
+}
+
+class _TerritorySummaryCard extends StatelessWidget {
+  const _TerritorySummaryCard({required this.stats});
+
+  final StatsSummary stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final hasRatio = stats.classifiedLocationCount > 0;
+    final homePct = stats.homePercent.round();
+    final awayPct = stats.awayPercent.round();
+
+    return ChunkyCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                s.territoryTitle.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.8,
+                  color: TronoColors.muted(context),
+                ),
+              ),
+              const Spacer(),
+              if (stats.distinctSpotsCount > 0)
+                Text(
+                  '📍 ${stats.distinctSpotsCount}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: TronoColors.terracotta,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (!hasRatio)
+            Text(
+              s.noLocationDataYet,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: TronoColors.muted(context),
+              ),
+            )
+          else ...[
+            Row(
+              children: [
+                Text(
+                  '🏠 ${s.homeShort} $homePct%',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 13.5,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '🌍 ${s.awayShort} $awayPct%',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 13.5,
+                    color: TronoColors.terracotta,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: SizedBox(
+                height: 12,
+                child: Row(
+                  children: [
+                    if (homePct > 0)
+                      Expanded(
+                        flex: homePct,
+                        child: Container(color: TronoColors.gold),
+                      ),
+                    if (awayPct > 0)
+                      Expanded(
+                        flex: awayPct,
+                        child: Container(color: TronoColors.terracotta),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            if (stats.maxDistanceFromHomeKm >= 0.5) ...[
+              const SizedBox(height: 8),
+              Text(
+                '🧭 ${s.farthestDropLabel(stats.maxDistanceFromHomeKm)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: TronoColors.muted(context),
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
     );
   }
 }

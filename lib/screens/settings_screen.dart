@@ -10,6 +10,7 @@ import '../state/trono_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/chunky_widgets.dart';
 import '../widgets/trono_toast.dart';
+import 'achievements_screen.dart';
 import 'favorite_places_screen.dart';
 import 'social_screen.dart';
 
@@ -226,19 +227,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final s = AppStrings.of(context);
-    final ctrl = widget.controller;
+    return ListenableBuilder(
+      listenable: widget.controller,
+      builder: (context, _) {
+        final s = AppStrings.of(context);
+        final ctrl = widget.controller;
 
-    return CustomScrollView(
-      slivers: [
-        SliverAppBar(
-          floating: true,
-          title: Text(s.settingsTitle),
-        ),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 32),
-          sliver: SliverList.list(
-            children: [
+        return Scaffold(
+          body: CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                floating: true,
+                title: Text(s.settingsTitle),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 32),
+                sliver: SliverList.list(
+                  children: [
               _SectionTitle(s.accountCloudSection),
               ListenableBuilder(
                 listenable: widget.social,
@@ -460,6 +465,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 18),
 
+              ChunkyCard(
+                padding: EdgeInsets.zero,
+                child: ListTile(
+                  leading: _ColorIcon(
+                    Icons.emoji_events_rounded,
+                    TronoColors.gold,
+                  ),
+                  title: Text(
+                    s.achievementsTitle,
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  subtitle: Text(
+                    '${ctrl.gamification.currentRank.emoji} ${s.rankName(ctrl.gamification.currentRank.id)} · ${ctrl.gamification.totalXp} XP · ${ctrl.gamification.unlockedCount}/${ctrl.gamification.achievements.length}',
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => AchievementsScreen(controller: ctrl),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 18),
+
               _SectionTitle(s.appearanceSection),
               ChunkyCard(
                 padding: EdgeInsets.zero,
@@ -535,7 +566,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         subtitle: Text(s.replayWelcomeSub),
                         trailing: const Icon(Icons.chevron_right_rounded),
-                        onTap: ctrl.resetOnboarding,
+                        onTap: () async {
+                          await ctrl.resetOnboarding();
+                          if (context.mounted && Navigator.of(context).canPop()) {
+                            Navigator.of(context).pop();
+                          }
+                        },
                       ),
                     ),
                   ],
@@ -827,6 +863,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
       ],
+          ),
+        );
+      },
     );
   }
 }

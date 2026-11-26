@@ -114,14 +114,20 @@ class ChunkyCard extends StatelessWidget {
     final border = borderColor ?? TronoColors.border(context);
     final lip = lipColor ?? TronoColors.lip(context);
 
-    final inner = Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: bg,
+    final inner = Material(
+      color: bg,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: border, width: 2),
+        side: BorderSide(color: border, width: 2),
       ),
-      child: child,
+      clipBehavior: Clip.antiAlias,
+      child: onTap == null
+          ? Padding(padding: padding, child: child)
+          : InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(borderRadius),
+              child: Padding(padding: padding, child: child),
+            ),
     );
 
     return Container(
@@ -130,16 +136,7 @@ class ChunkyCard extends StatelessWidget {
         color: lip,
         borderRadius: BorderRadius.circular(borderRadius),
       ),
-      child: onTap == null
-          ? inner
-          : Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: onTap,
-                borderRadius: BorderRadius.circular(borderRadius),
-                child: inner,
-              ),
-            ),
+      child: inner,
     );
   }
 }
@@ -151,15 +148,17 @@ class ChunkyHudPill extends StatelessWidget {
     required this.icon,
     required this.iconColor,
     required this.label,
+    this.onTap,
   });
 
   final IconData icon;
   final Color iconColor;
   final String label;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final pill = Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
       decoration: BoxDecoration(
         color: TronoColors.surface(context),
@@ -181,6 +180,14 @@ class ChunkyHudPill extends StatelessWidget {
           ),
         ],
       ),
+    );
+    if (onTap == null) return pill;
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap!();
+      },
+      child: pill,
     );
   }
 }

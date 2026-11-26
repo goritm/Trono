@@ -14,9 +14,16 @@ import '../widgets/trono_toast.dart';
 enum _QuickLocationMode { auto, home, work, away }
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.controller});
+  const HomeScreen({
+    super.key,
+    required this.controller,
+    this.onOpenSettings,
+    this.onOpenAwards,
+  });
 
   final TronoController controller;
+  final VoidCallback? onOpenSettings;
+  final VoidCallback? onOpenAwards;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -204,14 +211,39 @@ class _HomeScreenState extends State<HomeScreen> {
       slivers: [
         SliverAppBar(
           floating: true,
-          title: Text(
-            s.appName,
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.8,
-              color: TronoColors.ink(context),
-            ),
+          toolbarHeight: 62,
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: TronoColors.border(context),
+                    width: 1.5,
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8.5),
+                  child: Image.asset(
+                    'assets/icon/trono_icon.png',
+                    width: 30,
+                    height: 30,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                s.appName,
+                style: TextStyle(
+                  fontSize: 25,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
+                  color: TronoColors.ink(context),
+                ),
+              ),
+            ],
           ),
           actions: [
             ChunkyHudPill(
@@ -224,12 +256,21 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icons.bolt_rounded,
               iconColor: TronoColors.gold,
               label: '${gam.totalXp}',
+              onTap: widget.onOpenAwards,
             ),
-            const SizedBox(width: 16),
+            if (widget.onOpenSettings != null) ...[
+              const SizedBox(width: 4),
+              IconButton(
+                tooltip: s.navSettings,
+                onPressed: widget.onOpenSettings,
+                icon: const Icon(Icons.settings_outlined),
+              ),
+            ] else
+              const SizedBox(width: 16),
           ],
         ),
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
           sliver: SliverList.list(
             children: [
               // Clean Bold Numbers Strip (Today + 7d Avg)
@@ -302,30 +343,33 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: TronoColors.gold.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        'NV.${gam.currentRank.level}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                          color: isDark
-                              ? TronoColors.gold
-                              : TronoColors.goldLip,
+                    GestureDetector(
+                      onTap: widget.onOpenAwards,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: TronoColors.gold.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'NV.${gam.currentRank.level}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            color: isDark
+                                ? TronoColors.gold
+                                : TronoColors.goldLip,
+                          ),
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 24),
 
               // Compact Location Mode Selector (Auto · Casa · Trabajo · Fuera)
               _LocationModeSelector(
@@ -339,7 +383,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   setState(() => _locationMode = mode);
                 },
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
 
               // THE SINGLE ANIMATED 3D HERO BUTTON (with juicy click feedback + brief delay before sheet)
               _AnimatedHeroLogButton(
@@ -353,7 +397,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   sheetDelay: const Duration(milliseconds: 360),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 18),
 
               // Active Live Timer Pill OR Clean Subtle Utility Strip
               if (controller.isTimerRunning)
@@ -475,7 +519,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 28),
 
               // Today / Recent History Header
               Text(
@@ -488,7 +532,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: TronoColors.muted(context),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
               if (recentLogs.isEmpty)
                 ChunkyCard(
