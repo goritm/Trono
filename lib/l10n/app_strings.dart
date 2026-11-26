@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../models/bathroom_log.dart';
+import '../models/trigger_lab.dart';
 
 class AppStrings {
   AppStrings(this.locale);
@@ -478,6 +479,40 @@ class AppStrings {
   String poopUnitFor(int count) =>
       count == 1 ? _t('trono', 'throne') : _t('tronos', 'thrones');
   String poopsCountLabel(int count) => '$count ${poopUnitFor(count)}';
+
+  // V2.5 Trigger Lab (Food & Digestive Trigger Correlation)
+  String get triggerLabTitle => _t('Laboratorio de Triggers', 'Trigger Lab');
+  String triggerLabBaselinePill(double baseline) =>
+      _t('Base ${baseline.toStringAsFixed(1)}', 'Baseline ${baseline.toStringAsFixed(1)}');
+  String get triggerLabEmptyHint => _t(
+    'Etiqueta al menos 2 tronos con el mismo detonante (☕ Café, 🌶️ Picante, 🥗 Fibra…) y tu Escala de Bristol para descubrir qué te sienta mejor.',
+    'Tag at least 2 thrones with the same food or trigger (☕ Coffee, 🌶️ Spicy, 🥗 Fiber…) plus Bristol scale to uncover what works best for you.',
+  );
+  String triggerLabProgressChip(int taggedLogs) => _t(
+    '$taggedLogs tronos con detonantes registrados',
+    '$taggedLogs tagged thrones logged',
+  );
+  String get triggerLabBestAllyLabel => _t('Mejor aliado', 'Best ally');
+  String get triggerLabTopDisruptorLabel => _t('Mayor impacto', 'Top disruptor');
+  String triggerImpactLabel(TriggerImpact impact) => switch (impact) {
+    TriggerImpact.ally => _t('Aliado', 'Ally'),
+    TriggerImpact.softer => _t('Más blando', 'Softer'),
+    TriggerImpact.firmer => _t('Más firme', 'Firmer'),
+    TriggerImpact.intense => _t('Intenso', 'Intense'),
+    TriggerImpact.neutral => _t('Neutro', 'Neutral'),
+  };
+  String triggerLabBristolCompare(double avg, double baseline) => _t(
+    'Bristol ${avg.toStringAsFixed(1)} (base ${baseline.toStringAsFixed(1)})',
+    'Bristol ${avg.toStringAsFixed(1)} (vs ${baseline.toStringAsFixed(1)} base)',
+  );
+  String get triggerLabNoBristolYet => _t(
+    'Añade escala de Bristol para comparar',
+    'Add Bristol scale to compare',
+  );
+  String triggerLabDifficultPct(int pct) => _t(
+    '$pct% urgencia o esfuerzo',
+    '$pct% urgent or struggled',
+  );
 
   // Weekday initials (Mon..Sun)
   List<String> get weekdayShorts => isEs

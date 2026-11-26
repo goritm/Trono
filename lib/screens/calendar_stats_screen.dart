@@ -14,6 +14,7 @@ import '../widgets/chunky_widgets.dart';
 import '../widgets/log_detail_sheet.dart';
 import '../widgets/log_tile.dart';
 import '../widgets/monthly_comparison_card.dart';
+import '../widgets/trigger_lab_card.dart';
 import '../widgets/trono_toast.dart';
 import 'achievements_screen.dart';
 import 'settings_screen.dart';
@@ -430,7 +431,13 @@ class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
         ),
         const SizedBox(height: 16),
 
-        // 4. Paid on the Throne Card (Work Earnings)
+        // 4. Trigger Lab (Food & Lifestyle vs Bristol Scale)
+        TriggerLabCard(
+          snapshot: widget.controller.triggerLab,
+        ),
+        const SizedBox(height: 16),
+
+        // 5. Paid on the Throne Card (Work Earnings)
         _PaidOnThroneCard(
           paid: widget.controller.paidOnThrone,
           hasSalary: widget.controller.hasHourlyRate,
