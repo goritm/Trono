@@ -156,8 +156,11 @@ class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
                                 itemBuilder: (context, i) {
                                   final log = dayLogs[i];
                                   return LogTile(
+                                    key: ValueKey(log.id),
                                     log: log,
                                     onTap: () => _editLog(context, log),
+                                    onDelete: () =>
+                                        _deleteWithUndo(context, log),
                                   );
                                 },
                               ),
@@ -170,6 +173,25 @@ class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
           },
         );
       },
+    );
+  }
+
+  Future<void> _deleteWithUndo(BuildContext context, BathroomLog log) async {
+    final s = AppStrings.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    await widget.controller.deleteLog(log.id);
+    if (!context.mounted) return;
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(s.logDeletedToast),
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: s.undoAction,
+          textColor: TronoColors.gold,
+          onPressed: () => widget.controller.saveLog(log),
+        ),
+      ),
     );
   }
 

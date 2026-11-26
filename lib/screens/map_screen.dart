@@ -415,6 +415,27 @@ class _MapScreenState extends State<MapScreen> {
                       ? _ClusterListCard(
                           cluster: _selectedCluster!,
                           onEditLog: _editLog,
+                          onDeleteLog: (log) async {
+                            final s = AppStrings.of(context);
+                            final messenger = ScaffoldMessenger.of(context);
+                            await widget.controller.deleteLog(log.id);
+                            if (mounted) {
+                              setState(() => _selectedCluster = null);
+                              messenger.hideCurrentSnackBar();
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(s.logDeletedToast),
+                                  duration: const Duration(seconds: 4),
+                                  action: SnackBarAction(
+                                    label: s.undoAction,
+                                    textColor: TronoColors.gold,
+                                    onPressed: () =>
+                                        widget.controller.saveLog(log),
+                                  ),
+                                ),
+                              );
+                            }
+                          },
                           onClose: () =>
                               setState(() => _selectedCluster = null),
                         )
@@ -482,11 +503,13 @@ class _ClusterListCard extends StatelessWidget {
   const _ClusterListCard({
     required this.cluster,
     required this.onEditLog,
+    required this.onDeleteLog,
     required this.onClose,
   });
 
   final _PinCluster cluster;
   final ValueChanged<BathroomLog> onEditLog;
+  final ValueChanged<BathroomLog> onDeleteLog;
   final VoidCallback onClose;
 
   @override
@@ -528,9 +551,11 @@ class _ClusterListCard extends StatelessWidget {
               itemCount: cluster.logs.length,
               separatorBuilder: (_, _) => const SizedBox(height: 8),
               itemBuilder: (context, i) => LogTile(
+                key: ValueKey(cluster.logs[i].id),
                 log: cluster.logs[i],
                 showDate: true,
                 onTap: () => onEditLog(cluster.logs[i]),
+                onDelete: () => onDeleteLog(cluster.logs[i]),
               ),
             ),
           ),

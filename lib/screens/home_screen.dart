@@ -172,6 +172,28 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _handleDeleteWithUndo(
+    BuildContext context,
+    BathroomLog log,
+  ) async {
+    final s = AppStrings.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    await controller.deleteLog(log.id);
+    if (!context.mounted) return;
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(s.logDeletedToast),
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: s.undoAction,
+          textColor: TronoColors.gold,
+          onPressed: () => controller.saveLog(log),
+        ),
+      ),
+    );
+  }
+
   String _formatClock(int seconds) {
     final mins = (seconds ~/ 60).toString().padLeft(2, '0');
     final secs = (seconds % 60).toString().padLeft(2, '0');
@@ -531,9 +553,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   (log) => Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: LogTile(
+                      key: ValueKey(log.id),
                       log: log,
                       showDate: todayLogs.isEmpty,
                       onTap: () => _handleEditLog(context, log),
+                      onDelete: () => _handleDeleteWithUndo(context, log),
                     ),
                   ),
                 ),
