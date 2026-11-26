@@ -10,7 +10,7 @@ import '../widgets/chunky_widgets.dart';
 import '../widgets/log_detail_sheet.dart';
 import '../widgets/log_tile.dart';
 
-enum _QuickLocationMode { auto, home, away }
+enum _QuickLocationMode { auto, home, work, away }
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.controller});
@@ -29,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   LocationKind? get _selectedLocationKind => switch (_locationMode) {
     _QuickLocationMode.auto => null,
     _QuickLocationMode.home => LocationKind.home,
+    _QuickLocationMode.work => LocationKind.work,
     _QuickLocationMode.away => LocationKind.away,
   };
 
@@ -182,8 +183,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final heroSub = switch (_locationMode) {
       _QuickLocationMode.auto => s.oneTapHint,
-      _QuickLocationMode.home => '🏠 ${s.quickHomeButton} · ${s.oneTapHint}',
-      _QuickLocationMode.away => '🌍 ${s.quickAwayButton} · ${s.oneTapHint}',
+      _QuickLocationMode.home => '🏠 ${s.locationKindName(LocationKind.home)} · ${s.oneTapHint}',
+      _QuickLocationMode.work => '💼 ${s.locationKindName(LocationKind.work)} · ${s.oneTapHint}',
+      _QuickLocationMode.away => '🌍 ${s.locationKindName(LocationKind.away)} · ${s.oneTapHint}',
     };
 
     return CustomScrollView(
@@ -313,11 +315,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 18),
 
-              // Compact Location Mode Selector (Auto · Casa · Fuera)
+              // Compact Location Mode Selector (Auto · Casa · Trabajo · Fuera)
               _LocationModeSelector(
                 selected: _locationMode,
                 autoLabel: s.quickAutoChip,
                 homeLabel: s.quickHomeButton,
+                workLabel: s.quickWorkButton,
                 awayLabel: s.quickAwayButton,
                 onChanged: (mode) {
                   HapticFeedback.selectionClick();
@@ -599,6 +602,7 @@ class _LocationModeSelector extends StatelessWidget {
     required this.selected,
     required this.autoLabel,
     required this.homeLabel,
+    required this.workLabel,
     required this.awayLabel,
     required this.onChanged,
   });
@@ -606,6 +610,7 @@ class _LocationModeSelector extends StatelessWidget {
   final _QuickLocationMode selected;
   final String autoLabel;
   final String homeLabel;
+  final String workLabel;
   final String awayLabel;
   final ValueChanged<_QuickLocationMode> onChanged;
 
@@ -632,6 +637,13 @@ class _LocationModeSelector extends StatelessWidget {
             active: selected == _QuickLocationMode.home,
             activeColor: TronoColors.goldLip,
             onTap: () => onChanged(_QuickLocationMode.home),
+          ),
+          _ModeTab(
+            icon: Icons.work_rounded,
+            label: workLabel,
+            active: selected == _QuickLocationMode.work,
+            activeColor: isDark ? TronoColors.darkInk : TronoColors.obsidian,
+            onTap: () => onChanged(_QuickLocationMode.work),
           ),
           _ModeTab(
             icon: Icons.public_rounded,
@@ -689,15 +701,15 @@ class _ModeTab extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 15, color: fg),
-              const SizedBox(width: 5),
+              Icon(icon, size: 14, color: fg),
+              const SizedBox(width: 3),
               Flexible(
                 child: Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 11.5,
                     fontWeight: active ? FontWeight.w900 : FontWeight.w700,
                     color: fg,
                   ),

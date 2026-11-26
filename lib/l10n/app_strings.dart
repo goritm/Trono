@@ -157,23 +157,31 @@ class AppStrings {
   String tagLabel(String tag) => switch (tag) {
     'coffee' => _t('☕ Café', '☕ Coffee'),
     'spicy' => _t('🌶️ Picante', '🌶️ Spicy'),
+    'dairy' => _t('🧀 Lácteos', '🧀 Dairy'),
+    'alcohol' => _t('🍺 Alcohol', '🍺 Alcohol'),
+    'fast_food' => _t('🍔 Comida rápida', '🍔 Fast food'),
+    'fiber' => _t('🥗 Fibra', '🥗 Fiber'),
+    'sweets' => _t('🍫 Dulces', '🍫 Sweets'),
+    'stress' => _t('😰 Estrés', '😰 Stress'),
+    // Legacy fallbacks for previously saved logs
     'home' => _t('🏠 Casa', '🏠 Home'),
     'work' => _t('💼 Trabajo', '💼 Work'),
     'travel' => _t('✈️ Viaje', '✈️ Travel'),
     'restaurant' => _t('🍽️ Restaurante', '🍽️ Restaurant'),
-    'dairy' => _t('🧀 Lácteos', '🧀 Dairy'),
     'morning' => _t('🌅 Mañana', '🌅 Morning'),
     'late_night' => _t('🌙 Madrugada', '🌙 Late night'),
     _ => tag,
   };
 
-  // V1.5 Location, Home vs Away & Map
+  // V1.5 Location, Home / Work / Away & Map
   String locationKindName(LocationKind kind) => switch (kind) {
     LocationKind.home => _t('En casa', 'At home'),
+    LocationKind.work => _t('En el trabajo', 'At work'),
     LocationKind.away => _t('Fuera de casa', 'Away'),
   };
 
-  String get quickHomeButton => _t('En casa', 'At home');
+  String get quickHomeButton => _t('Casa', 'Home');
+  String get quickWorkButton => _t('Trabajo', 'Work');
   String get quickAwayButton => _t('Fuera', 'Away');
   String get quickAutoChip => _t('Auto', 'Auto');
   String get locationField => _t('Ubicación', 'Location');
@@ -224,8 +232,8 @@ class AppStrings {
   String get paidThisMonthLabel => _t('Este mes', 'This month');
   String get paidAllTimeLabel => _t('Total acumulado', 'All-time earned');
   String get paidSetupHint => _t(
-    'Configura tu sueldo aproximado en Ajustes (100% local) y marca el tag 💼 Trabajo para ver cuánto ganas en el trono.',
-    'Set your approximate pay in Settings (100% local) and tag visits 💼 Work to see how much you earn on the throne.',
+    'Configura tu sueldo aproximado en Ajustes (100% local) y elige 💼 Trabajo al registrar para ver cuánto ganas en el trono.',
+    'Set your approximate pay in Settings (100% local) and pick 💼 Work when logging to see how much you earn on the throne.',
   );
   String get configureSalaryButton => _t('Configurar sueldo', 'Set pay rate');
   String get salarySettingsSection => _t('Pagado en el Trono', 'Paid on the Throne');
@@ -309,6 +317,7 @@ class AppStrings {
   String get mapFilterAll => _t('Todos', 'All');
   String get mapFilterMonth => _t('Este mes', 'This month');
   String get mapFilterAway => _t('🌍 Fuera', '🌍 Away');
+  String get mapFilterWork => _t('💼 Trabajo', '💼 Work');
   String get mapFilterHome => _t('🏠 Casa', '🏠 Home');
   String clusterHeader(int count) => _t('$count pupus en este lugar', '$count poops at this spot');
 
@@ -432,7 +441,7 @@ class AppStrings {
     'early_bird' => _t('5 visitas entre 05:00 y 08:00', '5 visits between 5am and 8am'),
     'perfect_four' => _t('5 veces Bristol tipo 4 (perfección)', '5 times Bristol type 4 (ideal)'),
     'false_alarm_pro' => _t('5 falsas alarmas registradas', '5 false alarms logged'),
-    'paid_to_poop' => _t('5 visitas con el tag Trabajo', '5 visits tagged Work'),
+    'paid_to_poop' => _t('5 visitas en el Trabajo', '5 visits at Work'),
     'paid_throne_pro' => _t('Acumula 60 min en el trono en el trabajo', 'Reach 60 min on the throne at work'),
     'coffee_effect' => _t('5 visitas con el tag Café', '5 visits tagged Coffee'),
     'marathoner' => _t('Una sesión de 15+ minutos', 'A 15+ minute session'),

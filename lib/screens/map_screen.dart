@@ -12,7 +12,7 @@ import '../widgets/chunky_widgets.dart';
 import '../widgets/log_detail_sheet.dart';
 import '../widgets/log_tile.dart';
 
-enum _MapFilter { all, thisMonth, awayOnly, homeOnly }
+enum _MapFilter { all, thisMonth, awayOnly, workOnly, homeOnly }
 
 class _PinCluster {
   _PinCluster({required this.center, required this.logs});
@@ -45,7 +45,9 @@ class _MapScreenState extends State<MapScreen> {
         _MapFilter.thisMonth =>
           log.timestamp.year == now.year && log.timestamp.month == now.month,
         _MapFilter.awayOnly =>
-          log.effectiveLocationKind == LocationKind.away,
+          log.effectiveLocationKind?.isAwayFromHome == true,
+        _MapFilter.workOnly =>
+          log.effectiveLocationKind == LocationKind.work,
         _MapFilter.homeOnly =>
           log.effectiveLocationKind == LocationKind.home,
       };
@@ -341,6 +343,15 @@ class _MapScreenState extends State<MapScreen> {
                             selected: _filter == _MapFilter.awayOnly,
                             onTap: () => setState(() {
                               _filter = _MapFilter.awayOnly;
+                              _selectedCluster = null;
+                            }),
+                          ),
+                          const SizedBox(width: 6),
+                          _FilterPill(
+                            label: s.mapFilterWork,
+                            selected: _filter == _MapFilter.workOnly,
+                            onTap: () => setState(() {
+                              _filter = _MapFilter.workOnly;
                               _selectedCluster = null;
                             }),
                           ),

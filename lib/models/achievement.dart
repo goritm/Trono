@@ -82,9 +82,9 @@ class GamificationEngine {
     final earlyBirdLogs = logs
         .where((l) => l.timestamp.hour >= 5 && l.timestamp.hour < 8)
         .length;
-    final workLogs = logs.where((l) => l.tags.contains('work')).length;
+    final workLogs = logs.where((l) => l.isWorkVisit).length;
     final workMinutes = logs
-            .where((l) => l.tags.contains('work'))
+            .where((l) => l.isWorkVisit)
             .fold<int>(
               0,
               (sum, l) =>
@@ -114,7 +114,7 @@ class GamificationEngine {
                     homeLng: homeLng,
                   )
                 : null);
-        if (loc == LocationKind.away) awayPoopLogs++;
+        if (loc != null && loc.isAwayFromHome) awayPoopLogs++;
       }
       if (l.hasCoordinates && homeLat != null && homeLng != null) {
         final dKm = LocationService.distanceMeters(

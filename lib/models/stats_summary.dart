@@ -151,7 +151,7 @@ class StatsCalculator {
                 : null);
         if (loc == LocationKind.home) {
           homePoopCount++;
-        } else if (loc == LocationKind.away) {
+        } else if (loc != null && loc.isAwayFromHome) {
           awayPoopCount++;
         }
       }

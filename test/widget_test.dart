@@ -178,8 +178,8 @@ void main() {
           timestamp: DateTime(2026, 11, 23 + i, 10, 0),
           bristolType: 4,
           durationSeconds: 900, // 15 min each => 60 min total
-          tags: const ['work', 'coffee'],
-          locationKind: LocationKind.away,
+          tags: const ['coffee'],
+          locationKind: LocationKind.work,
           latitude: 40.5 + i * 0.1,
           longitude: -3.7,
           createdAt: now,

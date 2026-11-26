@@ -104,7 +104,7 @@ class InsightsEngine {
     int monthSecs = 0;
 
     for (final l in logs) {
-      if (!l.tags.contains('work')) continue;
+      if (!l.isWorkVisit) continue;
       final secs = _estimatedSeconds(l);
       totalVisits++;
       totalSecs += secs;
@@ -179,8 +179,17 @@ class InsightsEngine {
       );
     }
 
-    // 3. Top trigger tag (coffee / spicy / dairy / work / restaurant)
-    const triggerKeys = ['coffee', 'spicy', 'dairy', 'work', 'restaurant'];
+    // 3. Top food / digestive trigger tag
+    const triggerKeys = [
+      'coffee',
+      'spicy',
+      'dairy',
+      'alcohol',
+      'fast_food',
+      'fiber',
+      'sweets',
+      'stress',
+    ];
     final tagCounts = <String, int>{};
     for (final l in poops) {
       for (final t in l.tags) {
@@ -278,7 +287,7 @@ class InsightsEngine {
       }
       if (l.timestamp.hour >= 0 && l.timestamp.hour < 5) nightLogs++;
       if (l.tags.contains('coffee')) coffeeLogs++;
-      if (l.tags.contains('work')) workLogs++;
+      if (l.isWorkVisit) workLogs++;
     }
     final topBristol = bristolCounts.isEmpty
         ? null
