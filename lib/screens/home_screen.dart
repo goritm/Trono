@@ -51,25 +51,6 @@ class _HomeScreenState extends State<HomeScreen> {
         locationKind != null ? '${locationKind.emoji} ' : '${type.emoji} ';
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text('$prefix${s.savedInstantToast}'),
-        duration: const Duration(seconds: 4),
-        action: SnackBarAction(
-          label: s.undoAction,
-          textColor: TronoColors.gold,
-          onPressed: () async {
-            await controller.deleteLog(savedLog.id);
-            messenger.showSnackBar(
-              SnackBar(
-                content: Text(s.undoneToast),
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          },
-        ),
-      ),
-    );
 
     if (sheetDelay > Duration.zero) {
       await Future<void>.delayed(sheetDelay);
@@ -116,6 +97,27 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
       }
+    } else if (context.mounted) {
+      // User skipped/dismissed the detail sheet — show crisp toast with Undo!
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('$prefix${s.savedInstantToast}'),
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: s.undoAction,
+            textColor: TronoColors.gold,
+            onPressed: () async {
+              await controller.deleteLog(savedLog.id);
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(s.undoneToast),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+        ),
+      );
     }
 
     if (context.mounted && combinedUnlocks.hasAnything) {

@@ -33,6 +33,9 @@ Future<LogDetailSheetResult?> showLogDetailSheet(
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
+    clipBehavior: Clip.antiAlias,
+    backgroundColor: TronoColors.surface(context),
+    barrierColor: Colors.black.withValues(alpha: 0.42),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),
