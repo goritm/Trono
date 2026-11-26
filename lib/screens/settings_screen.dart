@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../l10n/app_strings.dart';
 import '../models/bathroom_log.dart';
 import '../services/backup_service.dart';
+import '../services/update_checker_service.dart';
 import '../state/social_controller.dart';
 import '../state/trono_controller.dart';
 import '../theme/app_theme.dart';
@@ -855,6 +856,99 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           color: TronoColors.muted(context),
                         ),
                       ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              _SectionTitle(s.updatesSection),
+              ChunkyCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    if (ctrl.availableUpdate != null) ...[
+                      ListTile(
+                        leading: _ColorIcon(
+                          Icons.system_update_rounded,
+                          TronoColors.terracotta,
+                        ),
+                        title: Text(
+                          s.updateAvailableTitle(ctrl.availableUpdate!.tagName),
+                          style: const TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                        subtitle: Text(s.updateAvailableSub),
+                        trailing: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: TronoColors.terracotta,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            minimumSize: Size.zero,
+                          ),
+                          onPressed: () async {
+                            final ok = await UpdateCheckerService.openDownload(
+                              ctrl.availableUpdate!,
+                            );
+                            if (!ok && context.mounted) {
+                              showTronoToast(context, s.updateOpenFailedToast);
+                            }
+                          },
+                          child: Text(
+                            s.updateDownloadBtn,
+                            style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                        ),
+                      ),
+                      const Divider(height: 1),
+                    ],
+                    ListTile(
+                      leading: _ColorIcon(
+                        Icons.refresh_rounded,
+                        TronoColors.gold,
+                      ),
+                      title: Text(
+                        s.checkUpdatesLabel,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      subtitle: Text(
+                        s.installedVersionSub(ctrl.installedVersion),
+                      ),
+                      trailing: ctrl.isCheckingUpdate
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.chevron_right_rounded),
+                      onTap: ctrl.isCheckingUpdate
+                          ? null
+                          : () async {
+                              final res = await ctrl.checkForUpdates(
+                                force: true,
+                              );
+                              if (!context.mounted) return;
+                              switch (res.status) {
+                                case UpdateCheckStatus.updateAvailable:
+                                  showTronoToast(
+                                    context,
+                                    s.updateAvailableTitle(
+                                      res.release!.tagName,
+                                    ),
+                                  );
+                                case UpdateCheckStatus.upToDate:
+                                  showTronoToast(context, s.upToDateToast);
+                                case UpdateCheckStatus.failed:
+                                  showTronoToast(
+                                    context,
+                                    s.updateCheckFailedToast,
+                                  );
+                                case UpdateCheckStatus.throttled:
+                                  break;
+                              }
+                            },
                     ),
                   ],
                 ),

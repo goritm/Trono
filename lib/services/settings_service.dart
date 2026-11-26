@@ -25,6 +25,8 @@ class SettingsService {
   static const _kSelectedGroupId = 'selected_group_id';
   static const _kOnboardingCompleted = 'onboarding_completed';
   static const _kFavoritePlaces = 'favorite_places';
+  static const _kUpdateLastCheckedMs = 'update_last_checked_ms';
+  static const _kUpdateDismissedTag = 'update_dismissed_tag';
 
   late final SharedPreferences _prefs;
 
@@ -203,5 +205,26 @@ class SettingsService {
   Future<void> setFavoritePlaces(List<FavoritePlace> places) async {
     final encoded = jsonEncode(places.map((p) => p.toJson()).toList());
     await _prefs.setString(_kFavoritePlaces, encoded);
+  }
+
+  // V2.4 In-App GitHub Releases Update Checker
+  DateTime? get updateLastCheckedAt {
+    final ms = _prefs.getInt(_kUpdateLastCheckedMs);
+    if (ms == null) return null;
+    return DateTime.fromMillisecondsSinceEpoch(ms);
+  }
+
+  Future<void> setUpdateLastCheckedAt(DateTime dt) async {
+    await _prefs.setInt(_kUpdateLastCheckedMs, dt.millisecondsSinceEpoch);
+  }
+
+  String? get dismissedUpdateTag => _prefs.getString(_kUpdateDismissedTag);
+
+  Future<void> setDismissedUpdateTag(String? tag) async {
+    if (tag == null || tag.isEmpty) {
+      await _prefs.remove(_kUpdateDismissedTag);
+    } else {
+      await _prefs.setString(_kUpdateDismissedTag, tag);
+    }
   }
 }
