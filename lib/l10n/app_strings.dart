@@ -22,6 +22,7 @@ class AppStrings {
   String get appName => 'Trono';
   String get navLog => _t('Registrar', 'Log');
   String get navCalendar => _t('Calendario', 'Calendar');
+  String get navSocial => _t('Amigos', 'Friends');
   String get navAchievements => _t('Logros', 'Awards');
   String get navSettings => _t('Ajustes', 'Settings');
 
@@ -93,7 +94,7 @@ class AppStrings {
   String get tagsField => _t('Comida y detonantes', 'Food & triggers');
   String get noteField => _t('Nota libre', 'Note');
   String get notePlaceholder => _t('Algo que quieras recordar...', 'Anything worth noting...');
-  String get privacyField => _t('Privacidad (para V2 amigos)', 'Privacy (for V2 friends)');
+  String get privacyField => _t('Privacidad con amigos', 'Privacy with friends');
   String get doneButton => _t('Listo', 'Done');
   String get saveButton => _t('Guardar', 'Save');
   String get deleteButton => _t('Eliminar', 'Delete');
@@ -474,12 +475,115 @@ class AppStrings {
   String get removePinLabel => _t('Quitar PIN', 'Remove PIN');
   String get enterNewPin => _t('Nuevo PIN (4 dígitos)', 'New 4-digit PIN');
   String get pinSavedToast => _t('PIN guardado', 'PIN saved');
-  String get defaultPrivacyLabel => _t('Privacidad por defecto (V2)', 'Default privacy (V2)');
-  String get multiplayerTeaserTitle => _t('Multiplayer con amigos (V2)', 'Friends Multiplayer (V2)');
-  String get multiplayerTeaserBody => _t(
-    'Tu base de datos local ya guarda UUIDs y privacidad por registro para sincronizar grupos, feed en vivo y rankings cuando activemos V2.',
-    'Your local database already stores UUIDs & per-log privacy so private groups, live feed, and leaderboards plug right in for V2.',
+  String get defaultPrivacyLabel => _t('Privacidad por defecto en grupos', 'Default privacy in groups');
+  String get accountCloudSection => _t('Cuenta y Nube', 'Account & Cloud');
+  String get cloudConnectTitle => _t('Conecta tu Trono en la nube', 'Connect Trono Cloud');
+  String get cloudConnectBody => _t(
+    'Respalda tu historial automáticamente y únete a grupos privados con tu pareja o amigos. GPS y sueldo siempre se quedan en tu móvil.',
+    'Auto-backup your history and join private groups with your partner or friends. Exact GPS & pay rate always stay on your device.',
   );
+  String get createAccountBtn => _t('Crear cuenta gratis', 'Create free account');
+  String get signInBtn => _t('Iniciar sesión', 'Sign in');
+  String get haveAccountSignIn => _t('Ya tengo cuenta · Iniciar sesión', 'I have an account · Sign in');
+  String get signOutBtn => _t('Cerrar sesión', 'Sign out');
+  String get signOutConfirmBody => _t(
+    'Tus registros locales se mantienen intactos en este teléfono.',
+    'Your local logs stay safe on this device.',
+  );
+  String get syncNowBtn => _t('Sincronizar ahora', 'Sync now');
+  String get syncingLabel => _t('Sincronizando...', 'Syncing...');
+  String get allSyncedLabel => _t('Todo sincronizado en la nube', 'All synced to cloud');
+  String pendingSyncLabel(int n) => _t('$n registro(s) pendientes de subir', '$n log(s) pending upload');
+  String syncedToast(int pushed, int pulled) => _t(
+    'Sincronizado · $pushed subidos, $pulled traídos',
+    'Synced · $pushed uploaded, $pulled downloaded',
+  );
+  String get editProfileTitle => _t('Editar perfil', 'Edit profile');
+  String get displayNameLabel => _t('Tu alias', 'Your alias');
+  String get displayNameHint => _t('Ej. Jose, Reina del Trono...', 'e.g. Alex, Throne Ruler...');
+  String get chooseAvatarLabel => _t('Tu avatar', 'Your avatar');
+  String get emailLabel => _t('Correo electrónico', 'Email');
+  String get passwordLabel => _t('Contraseña (mín. 6 caracteres)', 'Password (min. 6 chars)');
+  String get confirmEmailNotice => _t(
+    '¡Cuenta creada! Revisa tu correo para confirmarla y luego inicia sesión.',
+    'Account created! Check your email to confirm it, then sign in.',
+  );
+  String get profileSavedToast => _t('Perfil actualizado', 'Profile updated');
+
+  // Social / Multiplayer tab
+  String get socialTitle => _t('Amigos', 'Friends');
+  String get socialHeroTitle => _t('Trono con Amigos', 'Trono with Friends');
+  String get socialHeroSubtitle => _t(
+    'Grupos privados por código, feed en vivo con reacciones y rankings semanales.',
+    'Private invite-code groups, live feed with reactions, and weekly leaderboards.',
+  );
+  String get socialPerkPrivacyTitle => _t('Privacidad real', 'Real privacy');
+  String get socialPerkPrivacyBody => _t(
+    'Tu GPS exacto y sueldo nunca suben a la nube; tú eliges qué ve cada visita.',
+    'Exact GPS & salary never leave your phone; you control each log’s privacy.',
+  );
+  String get socialPerkSyncTitle => _t('Sync offline-first', 'Offline-first sync');
+  String get socialPerkSyncBody => _t(
+    'Registra en 1 toque sin internet y sincroniza automáticamente al volver.',
+    'Log in 1 tap offline and sync automatically whenever you’re online.',
+  );
+  String get socialPerkGroupsTitle => _t('Grupos privados de 6 letras', '6-letter private groups');
+  String get socialPerkGroupsBody => _t(
+    'Ideal para tu pareja, compañeros de piso o grupo de amigos.',
+    'Built for your partner, roommates, or close friend group.',
+  );
+  String get createGroupBtn => _t('Crear grupo', 'Create group');
+  String get joinGroupBtn => _t('Unirse con código', 'Join with code');
+  String get noGroupsTitle => _t('Crea o únete a tu primer grupo', 'Create or join your first group');
+  String get noGroupsBody => _t(
+    'Crea un grupo privado en 5 segundos y comparte el código de 6 letras por WhatsApp.',
+    'Create a private group in 5 seconds and share the 6-letter invite code.',
+  );
+  String get groupNameLabel => _t('Nombre del grupo', 'Group name');
+  String get groupNameHint => _t('Ej. Casa & Pareja, Los del Trono...', 'e.g. Home Squad, Throne Crew...');
+  String get groupEmojiLabel => _t('Icono del grupo', 'Group icon');
+  String get inviteCodeLabel => _t('Código de invitación', 'Invite code');
+  String get enterInviteCodeHint => _t('Ej. TRN8K2', 'e.g. TRN8K2');
+  String get copyCodeBtn => _t('Copiar', 'Copy');
+  String get shareCodeBtn => _t('Invitar', 'Invite');
+  String get codeCopiedToast => _t('¡Código copiado!', 'Invite code copied!');
+  String inviteShareMessage(String groupName, String code) => _t(
+    'Únete a mi grupo "$groupName" en Trono 👑🚽\nCódigo de invitación: $code',
+    'Join my group "$groupName" on Trono 👑🚽\nInvite code: $code',
+  );
+  String membersCountLabel(int n) =>
+      n == 1 ? _t('1 miembro', '1 member') : _t('$n miembros', '$n members');
+  String get leaveGroupBtn => _t('Salir del grupo', 'Leave group');
+  String get leaveGroupConfirm => _t(
+    '¿Seguro que quieres salir de este grupo? Puedes volver a entrar con el código.',
+    'Are you sure you want to leave this group? You can rejoin anytime with the code.',
+  );
+  String get socialTabFeed => _t('Feed en vivo', 'Live feed');
+  String get socialTabRanking => _t('Ranking', 'Leaderboard');
+  String get emptyFeedTitle => _t('El trono está tranquilo', 'All quiet on the throne');
+  String get emptyFeedBody => _t(
+    'Cuando alguien del grupo registre un pupu compartido (Solo resumen o Completo), aparecerá aquí al instante.',
+    'Whenever someone in the group logs a shared poop (Summary or Full), it appears here live.',
+  );
+  String get rankingPeriodWeek => _t('7 días', '7 days');
+  String get rankingPeriodMonth => _t('30 días', '30 days');
+  String get rankingPeriodAll => _t('Histórico', 'All time');
+  String get poopsUnit => _t('pupus', 'poops');
+  String awayPctShort(int pct) => _t('$pct% fuera', '$pct% away');
+  String get summaryOnlyBadge => _t('Solo resumen', 'Summary only');
+  String get youBadge => _t('Tú', 'You');
+  String get groupNotFoundError => _t('No existe ningún grupo con ese código', 'No group found with that code');
+  String get authGenericError => _t('No se pudo completar. Revisa tus datos o conexión.', 'Could not complete. Check your details or connection.');
+  String relativeTime(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inSeconds < 60) return _t('ahora mismo', 'just now');
+    if (diff.inMinutes < 60) return _t('hace ${diff.inMinutes}m', '${diff.inMinutes}m ago');
+    if (diff.inHours < 24) return _t('hace ${diff.inHours}h', '${diff.inHours}h ago');
+    if (diff.inDays < 7) return _t('hace ${diff.inDays}d', '${diff.inDays}d ago');
+    final d = dt.day.toString().padLeft(2, '0');
+    final m = dt.month.toString().padLeft(2, '0');
+    return '$d/$m';
+  }
 
   String get backupSection => _t('Respaldo de datos', 'Data Backup');
   String get exportJsonLabel => _t('Exportar respaldo JSON', 'Export JSON backup');

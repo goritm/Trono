@@ -21,6 +21,7 @@ class SettingsService {
   static const _kAutoGps = 'auto_gps';
   static const _kHourlyRate = 'hourly_rate';
   static const _kCurrencySymbol = 'currency_symbol';
+  static const _kSelectedGroupId = 'selected_group_id';
 
   late final SharedPreferences _prefs;
 
@@ -158,5 +159,16 @@ class SettingsService {
 
   Future<void> setCurrencySymbol(String symbol) async {
     await _prefs.setString(_kCurrencySymbol, symbol);
+  }
+
+  // V2 Social selected group
+  String? get selectedGroupId => _prefs.getString(_kSelectedGroupId);
+
+  Future<void> setSelectedGroupId(String? groupId) async {
+    if (groupId == null || groupId.isEmpty) {
+      await _prefs.remove(_kSelectedGroupId);
+    } else {
+      await _prefs.setString(_kSelectedGroupId, groupId);
+    }
   }
 }

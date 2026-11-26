@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:trono/models/achievement.dart';
 import 'package:trono/models/bathroom_log.dart';
 import 'package:trono/models/insights.dart';
+import 'package:trono/models/social_models.dart';
 import 'package:trono/models/stats_summary.dart';
 import 'package:trono/services/location_service.dart';
 
@@ -241,6 +242,97 @@ void main() {
         expect(t, inInclusiveRange(0.0, 1.0));
         expect(seq.transform(t), inInclusiveRange(0.95, 1.05));
       }
+    });
+  });
+
+  group('V2 Multiplayer & Cloud Sync Privacy', () {
+    test('CloudLogMapper strips exact GPS coordinates and preserves them on pull', () {
+      final t1 = DateTime.utc(2026, 11, 26, 12, 0);
+      final t2 = DateTime.utc(2026, 11, 26, 12, 5);
+      final local = BathroomLog(
+        id: 'log-uuid-1',
+        type: BathroomType.poop,
+        timestamp: t1,
+        bristolType: 4,
+        tags: const ['coffee'],
+        note: 'Morning brew',
+        locationKind: LocationKind.work,
+        latitude: 40.4168,
+        longitude: -3.7038,
+        placeLabel: 'Oficina',
+        shareLevel: ShareLevel.summaryOnly,
+        createdAt: t1,
+        updatedAt: t1,
+      );
+
+      final cloudPayload = CloudLogMapper.toSupabaseRow(
+        local,
+        userId: 'user-1',
+      );
+      expect(cloudPayload.containsKey('latitude'), isFalse);
+      expect(cloudPayload.containsKey('longitude'), isFalse);
+      expect(cloudPayload['location_kind'], 'work');
+      expect(cloudPayload['share_level'], 'summary_only');
+
+      // Remote has a newer update (t2); merging must keep local lat/lng intact!
+      final remoteUpdated = Map<String, dynamic>.from(cloudPayload)
+        ..['note'] = 'Edited from another phone'
+        ..['updated_at'] = t2.toIso8601String();
+
+      final merges = CloudLogMapper.computeRemoteMerges(
+        remoteRows: [remoteUpdated],
+        localById: {local.id: local},
+      );
+      expect(merges, hasLength(1));
+      expect(merges.first.note, 'Edited from another phone');
+      expect(merges.first.latitude, closeTo(40.4168, 0.0001));
+      expect(merges.first.longitude, closeTo(-3.7038, 0.0001));
+      expect(merges.first.syncStatus, SyncStatus.synced);
+    });
+
+    test('SharedFeedItem enforces summary_only redaction & LeaderboardEntry computes away %', () {
+      const author = UserProfile(
+        id: 'u1',
+        displayName: 'Jose',
+        avatarEmoji: '👑',
+        totalXp: 350,
+        rankLevel: 3,
+        currentStreak: 4,
+      );
+
+      final summaryItem = SharedFeedItem.fromMap(
+        {
+          'log_id': 'l1',
+          'user_id': 'u1',
+          'type': 'poop',
+          'timestamp': '2026-11-26T10:00:00Z',
+          'location_kind': 'away',
+          'share_level': 'summary_only',
+          // Even if extra fields existed in a map, summary_only must drop them
+          'bristol_type': 4,
+          'note': 'Should be hidden',
+          'tags': ['coffee'],
+        },
+        author: author,
+      );
+      expect(summaryItem.bristolType, isNull);
+      expect(summaryItem.note, isNull);
+      expect(summaryItem.tags, isEmpty);
+      expect(summaryItem.locationKind, LocationKind.away);
+
+      final lb = LeaderboardEntry.fromMap({
+        'user_id': 'u1',
+        'display_name': 'Jose',
+        'avatar_emoji': '👑',
+        'total_xp': 350,
+        'rank_level': 3,
+        'current_streak': 4,
+        'poop_count': 8,
+        'away_count': 6,
+        'work_count': 3,
+        'total_duration_seconds': 1800,
+      });
+      expect(lb.awayPercent, 75);
     });
   });
 }

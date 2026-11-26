@@ -5,9 +5,11 @@ import 'package:material_ui/material_ui.dart';
 import '../l10n/app_strings.dart';
 import '../models/bathroom_log.dart';
 import '../services/backup_service.dart';
+import '../state/social_controller.dart';
 import '../state/trono_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/chunky_widgets.dart';
+import 'social_screen.dart';
 
 Future<void> showSalaryConfigDialog(
   BuildContext context,
@@ -118,9 +120,14 @@ Future<void> showSalaryConfigDialog(
 }
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key, required this.controller});
+  const SettingsScreen({
+    super.key,
+    required this.controller,
+    required this.social,
+  });
 
   final TronoController controller;
+  final SocialController social;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -239,6 +246,230 @@ class _SettingsScreenState extends State<SettingsScreen> {
           padding: const EdgeInsets.fromLTRB(16, 6, 16, 32),
           sliver: SliverList.list(
             children: [
+              _SectionTitle(s.accountCloudSection),
+              ListenableBuilder(
+                listenable: widget.social,
+                builder: (context, _) {
+                  final social = widget.social;
+                  if (!social.isSignedIn) {
+                    return ChunkyCard(
+                      color: TronoColors.obsidian,
+                      borderColor: const Color(0xFF343B4D),
+                      lipColor: TronoColors.obsidianLip,
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _ColorIcon(Icons.cloud_done_rounded, TronoColors.gold),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      s.cloudConnectTitle,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 15,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      s.cloudConnectBody,
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white.withValues(alpha: 0.72),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ChunkyButton(
+                                  color: TronoColors.terracotta,
+                                  lipColor: TronoColors.terracottaLip,
+                                  lipHeight: 4,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 11,
+                                  ),
+                                  onPressed: () => showAuthSheet(
+                                    context,
+                                    social,
+                                    initialSignUp: true,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      s.createAccountBtn,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 13.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              ChunkyButton(
+                                color: const Color(0xFF2B3140),
+                                lipColor: TronoColors.obsidianLip,
+                                borderColor: const Color(0xFF3E465B),
+                                lipHeight: 4,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 11,
+                                ),
+                                onPressed: () => showAuthSheet(
+                                  context,
+                                  social,
+                                  initialSignUp: false,
+                                ),
+                                child: Text(
+                                  s.signInBtn,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 13.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  final profile = social.myProfile;
+                  return ChunkyCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: Container(
+                            width: 40,
+                            height: 40,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: TronoColors.gold.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(13),
+                            ),
+                            child: Text(
+                              profile?.avatarEmoji ?? '👑',
+                              style: const TextStyle(fontSize: 20),
+                            ),
+                          ),
+                          title: Text(
+                            profile?.displayName ?? (social.currentEmail ?? 'Trono'),
+                            style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                          subtitle: Text(
+                            social.isSyncing
+                                ? s.syncingLabel
+                                : social.pendingSyncCount > 0
+                                    ? s.pendingSyncLabel(social.pendingSyncCount)
+                                    : '${social.currentEmail ?? ''} · ${s.allSyncedLabel}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: const Icon(Icons.edit_rounded, size: 19),
+                          onTap: () => showEditProfileDialog(context, social),
+                        ),
+                        const Divider(height: 1),
+                        ListTile(
+                          leading: _ColorIcon(
+                            Icons.sync_rounded,
+                            TronoColors.sage,
+                          ),
+                          title: Text(
+                            s.syncNowBtn,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          trailing: social.isSyncing
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.chevron_right_rounded),
+                          onTap: social.isSyncing
+                              ? null
+                              : () async {
+                                  final report = await social.syncNow(
+                                    refreshFeedAfter: true,
+                                  );
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        s.syncedToast(
+                                          report.pushedCount,
+                                          report.pulledCount,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                        ),
+                        const Divider(height: 1),
+                        ListTile(
+                          leading: _ColorIcon(
+                            Icons.logout_rounded,
+                            TronoColors.coral,
+                          ),
+                          title: Text(
+                            s.signOutBtn,
+                            style: const TextStyle(
+                              color: TronoColors.coral,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          onTap: () async {
+                            final ok = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: Text(s.signOutBtn),
+                                content: Text(s.signOutConfirmBody),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(ctx).pop(false),
+                                    child: Text(s.cancelTimer),
+                                  ),
+                                  FilledButton(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: TronoColors.coral,
+                                    ),
+                                    onPressed: () =>
+                                        Navigator.of(ctx).pop(true),
+                                    child: Text(s.signOutBtn),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (ok == true) {
+                              await social.signOut();
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 18),
+
               _SectionTitle(s.appearanceSection),
               ChunkyCard(
                 padding: const EdgeInsets.all(16),
@@ -549,45 +780,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           fontWeight: FontWeight.w600,
                           color: TronoColors.muted(context),
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              ChunkyCard(
-                color: TronoColors.obsidian,
-                borderColor: const Color(0xFF343B4D),
-                lipColor: TronoColors.obsidianLip,
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _ColorIcon(Icons.groups_rounded, TronoColors.gold),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            s.multiplayerTeaserTitle,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 14.5,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            s.multiplayerTeaserBody,
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white.withValues(alpha: 0.72),
-                            ),
-                          ),
-                        ],
                       ),
                     ),
                   ],

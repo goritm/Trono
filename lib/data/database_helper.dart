@@ -6,6 +6,9 @@ import '../models/bathroom_log.dart';
 /// Abstract repository so V2 cloud sync / multiplayer can plug in cleanly.
 abstract class BathroomRepository {
   Future<List<BathroomLog>> getAllLogs();
+  Future<List<BathroomLog>> getAllLogsIncludingDeleted();
+  Future<List<BathroomLog>> getPendingSyncLogs();
+  Future<void> markLogsSynced(List<String> ids);
   Future<void> upsertLog(BathroomLog log);
   Future<void> upsertLogsBatch(List<BathroomLog> logs);
   Future<void> softDeleteLog(String id);
@@ -81,6 +84,46 @@ class LocalBathroomRepository implements BathroomRepository {
       orderBy: 'timestamp DESC',
     );
     return rows.map(BathroomLog.fromDbMap).toList();
+  }
+
+  @override
+  Future<List<BathroomLog>> getAllLogsIncludingDeleted() async {
+    final db = await database;
+    final rows = await db.query(
+      _table,
+      orderBy: 'timestamp DESC',
+    );
+    return rows.map(BathroomLog.fromDbMap).toList();
+  }
+
+  @override
+  Future<List<BathroomLog>> getPendingSyncLogs() async {
+    final db = await database;
+    final rows = await db.query(
+      _table,
+      where: 'sync_status != ?',
+      whereArgs: [SyncStatus.synced.dbValue],
+      orderBy: 'updated_at ASC',
+    );
+    return rows.map(BathroomLog.fromDbMap).toList();
+  }
+
+  @override
+  Future<void> markLogsSynced(List<String> ids) async {
+    if (ids.isEmpty) return;
+    final db = await database;
+    await db.transaction((txn) async {
+      final batch = txn.batch();
+      for (final id in ids) {
+        batch.update(
+          _table,
+          {'sync_status': SyncStatus.synced.dbValue},
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+      }
+      await batch.commit(noResult: true);
+    });
   }
 
   @override
