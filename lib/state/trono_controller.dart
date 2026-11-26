@@ -11,6 +11,7 @@ import '../models/favorite_place.dart';
 import '../models/insights.dart';
 import '../models/monthly_comparison.dart';
 import '../models/stats_summary.dart';
+import '../models/trigger_lab.dart';
 import '../services/location_service.dart';
 import '../services/settings_service.dart';
 import '../services/update_checker_service.dart';
@@ -58,6 +59,7 @@ class TronoController extends ChangeNotifier {
   List<TronoInsight> _insights = const [];
   MonthlyComparisonSnapshot _monthlyComparison =
       MonthlyComparisonEngine.compute(const []);
+  TriggerLabSnapshot _triggerLab = TriggerLabEngine.analyze(const []);
 
   bool _isLoading = true;
   DateTime? _activeTimerStart;
@@ -101,6 +103,7 @@ class TronoController extends ChangeNotifier {
   List<FavoritePlace> get favoritePlaces => _favoritePlaces;
   List<TopPlaceStat> get topPlaces => _topPlaces;
   MonthlyComparisonSnapshot get monthlyComparison => _monthlyComparison;
+  TriggerLabSnapshot get triggerLab => _triggerLab;
   bool get isLoading => _isLoading;
 
   bool get isTimerRunning => _activeTimerStart != null;
@@ -239,6 +242,7 @@ class TronoController extends ChangeNotifier {
       homeLat: _homeLat,
       homeLng: _homeLng,
     );
+    _triggerLab = TriggerLabEngine.analyze(_logs);
   }
 
   WrappedSnapshot buildWrapped(WrappedPeriod period) {
