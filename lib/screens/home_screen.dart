@@ -37,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
     BuildContext context,
     BathroomType type, {
     LocationKind? locationKind,
+    Duration sheetDelay = Duration.zero,
   }) async {
     HapticFeedback.mediumImpact();
     final s = AppStrings.of(context);
@@ -69,6 +70,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+
+    if (sheetDelay > Duration.zero) {
+      await Future<void>.delayed(sheetDelay);
+      if (!context.mounted) return;
+    }
 
     final result = await showLogDetailSheet(
       context,
@@ -329,76 +335,16 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 10),
 
-              // THE SINGLE CHUNKY 3D HERO BUTTON
-              ChunkyButton(
-                width: double.infinity,
-                color: TronoColors.terracotta,
-                lipColor: TronoColors.terracottaLip,
-                lipHeight: 7,
-                borderRadius: 26,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 22,
-                  vertical: 24,
-                ),
-                onPressed: () => _handleQuickTap(
+              // THE SINGLE ANIMATED 3D HERO BUTTON (with juicy click feedback + brief delay before sheet)
+              _AnimatedHeroLogButton(
+                title: s.heroLogTitle.toUpperCase(),
+                successTitle: s.heroLoggedFlash.toUpperCase(),
+                subtitle: heroSub,
+                onConfirmedTap: () => _handleQuickTap(
                   context,
                   BathroomType.poop,
                   locationKind: _selectedLocationKind,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text('💩', style: TextStyle(fontSize: 36)),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            s.heroLogTitle.toUpperCase(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            heroSub,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.22),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.add_rounded,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                  ],
+                  sheetDelay: const Duration(milliseconds: 360),
                 ),
               ),
               const SizedBox(height: 12),
@@ -593,6 +539,224 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AnimatedHeroLogButton extends StatefulWidget {
+  const _AnimatedHeroLogButton({
+    required this.title,
+    required this.successTitle,
+    required this.subtitle,
+    required this.onConfirmedTap,
+  });
+
+  final String title;
+  final String successTitle;
+  final String subtitle;
+  final Future<void> Function() onConfirmedTap;
+
+  @override
+  State<_AnimatedHeroLogButton> createState() => _AnimatedHeroLogButtonState();
+}
+
+class _AnimatedHeroLogButtonState extends State<_AnimatedHeroLogButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _popCtrl;
+  late final Animation<double> _emojiScale;
+  late final Animation<double> _emojiTilt;
+  late final Animation<double> _cardBounce;
+
+  bool _pressed = false;
+  bool _celebrating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _popCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 360),
+    );
+    _emojiScale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.30), weight: 45),
+      TweenSequenceItem(tween: Tween(begin: 1.30, end: 0.94), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 0.94, end: 1.0), weight: 25),
+    ]).animate(CurvedAnimation(parent: _popCtrl, curve: Curves.easeOutCubic));
+
+    _emojiTilt = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: -0.16), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: -0.16, end: 0.14), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 0.14, end: 0.0), weight: 30),
+    ]).animate(CurvedAnimation(parent: _popCtrl, curve: Curves.easeInOut));
+
+    _cardBounce = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.97, end: 1.02), weight: 55),
+      TweenSequenceItem(tween: Tween(begin: 1.02, end: 1.0), weight: 45),
+    ]).animate(CurvedAnimation(parent: _popCtrl, curve: Curves.easeOutBack));
+  }
+
+  @override
+  void dispose() {
+    _popCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _triggerTap() async {
+    if (_celebrating) return;
+    setState(() {
+      _pressed = false;
+      _celebrating = true;
+    });
+    _popCtrl.forward(from: 0);
+
+    try {
+      await widget.onConfirmedTap();
+    } finally {
+      if (mounted) {
+        setState(() => _celebrating = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentLip = _pressed ? 1.5 : 7.0;
+    final topOffset = _pressed ? 5.5 : 0.0;
+    final faceColor = _celebrating ? TronoColors.gold : TronoColors.terracotta;
+    final lipColor =
+        _celebrating ? TronoColors.goldLip : TronoColors.terracottaLip;
+    final fgColor = _celebrating ? TronoColors.obsidian : Colors.white;
+
+    return GestureDetector(
+      onTapDown: (_) {
+        if (_celebrating) return;
+        HapticFeedback.lightImpact();
+        setState(() => _pressed = true);
+      },
+      onTapUp: (_) => _triggerTap(),
+      onTapCancel: () {
+        if (_pressed) setState(() => _pressed = false);
+      },
+      child: AnimatedBuilder(
+        animation: _popCtrl,
+        builder: (context, child) {
+          final scale = _popCtrl.isAnimating ? _cardBounce.value : 1.0;
+          return Transform.scale(scale: scale, child: child);
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 90),
+          curve: Curves.easeOut,
+          width: double.infinity,
+          margin: EdgeInsets.only(top: topOffset),
+          padding: EdgeInsets.only(bottom: currentLip),
+          decoration: BoxDecoration(
+            color: lipColor,
+            borderRadius: BorderRadius.circular(26),
+            boxShadow: _pressed
+                ? null
+                : [
+                    BoxShadow(
+                      color: faceColor.withValues(alpha: 0.28),
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+          ),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+            decoration: BoxDecoration(
+              color: faceColor,
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.22),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                AnimatedBuilder(
+                  animation: _popCtrl,
+                  builder: (context, child) {
+                    return Transform.rotate(
+                      angle: _emojiTilt.value,
+                      child: Transform.scale(
+                        scale: _emojiScale.value,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: fgColor.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text('💩', style: TextStyle(fontSize: 36)),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 150),
+                        child: Align(
+                          key: ValueKey(_celebrating),
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            _celebrating ? widget.successTitle : widget.title,
+                            style: TextStyle(
+                              color: fgColor,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        widget.subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: fgColor.withValues(alpha: 0.86),
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: fgColor.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 160),
+                    transitionBuilder: (child, anim) =>
+                        ScaleTransition(scale: anim, child: child),
+                    child: Icon(
+                      _celebrating ? Icons.check_rounded : Icons.add_rounded,
+                      key: ValueKey(_celebrating),
+                      color: fgColor,
+                      size: 28,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

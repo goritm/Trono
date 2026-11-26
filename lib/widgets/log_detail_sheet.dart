@@ -305,75 +305,7 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
                       const SizedBox(height: 18),
                     ],
 
-                    // Location: Home vs Away + GPS Pin + Place Label
-                    _SectionLabel(s.locationField),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        ...LocationKind.values.map((kind) {
-                          final selected = _locationKind == kind;
-                          return ChoiceChip(
-                            label: Text('${kind.emoji} ${s.locationKindName(kind)}'),
-                            selected: selected,
-                            onSelected: (_) => setState(() {
-                              _locationKind = selected ? null : kind;
-                            }),
-                          );
-                        }),
-                        if (_latitude != null && _longitude != null)
-                          InputChip(
-                            avatar: const Icon(
-                              Icons.location_on_rounded,
-                              size: 16,
-                              color: TronoColors.terracotta,
-                            ),
-                            label: Text(s.gpsPinnedLabel),
-                            onDeleted: () => setState(() {
-                              _latitude = null;
-                              _longitude = null;
-                            }),
-                          )
-                        else
-                          ActionChip(
-                            avatar: _capturingGps
-                                ? const SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.my_location_rounded, size: 16),
-                            label: Text(s.captureGpsButton),
-                            onPressed: _capturingGps ? null : _captureGps,
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _placeController,
-                      textCapitalization: TextCapitalization.sentences,
-                      decoration: InputDecoration(
-                        hintText: s.placeNamePlaceholder,
-                        prefixIcon: const Icon(Icons.place_outlined, size: 18),
-                        filled: true,
-                        fillColor: scheme.surfaceContainerHighest
-                            .withValues(alpha: 0.45),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-
-                    // Bristol Scale (shown when poop or both)
+                    // 1. Bristol Scale (first & fastest when logging poop)
                     if (_type.includesPoop) ...[
                       _SectionLabel(s.bristolField),
                       const SizedBox(height: 8),
@@ -450,8 +382,101 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
                         ),
                       ],
                       const SizedBox(height: 18),
+                    ],
 
-                      // Size
+                    // 2. Food & digestive triggers (moved right near the top!)
+                    _SectionLabel(s.tagsField),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: kDefaultQuickTags.map((tag) {
+                        final selected = _tags.contains(tag);
+                        return FilterChip(
+                          label: Text(s.tagLabel(tag)),
+                          selected: selected,
+                          onSelected: (val) => setState(() {
+                            if (val) {
+                              _tags.add(tag);
+                            } else {
+                              _tags.remove(tag);
+                            }
+                          }),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 18),
+
+                    // 3. Location: Home / Work / Away + GPS Pin + Place Label
+                    _SectionLabel(s.locationField),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ...LocationKind.values.map((kind) {
+                          final selected = _locationKind == kind;
+                          return ChoiceChip(
+                            label: Text('${kind.emoji} ${s.locationKindName(kind)}'),
+                            selected: selected,
+                            onSelected: (_) => setState(() {
+                              _locationKind = selected ? null : kind;
+                            }),
+                          );
+                        }),
+                        if (_latitude != null && _longitude != null)
+                          InputChip(
+                            avatar: const Icon(
+                              Icons.location_on_rounded,
+                              size: 16,
+                              color: TronoColors.terracotta,
+                            ),
+                            label: Text(s.gpsPinnedLabel),
+                            onDeleted: () => setState(() {
+                              _latitude = null;
+                              _longitude = null;
+                            }),
+                          )
+                        else
+                          ActionChip(
+                            avatar: _capturingGps
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.my_location_rounded, size: 16),
+                            label: Text(s.captureGpsButton),
+                            onPressed: _capturingGps ? null : _captureGps,
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _placeController,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: InputDecoration(
+                        hintText: s.placeNamePlaceholder,
+                        prefixIcon: const Icon(Icons.place_outlined, size: 18),
+                        filled: true,
+                        fillColor: scheme.surfaceContainerHighest
+                            .withValues(alpha: 0.45),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+
+                    // 4. Size
+                    if (_type.includesPoop) ...[
                       _SectionLabel(s.sizeField),
                       const SizedBox(height: 8),
                       Wrap(
@@ -572,29 +597,6 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
                       ),
                       const SizedBox(height: 18),
                     ],
-
-                    // Quick tags
-                    _SectionLabel(s.tagsField),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: kDefaultQuickTags.map((tag) {
-                        final selected = _tags.contains(tag);
-                        return FilterChip(
-                          label: Text(s.tagLabel(tag)),
-                          selected: selected,
-                          onSelected: (val) => setState(() {
-                            if (val) {
-                              _tags.add(tag);
-                            } else {
-                              _tags.remove(tag);
-                            }
-                          }),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 18),
 
                     // Free note
                     _SectionLabel(s.noteField),

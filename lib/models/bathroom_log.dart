@@ -176,11 +176,11 @@ enum SyncStatus {
 const List<String> kDefaultQuickTags = [
   'coffee',
   'spicy',
+  'fast_food',
   'dairy',
   'alcohol',
-  'fast_food',
-  'fiber',
   'sweets',
+  'fiber',
   'stress',
 ];
 
