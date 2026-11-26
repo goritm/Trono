@@ -63,6 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
       mode: LogSheetMode.quickFollowUp,
       initialLog: savedLog,
       defaultShareLevel: controller.defaultShareLevel,
+      favoritePlaces: controller.favoritePlaces,
     );
 
     if (result?.deleted == true) {
@@ -122,6 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       mode: LogSheetMode.createPast,
       defaultShareLevel: controller.defaultShareLevel,
+      favoritePlaces: controller.favoritePlaces,
     );
     if (result?.savedLog == null) return;
     final unlocks = await controller.saveLog(result!.savedLog!);
@@ -139,6 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
       mode: LogSheetMode.editExisting,
       initialLog: log,
       defaultShareLevel: controller.defaultShareLevel,
+      favoritePlaces: controller.favoritePlaces,
     );
     if (result == null) return;
     if (result.deleted) {

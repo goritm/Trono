@@ -200,6 +200,7 @@ class BathroomLog {
     this.latitude,
     this.longitude,
     this.placeLabel,
+    this.rating,
     this.shareLevel = ShareLevel.summaryOnly,
     this.syncStatus = SyncStatus.localOnly,
     required this.createdAt,
@@ -223,6 +224,9 @@ class BathroomLog {
   final double? latitude;
   final double? longitude;
   final String? placeLabel;
+
+  // V2.2 Bathroom Rating (1..5 stars, stored locally)
+  final int? rating;
 
   // V2 sync & multiplayer metadata
   final ShareLevel shareLevel;
@@ -257,6 +261,7 @@ class BathroomLog {
       locationKind != null ||
       hasCoordinates ||
       (placeLabel != null && placeLabel!.trim().isNotEmpty) ||
+      rating != null ||
       (note != null && note!.trim().isNotEmpty);
 
   BathroomLog copyWith({
@@ -283,6 +288,8 @@ class BathroomLog {
     bool clearCoordinates = false,
     String? placeLabel,
     bool clearPlaceLabel = false,
+    int? rating,
+    bool clearRating = false,
     ShareLevel? shareLevel,
     SyncStatus? syncStatus,
     DateTime? createdAt,
@@ -306,6 +313,7 @@ class BathroomLog {
       latitude: clearCoordinates ? null : (latitude ?? this.latitude),
       longitude: clearCoordinates ? null : (longitude ?? this.longitude),
       placeLabel: clearPlaceLabel ? null : (placeLabel ?? this.placeLabel),
+      rating: clearRating ? null : (rating ?? this.rating),
       shareLevel: shareLevel ?? this.shareLevel,
       syncStatus: syncStatus ?? this.syncStatus,
       createdAt: createdAt ?? this.createdAt,
@@ -330,6 +338,7 @@ class BathroomLog {
       'latitude': latitude,
       'longitude': longitude,
       'place_label': placeLabel,
+      'rating': rating,
       'share_level': shareLevel.dbValue,
       'sync_status': syncStatus.dbValue,
       'created_at': createdAt.millisecondsSinceEpoch,
@@ -361,6 +370,7 @@ class BathroomLog {
       latitude: (map['latitude'] as num?)?.toDouble(),
       longitude: (map['longitude'] as num?)?.toDouble(),
       placeLabel: map['place_label'] as String?,
+      rating: (map['rating'] as num?)?.toInt(),
       shareLevel: ShareLevel.fromDb(map['share_level'] as String?),
       syncStatus: SyncStatus.fromDb(map['sync_status'] as String?),
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
@@ -387,6 +397,7 @@ class BathroomLog {
       'latitude': latitude,
       'longitude': longitude,
       'placeLabel': placeLabel,
+      'rating': rating,
       'shareLevel': shareLevel.dbValue,
       'syncStatus': syncStatus.dbValue,
       'createdAt': createdAt.toIso8601String(),
@@ -423,6 +434,9 @@ class BathroomLog {
           ? (json['longitude'] as num).toDouble()
           : double.tryParse(json['longitude']?.toString() ?? ''),
       placeLabel: json['placeLabel']?.toString(),
+      rating: json['rating'] is int
+          ? json['rating'] as int
+          : int.tryParse(json['rating']?.toString() ?? ''),
       shareLevel: ShareLevel.fromDb(json['shareLevel']?.toString()),
       syncStatus: SyncStatus.fromDb(json['syncStatus']?.toString()),
       createdAt:

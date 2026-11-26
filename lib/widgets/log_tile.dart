@@ -178,37 +178,39 @@ class _LogTileState extends State<LogTile> with SingleTickerProviderStateMixin {
                     ),
                   ],
                 ),
-                if (chips.isNotEmpty) ...[
+                if (chips.isNotEmpty || log.rating != null) ...[
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
-                    children: chips
-                        .map(
-                          (c) => Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 9,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: TronoColors.bg(context),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: TronoColors.border(context),
-                                width: 1.2,
-                              ),
-                            ),
-                            child: Text(
-                              c,
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                color: TronoColors.ink(context),
-                                fontWeight: FontWeight.w700,
-                              ),
+                    children: [
+                      if (log.rating != null)
+                        _RatingPill(rating: log.rating!),
+                      ...chips.map(
+                        (c) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: TronoColors.bg(context),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: TronoColors.border(context),
+                              width: 1.2,
                             ),
                           ),
-                        )
-                        .toList(),
+                          child: Text(
+                            c,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: TronoColors.ink(context),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
                 if (log.note != null && log.note!.trim().isNotEmpty) ...[
@@ -331,6 +333,34 @@ class _DrawerActionBtn extends StatelessWidget {
             height: double.infinity,
             child: Icon(icon, color: iconColor, size: 22),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RatingPill extends StatelessWidget {
+  const _RatingPill({required this.rating});
+
+  final int rating;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF3A3014) : const Color(0xFFFEF3D2),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: TronoColors.gold, width: 1.3),
+      ),
+      child: Text(
+        '⭐ $rating',
+        style: TextStyle(
+          fontSize: 11.5,
+          color: isDark ? TronoColors.gold : const Color(0xFF694B05),
+          fontWeight: FontWeight.w800,
+          fontFeatures: const [FontFeature.tabularFigures()],
         ),
       ),
     );
