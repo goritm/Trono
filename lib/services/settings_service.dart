@@ -53,7 +53,7 @@ class SettingsService {
   }
 
   Locale get locale {
-    final code = _prefs.getString(_kLocaleCode) ?? 'es';
+    final code = _prefs.getString(_kLocaleCode) ?? 'en';
     return Locale(code);
   }
 

@@ -69,7 +69,7 @@ class TronoApp extends StatelessWidget {
           darkTheme: AppTheme.dark(),
           themeMode: controller.themeMode,
           locale: controller.locale,
-          supportedLocales: const [Locale('es'), Locale('en')],
+          supportedLocales: const [Locale('en'), Locale('es')],
           localizationsDelegates: const [
             AppStrings.delegate,
             ...GlobalMaterialLocalizations.delegates,

@@ -1145,7 +1145,7 @@ void main() {
           builder: (context, _) => MaterialApp(
             theme: AppTheme.light(),
             locale: controller.locale,
-            supportedLocales: const [Locale('es'), Locale('en')],
+            supportedLocales: const [Locale('en'), Locale('es')],
             localizationsDelegates: const [
               AppStrings.delegate,
               ...GlobalMaterialLocalizations.delegates,
@@ -1159,38 +1159,38 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Page 1: Welcome + Language selector
-      expect(find.text('Tu trono, tus reglas.'), findsOneWidget);
-      expect(find.text('Español'), findsOneWidget);
-      expect(find.text('English'), findsOneWidget);
-
-      // Instant language switch to English
-      await tester.ensureVisible(find.text('English'));
-      await tester.tap(find.text('English'));
-      await tester.pumpAndSettle();
+      // Page 1: Welcome + Language selector (English default)
       expect(find.text('Your throne, your rules.'), findsOneWidget);
+      expect(find.text('English'), findsOneWidget);
+      expect(find.text('Español'), findsOneWidget);
 
-      // Switch back to Spanish
+      // Instant language switch to Spanish
       await tester.ensureVisible(find.text('Español'));
       await tester.tap(find.text('Español'));
       await tester.pumpAndSettle();
       expect(find.text('Tu trono, tus reglas.'), findsOneWidget);
 
-      // Advance to Page 2: Home & Territory
-      await tester.tap(find.text('SIGUIENTE'));
+      // Switch back to English
+      await tester.ensureVisible(find.text('English'));
+      await tester.tap(find.text('English'));
       await tester.pumpAndSettle();
-      expect(find.text('Conquista el mapa 🏠🌍'), findsOneWidget);
-      expect(find.text('Guardar ubicación actual como Casa'), findsOneWidget);
+      expect(find.text('Your throne, your rules.'), findsOneWidget);
+
+      // Advance to Page 2: Home & Territory
+      await tester.tap(find.text('NEXT'));
+      await tester.pumpAndSettle();
+      expect(find.text('Conquer the map 🏠🌍'), findsOneWidget);
+      expect(find.text('Set current spot as Home'), findsOneWidget);
 
       // Advance to Page 3: Solo or Friends
-      await tester.tap(find.text('SIGUIENTE'));
+      await tester.tap(find.text('NEXT'));
       await tester.pumpAndSettle();
-      expect(find.text('Crear cuenta / Unirme a un grupo'), findsOneWidget);
-      expect(find.text('Empezar en local (sin cuenta)'), findsOneWidget);
+      expect(find.text('Create account / Join a group'), findsOneWidget);
+      expect(find.text('Start locally (no account)'), findsOneWidget);
 
       // Complete locally
-      await tester.ensureVisible(find.text('Empezar en local (sin cuenta)'));
-      await tester.tap(find.text('Empezar en local (sin cuenta)'));
+      await tester.ensureVisible(find.text('Start locally (no account)'));
+      await tester.tap(find.text('Start locally (no account)'));
       await tester.pumpAndSettle();
       expect(controller.onboardingCompleted, isTrue);
 
@@ -1229,42 +1229,42 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Verify exactly 4 clean bottom navigation destinations
+      // Verify exactly 4 clean bottom navigation destinations (English default)
       final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
       expect(navBar.destinations, hasLength(4));
-      expect(find.text('Registrar'), findsOneWidget);
+      expect(find.text('Log'), findsOneWidget);
       expect(find.text('Stats'), findsOneWidget);
-      expect(find.text('Mapa'), findsOneWidget);
-      expect(find.text('Amigos'), findsOneWidget);
+      expect(find.text('Map'), findsOneWidget);
+      expect(find.text('Friends'), findsOneWidget);
 
-      // Tap Stats tab -> verify 3 clean sub-tabs (Calendario | Análisis | Logros)
+      // Tap Stats tab -> verify 3 clean sub-tabs (Calendar | Insights | Awards)
       await tester.tap(find.text('Stats'));
       await tester.pumpAndSettle();
-      expect(find.text('Calendario'), findsOneWidget);
-      expect(find.text('Análisis'), findsOneWidget);
-      expect(find.text('Logros'), findsOneWidget);
+      expect(find.text('Calendar'), findsOneWidget);
+      expect(find.text('Insights'), findsOneWidget);
+      expect(find.text('Awards'), findsOneWidget);
 
-      // Switch to Análisis sub-tab
-      await tester.tap(find.text('Análisis'));
+      // Switch to Insights sub-tab
+      await tester.tap(find.text('Insights'));
       await tester.pumpAndSettle();
-      expect(find.text('ESTE MES VS MES PASADO'), findsOneWidget);
+      expect(find.text('THIS MONTH VS LAST MONTH'), findsOneWidget);
 
-      // Back to Registrar, tap NV.1 badge -> jumps directly to Stats > Logros
-      await tester.tap(find.text('Registrar'));
+      // Back to Log, tap NV.1 badge -> jumps directly to Stats > Awards
+      await tester.tap(find.text('Log'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('NV.1'));
       await tester.pumpAndSettle();
-      expect(find.text('ESCALERA DE RANGOS'), findsOneWidget);
+      expect(find.text('RANK LADDER'), findsOneWidget);
 
-      // Open Settings via top-right gear icon -> verify Logros y Rangos shortcut
+      // Open Settings via top-right gear icon -> verify Awards & Ranks shortcut
       await tester.tap(find.byIcon(Icons.settings_outlined).first);
       await tester.pumpAndSettle();
-      expect(find.text('Ajustes'), findsOneWidget);
-      expect(find.text('Logros y Rangos'), findsOneWidget);
+      expect(find.text('Settings'), findsOneWidget);
+      expect(find.text('Awards & Ranks'), findsOneWidget);
 
-      await tester.tap(find.text('Logros y Rangos'));
+      await tester.tap(find.text('Awards & Ranks'));
       await tester.pumpAndSettle();
-      expect(find.text('ESCALERA DE RANGOS'), findsOneWidget);
+      expect(find.text('RANK LADDER'), findsOneWidget);
 
       social.dispose();
       controller.dispose();
