@@ -511,6 +511,7 @@ class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
               ),
               const SizedBox(height: 10),
               GridView.count(
+                padding: EdgeInsets.zero,
                 crossAxisCount: 2,
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
@@ -1177,6 +1178,7 @@ class _MonthlyHeatmapGrid extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         GridView.builder(
+          padding: EdgeInsets.zero,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: totalCells,

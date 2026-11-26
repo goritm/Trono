@@ -187,9 +187,9 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           color: isCurrent
-                              ? TronoColors.gold.withValues(
-                                  alpha: isDark ? 0.18 : 0.14,
-                                )
+                              ? (isDark
+                                  ? const Color(0xFF2B2618)
+                                  : const Color(0xFFFFF8E6))
                               : TronoColors.surface(context),
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(
@@ -294,6 +294,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
 
               // Clean 2-Column Badge Grid (Gold Unlocked / Muted Locked)
               GridView.builder(
+                padding: EdgeInsets.zero,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: filtered.length,
