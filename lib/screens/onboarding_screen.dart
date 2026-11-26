@@ -314,8 +314,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   width: double.infinity,
                   child: SegmentedButton<String>(
                     segments: const [
-                      ButtonSegment(value: 'es', label: Text('Español')),
                       ButtonSegment(value: 'en', label: Text('English')),
+                      ButtonSegment(value: 'es', label: Text('Español')),
                     ],
                     selected: {widget.controller.locale.languageCode},
                     onSelectionChanged: (set) =>

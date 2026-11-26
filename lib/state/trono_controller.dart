@@ -66,7 +66,7 @@ class TronoController extends ChangeNotifier {
 
   // Settings mirrors
   ThemeMode _themeMode = ThemeMode.system;
-  Locale _locale = const Locale('es');
+  Locale _locale = const Locale('en');
   ShareLevel _defaultShareLevel = ShareLevel.summaryOnly;
   bool _lockEnabled = false;
   bool _biometricEnabled = true;

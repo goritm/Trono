@@ -10,7 +10,7 @@ class AppStrings {
 
   static AppStrings of(BuildContext context) {
     return Localizations.of<AppStrings>(context, AppStrings) ??
-        AppStrings(const Locale('es'));
+        AppStrings(const Locale('en'));
   }
 
   static const LocalizationsDelegate<AppStrings> delegate =
