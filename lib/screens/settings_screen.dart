@@ -461,55 +461,80 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               _SectionTitle(s.appearanceSection),
               ChunkyCard(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.zero,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      s.languageLabel,
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: SegmentedButton<String>(
-                        segments: const [
-                          ButtonSegment(value: 'es', label: Text('Español')),
-                          ButtonSegment(value: 'en', label: Text('English')),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            s.languageLabel,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: SegmentedButton<String>(
+                              segments: const [
+                                ButtonSegment(value: 'es', label: Text('Español')),
+                                ButtonSegment(value: 'en', label: Text('English')),
+                              ],
+                              selected: {ctrl.locale.languageCode},
+                              onSelectionChanged: (set) =>
+                                  ctrl.setLocale(Locale(set.first)),
+                              showSelectedIcon: false,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            s.themeLabel,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: SegmentedButton<ThemeMode>(
+                              segments: [
+                                ButtonSegment(
+                                  value: ThemeMode.system,
+                                  label: Text(s.themeSystem),
+                                ),
+                                ButtonSegment(
+                                  value: ThemeMode.light,
+                                  label: Text(s.themeLight),
+                                ),
+                                ButtonSegment(
+                                  value: ThemeMode.dark,
+                                  label: Text(s.themeDark),
+                                ),
+                              ],
+                              selected: {ctrl.themeMode},
+                              onSelectionChanged: (set) =>
+                                  ctrl.setThemeMode(set.first),
+                              showSelectedIcon: false,
+                            ),
+                          ),
                         ],
-                        selected: {ctrl.locale.languageCode},
-                        onSelectionChanged: (set) =>
-                            ctrl.setLocale(Locale(set.first)),
-                        showSelectedIcon: false,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      s.themeLabel,
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: SegmentedButton<ThemeMode>(
-                        segments: [
-                          ButtonSegment(
-                            value: ThemeMode.system,
-                            label: Text(s.themeSystem),
-                          ),
-                          ButtonSegment(
-                            value: ThemeMode.light,
-                            label: Text(s.themeLight),
-                          ),
-                          ButtonSegment(
-                            value: ThemeMode.dark,
-                            label: Text(s.themeDark),
-                          ),
-                        ],
-                        selected: {ctrl.themeMode},
-                        onSelectionChanged: (set) =>
-                            ctrl.setThemeMode(set.first),
-                        showSelectedIcon: false,
+                    const Divider(height: 1),
+                    Material(
+                      type: MaterialType.transparency,
+                      child: ListTile(
+                        leading: _ColorIcon(
+                          Icons.waving_hand_rounded,
+                          TronoColors.gold,
+                        ),
+                        title: Text(
+                          s.replayWelcomeLabel,
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        subtitle: Text(s.replayWelcomeSub),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: ctrl.resetOnboarding,
                       ),
                     ),
                   ],

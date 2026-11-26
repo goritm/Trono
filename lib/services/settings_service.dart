@@ -22,6 +22,7 @@ class SettingsService {
   static const _kHourlyRate = 'hourly_rate';
   static const _kCurrencySymbol = 'currency_symbol';
   static const _kSelectedGroupId = 'selected_group_id';
+  static const _kOnboardingCompleted = 'onboarding_completed';
 
   late final SharedPreferences _prefs;
 
@@ -170,5 +171,13 @@ class SettingsService {
     } else {
       await _prefs.setString(_kSelectedGroupId, groupId);
     }
+  }
+
+  // V2.2 Onboarding completion flag
+  bool get onboardingCompleted =>
+      _prefs.getBool(_kOnboardingCompleted) ?? false;
+
+  Future<void> setOnboardingCompleted(bool completed) async {
+    await _prefs.setBool(_kOnboardingCompleted, completed);
   }
 }

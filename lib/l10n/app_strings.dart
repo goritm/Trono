@@ -660,6 +660,76 @@ class AppStrings {
     'Autentícate para abrir Trono',
     'Authenticate to open Trono',
   );
+
+  // V2.2 Onboarding & Replay Welcome
+  String get replayWelcomeLabel => _t(
+    'Ver bienvenida de nuevo',
+    'Replay welcome',
+  );
+  String get replayWelcomeSub => _t(
+    'Repasa idioma, tu Casa y las opciones iniciales',
+    'Revisit language, Home setup & starter options',
+  );
+  String get onboardingNextBtn => _t('Siguiente', 'Next');
+  String get onboardingBackBtn => _t('Atrás', 'Back');
+
+  String get onboardingWelcomeBadge => _t('Bienvenido a Trono', 'Welcome to Trono');
+  String get onboardingWelcomeTitle => _t('Tu trono, tus reglas.', 'Your throne, your rules.');
+  String get onboardingWelcomePitch => _t(
+    'Registra cada pupú en 1 toque. Tus datos, tu mapa y tu sueldo se quedan 100% privados en tu teléfono.',
+    'Log every poop in 1 tap. Your history, map & pay rate stay 100% private on your phone.',
+  );
+  String get onboardingPerkOneTap => _t(
+    'Registro instantáneo en 1 toque',
+    'Instant 1-tap logging',
+  );
+  String get onboardingPerkPrivate => _t(
+    'Offline-first y privado por diseño',
+    'Offline-first & private by design',
+  );
+  String get onboardingPerkStats => _t(
+    'Rangos, logros, mapa y Trono Wrapped',
+    'Ranks, awards, map & Trono Wrapped',
+  );
+  String get onboardingChooseLang => _t('Elige tu idioma', 'Choose your language');
+
+  String get onboardingHomeBadge => _t('Tu Casa y Territorio', 'Your Home & Territory');
+  String get onboardingHomeTitle => _t('Conquista el mapa 🏠🌍', 'Conquer the map 🏠🌍');
+  String get onboardingHomeBody => _t(
+    'Detecta automáticamente tus pupús en Casa vs Fuera y desbloquea tu mapa de territorio.',
+    'Auto-detect Home vs Away poops and build your personal territory map.',
+  );
+  String get onboardingHomeSavedBtn => _t(
+    'Casa guardada · Actualizar',
+    'Home saved · Update',
+  );
+  String get onboardingGpsPrivacyNote => _t(
+    'Tus coordenadas GPS exactas se guardan 100% en local en tu dispositivo y nunca salen a la nube.',
+    'Your exact GPS coordinates stay 100% local on your device and are never uploaded to the cloud.',
+  );
+
+  String get onboardingSocialBadge => _t('Solo o con Amigos', 'Solo or with Friends');
+  String get onboardingSocialTitle => _t('Tú eliges cómo usarlo 👥', 'Choose how you play 👥');
+  String get onboardingSocialBody => _t(
+    'Úsalo 100% offline y local, o crea una cuenta gratis para competir en grupos privados con tu pareja o amigos.',
+    'Use Trono 100% locally offline, or create a free account to compete in private groups with your partner or friends.',
+  );
+  String get onboardingCreateOrJoinBtn => _t(
+    'Crear cuenta / Unirme a un grupo',
+    'Create account / Join a group',
+  );
+  String get onboardingStartLocalBtn => _t(
+    'Empezar en local (sin cuenta)',
+    'Start locally (no account)',
+  );
+  String get onboardingAlreadySignedInBtn => _t(
+    '¡Entrar a Trono!',
+    'Enter Trono!',
+  );
+  String get onboardingSocialNote => _t(
+    'Siempre podrás conectar o quitar tu cuenta más tarde desde Ajustes.',
+    'You can always connect or remove your account later in Settings.',
+  );
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

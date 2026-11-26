@@ -1,13 +1,65 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:trono/data/database_helper.dart';
+import 'package:trono/l10n/app_strings.dart';
 import 'package:trono/models/achievement.dart';
 import 'package:trono/models/bathroom_log.dart';
 import 'package:trono/models/insights.dart';
 import 'package:trono/models/social_models.dart';
 import 'package:trono/models/social_plus.dart';
 import 'package:trono/models/stats_summary.dart';
+import 'package:trono/screens/onboarding_screen.dart';
 import 'package:trono/services/location_service.dart';
+import 'package:trono/services/settings_service.dart';
+import 'package:trono/state/social_controller.dart';
+import 'package:trono/state/trono_controller.dart';
+import 'package:trono/theme/app_theme.dart';
+import 'package:trono/widgets/confetti_overlay.dart';
 import 'package:trono/widgets/trono_toast.dart';
+
+class _InMemoryBathroomRepository implements BathroomRepository {
+  _InMemoryBathroomRepository([List<BathroomLog>? initial])
+      : _logs = List<BathroomLog>.from(initial ?? const []);
+
+  final List<BathroomLog> _logs;
+
+  @override
+  Future<List<BathroomLog>> getAllLogs() async =>
+      _logs.where((l) => l.deletedAt == null).toList();
+
+  @override
+  Future<List<BathroomLog>> getAllLogsIncludingDeleted() async =>
+      List<BathroomLog>.from(_logs);
+
+  @override
+  Future<List<BathroomLog>> getPendingSyncLogs() async =>
+      _logs.where((l) => l.syncStatus != SyncStatus.synced).toList();
+
+  @override
+  Future<void> markLogsSynced(List<String> ids) async {}
+
+  @override
+  Future<void> upsertLog(BathroomLog log) async {
+    _logs.removeWhere((l) => l.id == log.id);
+    _logs.add(log);
+  }
+
+  @override
+  Future<void> upsertLogsBatch(List<BathroomLog> logs) async {
+    for (final log in logs) {
+      await upsertLog(log);
+    }
+  }
+
+  @override
+  Future<void> softDeleteLog(String id) async {
+    _logs.removeWhere((l) => l.id == id);
+  }
+
+  @override
+  Future<void> clearAll() async => _logs.clear();
+}
 
 void main() {
   group('StatsCalculator', () {
@@ -488,6 +540,164 @@ void main() {
       expect(wrapped.awayMvp?.displayName, 'Jose');
       expect(wrapped.totalReactions, 10);
       expect(wrapped.topReactionEmoji, '👑');
+    });
+  });
+
+  group('V2.2 ConfettiBurstOverlay & Onboarding', () {
+    testWidgets('ConfettiBurstOverlay renders, animates, and ignores pointer events', (tester) async {
+      bool tapped = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: Stack(
+              children: [
+                Center(
+                  child: ElevatedButton(
+                    onPressed: () => tapped = true,
+                    child: const Text('Awesome'),
+                  ),
+                ),
+                const Positioned.fill(
+                  child: ConfettiBurstOverlay(seed: 42),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(ConfettiBurstOverlay), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(find.byType(CustomPaint), findsWidgets);
+
+      // Verify taps pass through IgnorePointer while confetti is active
+      await tester.tap(find.text('Awesome'));
+      expect(tapped, isTrue);
+
+      // Pump through mid-flight and completion cleanly
+      await tester.pump(const Duration(milliseconds: 1000));
+      await tester.pump(const Duration(milliseconds: 1200));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+
+    test('TronoController auto-completes onboarding for upgrading users with logs', () async {
+      SharedPreferences.setMockInitialValues({});
+      final settings = SettingsService();
+      await settings.init();
+
+      final now = DateTime(2026, 11, 26, 10, 0);
+      final existingRepo = _InMemoryBathroomRepository([
+        BathroomLog(
+          id: 'existing-1',
+          type: BathroomType.poop,
+          timestamp: now,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      ]);
+      final existingCtrl = TronoController(
+        repository: existingRepo,
+        settings: settings,
+      );
+      await existingCtrl.init();
+
+      expect(existingCtrl.onboardingCompleted, isTrue);
+      expect(settings.onboardingCompleted, isTrue);
+
+      await existingCtrl.resetOnboarding();
+      expect(existingCtrl.onboardingCompleted, isFalse);
+      expect(settings.onboardingCompleted, isFalse);
+
+      await existingCtrl.completeOnboarding();
+      expect(existingCtrl.onboardingCompleted, isTrue);
+      expect(settings.onboardingCompleted, isTrue);
+      existingCtrl.dispose();
+    });
+
+    testWidgets('OnboardingScreen renders all 3 steps and completes locally', (tester) async {
+      tester.view.physicalSize = const Size(412, 892);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      SharedPreferences.setMockInitialValues({});
+      final settings = SettingsService();
+      final repo = _InMemoryBathroomRepository();
+      late TronoController controller;
+      late SocialController social;
+
+      await tester.runAsync(() async {
+        await settings.init();
+        controller = TronoController(repository: repo, settings: settings);
+        await controller.init();
+        social = SocialController(
+          tronoController: controller,
+          repository: repo,
+          settings: settings,
+        );
+        await social.init();
+      });
+      expect(controller.onboardingCompleted, isFalse);
+
+      await tester.pumpWidget(
+        ListenableBuilder(
+          listenable: controller,
+          builder: (context, _) => MaterialApp(
+            theme: AppTheme.light(),
+            locale: controller.locale,
+            supportedLocales: const [Locale('es'), Locale('en')],
+            localizationsDelegates: const [
+              AppStrings.delegate,
+              ...GlobalMaterialLocalizations.delegates,
+            ],
+            home: OnboardingScreen(
+              controller: controller,
+              social: social,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Page 1: Welcome + Language selector
+      expect(find.text('Tu trono, tus reglas.'), findsOneWidget);
+      expect(find.text('Español'), findsOneWidget);
+      expect(find.text('English'), findsOneWidget);
+
+      // Instant language switch to English
+      await tester.ensureVisible(find.text('English'));
+      await tester.tap(find.text('English'));
+      await tester.pumpAndSettle();
+      expect(find.text('Your throne, your rules.'), findsOneWidget);
+
+      // Switch back to Spanish
+      await tester.ensureVisible(find.text('Español'));
+      await tester.tap(find.text('Español'));
+      await tester.pumpAndSettle();
+      expect(find.text('Tu trono, tus reglas.'), findsOneWidget);
+
+      // Advance to Page 2: Home & Territory
+      await tester.tap(find.text('SIGUIENTE'));
+      await tester.pumpAndSettle();
+      expect(find.text('Conquista el mapa 🏠🌍'), findsOneWidget);
+      expect(find.text('Guardar ubicación actual como Casa'), findsOneWidget);
+
+      // Advance to Page 3: Solo or Friends
+      await tester.tap(find.text('SIGUIENTE'));
+      await tester.pumpAndSettle();
+      expect(find.text('Crear cuenta / Unirme a un grupo'), findsOneWidget);
+      expect(find.text('Empezar en local (sin cuenta)'), findsOneWidget);
+
+      // Complete locally
+      await tester.ensureVisible(find.text('Empezar en local (sin cuenta)'));
+      await tester.tap(find.text('Empezar en local (sin cuenta)'));
+      await tester.pumpAndSettle();
+      expect(controller.onboardingCompleted, isTrue);
+
+      social.dispose();
+      controller.dispose();
     });
   });
 }

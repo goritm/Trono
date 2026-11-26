@@ -10,6 +10,7 @@ import 'screens/achievements_screen.dart';
 import 'screens/calendar_stats_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/lock_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/social_screen.dart';
 import 'services/settings_service.dart';
@@ -136,6 +137,13 @@ class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
       return LockScreen(
         controller: widget.controller,
         onUnlocked: () => setState(() => _locked = false),
+      );
+    }
+
+    if (!widget.controller.onboardingCompleted) {
+      return OnboardingScreen(
+        controller: widget.controller,
+        social: widget.socialController,
       );
     }
 
