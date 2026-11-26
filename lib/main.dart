@@ -1,15 +1,13 @@
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 
 import 'data/database_helper.dart';
 import 'l10n/app_strings.dart';
-import 'screens/achievements_screen.dart';
 import 'screens/calendar_stats_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/lock_screen.dart';
+import 'screens/map_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/social_screen.dart';
@@ -74,8 +72,7 @@ class TronoApp extends StatelessWidget {
           supportedLocales: const [Locale('es'), Locale('en')],
           localizationsDelegates: const [
             AppStrings.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
+            ...GlobalMaterialLocalizations.delegates,
           ],
           home: _TronoShell(
             controller: controller,
@@ -102,6 +99,7 @@ class _TronoShell extends StatefulWidget {
 
 class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
   int _tabIndex = 0;
+  final _statsSubTab = ValueNotifier<int>(0);
   late bool _locked;
 
   @override
@@ -114,7 +112,24 @@ class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _statsSubTab.dispose();
     super.dispose();
+  }
+
+  void _openSettings(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SettingsScreen(
+          controller: widget.controller,
+          social: widget.socialController,
+        ),
+      ),
+    );
+  }
+
+  void _openAwards() {
+    _statsSubTab.value = 2;
+    setState(() => _tabIndex = 1);
   }
 
   @override
@@ -149,14 +164,22 @@ class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
 
     final s = AppStrings.of(context);
     final screens = [
-      HomeScreen(controller: widget.controller),
-      CalendarStatsScreen(controller: widget.controller),
-      SocialScreen(social: widget.socialController),
-      AchievementsScreen(controller: widget.controller),
-      SettingsScreen(
+      HomeScreen(
         controller: widget.controller,
-        social: widget.socialController,
+        onOpenSettings: () => _openSettings(context),
+        onOpenAwards: _openAwards,
       ),
+      CalendarStatsScreen(
+        controller: widget.controller,
+        subTabNotifier: _statsSubTab,
+        onOpenSettings: () => _openSettings(context),
+      ),
+      MapScreen(
+        controller: widget.controller,
+        isRootTab: true,
+        onOpenSettings: () => _openSettings(context),
+      ),
+      SocialScreen(social: widget.socialController),
     ];
 
     return Scaffold(
@@ -171,24 +194,19 @@ class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
             label: s.navLog,
           ),
           NavigationDestination(
-            icon: const Icon(Icons.calendar_month_outlined),
-            selectedIcon: const Icon(Icons.calendar_month_rounded),
-            label: s.navCalendar,
+            icon: const Icon(Icons.bar_chart_outlined),
+            selectedIcon: const Icon(Icons.bar_chart_rounded),
+            label: s.navStats,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.map_outlined),
+            selectedIcon: const Icon(Icons.map_rounded),
+            label: s.navMap,
           ),
           NavigationDestination(
             icon: const Icon(Icons.groups_outlined),
             selectedIcon: const Icon(Icons.groups_rounded),
             label: s.navSocial,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.emoji_events_outlined),
-            selectedIcon: const Icon(Icons.emoji_events_rounded),
-            label: s.navAchievements,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.settings_outlined),
-            selectedIcon: const Icon(Icons.settings_rounded),
-            label: s.navSettings,
           ),
         ],
       ),

@@ -22,9 +22,16 @@ class AppStrings {
   String get appName => 'Trono';
   String get navLog => _t('Registrar', 'Log');
   String get navCalendar => _t('Calendario', 'Calendar');
+  String get navStats => _t('Stats', 'Stats');
+  String get navMap => _t('Mapa', 'Map');
   String get navSocial => _t('Amigos', 'Friends');
   String get navAchievements => _t('Logros', 'Awards');
   String get navSettings => _t('Ajustes', 'Settings');
+  String get statsTabCalendar => _t('Calendario', 'Calendar');
+  String get statsTabAnalysis => _t('Análisis', 'Insights');
+  String get statsTabAwards => _t('Logros', 'Awards');
+  String get mapSubTabMap => _t('Mapa', 'Map');
+  String get mapSubTabPlaces => _t('Lugares ⭐', 'Places ⭐');
 
   // Home screen
   String get homeSubtitle => _t('¿Listo para registrar?', 'Ready to log?');

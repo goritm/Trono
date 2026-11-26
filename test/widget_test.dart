@@ -15,6 +15,7 @@ import 'package:trono/widgets/trono_toast.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trono/data/database_helper.dart';
+import 'package:trono/main.dart';
 import 'package:trono/screens/onboarding_screen.dart';
 import 'package:trono/services/settings_service.dart';
 import 'package:trono/state/social_controller.dart';
@@ -1192,6 +1193,78 @@ void main() {
       await tester.tap(find.text('Empezar en local (sin cuenta)'));
       await tester.pumpAndSettle();
       expect(controller.onboardingCompleted, isTrue);
+
+      social.dispose();
+      controller.dispose();
+    });
+  });
+
+  group('V2.3 Clean 4-Tab Navigation & Shortcuts', () {
+    testWidgets('shows 4 bottom tabs, Stats sub-tabs, XP->Awards & Settings push', (tester) async {
+      tester.view.physicalSize = const Size(412, 892);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      SharedPreferences.setMockInitialValues({'onboarding_completed': true});
+      final settings = SettingsService();
+      final repo = _InMemoryBathroomRepository();
+      late TronoController controller;
+      late SocialController social;
+
+      await tester.runAsync(() async {
+        await settings.init();
+        controller = TronoController(repository: repo, settings: settings);
+        await controller.init();
+        social = SocialController(
+          tronoController: controller,
+          repository: repo,
+          settings: settings,
+        );
+        await social.init();
+      });
+
+      await tester.pumpWidget(
+        TronoApp(controller: controller, socialController: social),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify exactly 4 clean bottom navigation destinations
+      final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      expect(navBar.destinations, hasLength(4));
+      expect(find.text('Registrar'), findsOneWidget);
+      expect(find.text('Stats'), findsOneWidget);
+      expect(find.text('Mapa'), findsOneWidget);
+      expect(find.text('Amigos'), findsOneWidget);
+
+      // Tap Stats tab -> verify 3 clean sub-tabs (Calendario | Análisis | Logros)
+      await tester.tap(find.text('Stats'));
+      await tester.pumpAndSettle();
+      expect(find.text('Calendario'), findsOneWidget);
+      expect(find.text('Análisis'), findsOneWidget);
+      expect(find.text('Logros'), findsOneWidget);
+
+      // Switch to Análisis sub-tab
+      await tester.tap(find.text('Análisis'));
+      await tester.pumpAndSettle();
+      expect(find.text('ESTE MES VS MES PASADO'), findsOneWidget);
+
+      // Back to Registrar, tap NV.1 badge -> jumps directly to Stats > Logros
+      await tester.tap(find.text('Registrar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('NV.1'));
+      await tester.pumpAndSettle();
+      expect(find.text('ESCALERA DE RANGOS'), findsOneWidget);
+
+      // Open Settings via top-right gear icon -> verify Logros y Rangos shortcut
+      await tester.tap(find.byIcon(Icons.settings_outlined).first);
+      await tester.pumpAndSettle();
+      expect(find.text('Ajustes'), findsOneWidget);
+      expect(find.text('Logros y Rangos'), findsOneWidget);
+
+      await tester.tap(find.text('Logros y Rangos'));
+      await tester.pumpAndSettle();
+      expect(find.text('ESCALERA DE RANGOS'), findsOneWidget);
 
       social.dispose();
       controller.dispose();

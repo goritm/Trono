@@ -15,14 +15,21 @@ import '../widgets/log_detail_sheet.dart';
 import '../widgets/log_tile.dart';
 import '../widgets/monthly_comparison_card.dart';
 import '../widgets/trono_toast.dart';
-import 'map_screen.dart';
+import 'achievements_screen.dart';
 import 'settings_screen.dart';
 import 'wrapped_screen.dart';
 
 class CalendarStatsScreen extends StatefulWidget {
-  const CalendarStatsScreen({super.key, required this.controller});
+  const CalendarStatsScreen({
+    super.key,
+    required this.controller,
+    this.subTabNotifier,
+    this.onOpenSettings,
+  });
 
   final TronoController controller;
+  final ValueNotifier<int>? subTabNotifier;
+  final VoidCallback? onOpenSettings;
 
   @override
   State<CalendarStatsScreen> createState() => _CalendarStatsScreenState();
@@ -31,12 +38,46 @@ class CalendarStatsScreen extends StatefulWidget {
 class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
   StatsPeriod _period = StatsPeriod.week;
   late DateTime _visibleMonth;
+  int _subTab = 0; // 0 = Calendario, 1 = Análisis, 2 = Logros
 
   @override
   void initState() {
     super.initState();
     final now = DateTime.now();
     _visibleMonth = DateTime(now.year, now.month);
+    if (widget.subTabNotifier != null) {
+      _subTab = widget.subTabNotifier!.value.clamp(0, 2);
+      widget.subTabNotifier!.addListener(_onExternalSubTabChange);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant CalendarStatsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.subTabNotifier != widget.subTabNotifier) {
+      oldWidget.subTabNotifier?.removeListener(_onExternalSubTabChange);
+      widget.subTabNotifier?.addListener(_onExternalSubTabChange);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.subTabNotifier?.removeListener(_onExternalSubTabChange);
+    super.dispose();
+  }
+
+  void _onExternalSubTabChange() {
+    final next = (widget.subTabNotifier?.value ?? 0).clamp(0, 2);
+    if (next != _subTab && mounted) {
+      setState(() => _subTab = next);
+    }
+  }
+
+  void _selectSubTab(int index) {
+    setState(() => _subTab = index);
+    if (widget.subTabNotifier != null && widget.subTabNotifier!.value != index) {
+      widget.subTabNotifier!.value = index;
+    }
   }
 
   void _shiftMonth(int delta) {
@@ -222,441 +263,474 @@ class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
     final stats = widget.controller.stats;
     final avg = stats.averageFor(_period);
 
-    return CustomScrollView(
-      slivers: [
-        SliverAppBar(
-          floating: true,
-          title: Text(s.calendarStatsTitle),
-          actions: [
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(s.navStats),
+        actions: [
+          IconButton(
+            tooltip: s.wrappedTitle,
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => WrappedScreen(controller: widget.controller),
+                ),
+              );
+            },
+            icon: const Icon(Icons.auto_awesome_rounded),
+          ),
+          if (widget.onOpenSettings != null)
             IconButton(
-              tooltip: s.wrappedTitle,
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => WrappedScreen(controller: widget.controller),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.auto_awesome_rounded),
+              tooltip: s.navSettings,
+              onPressed: widget.onOpenSettings,
+              icon: const Icon(Icons.settings_outlined),
             ),
-            IconButton(
-              tooltip: s.mapScreenTitle,
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => MapScreen(controller: widget.controller),
+          const SizedBox(width: 4),
+        ],
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+            child: SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<int>(
+                segments: [
+                  ButtonSegment(
+                    value: 0,
+                    label: Text(s.statsTabCalendar),
                   ),
-                );
-              },
-              icon: const Icon(Icons.map_rounded),
+                  ButtonSegment(
+                    value: 1,
+                    label: Text(s.statsTabAnalysis),
+                  ),
+                  ButtonSegment(
+                    value: 2,
+                    label: Text(s.statsTabAwards),
+                  ),
+                ],
+                selected: {_subTab},
+                onSelectionChanged: (set) => _selectSubTab(set.first),
+                showSelectedIcon: false,
+              ),
             ),
-            const SizedBox(width: 6),
-          ],
-        ),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 28),
-          sliver: SliverList.list(
+          ),
+          Expanded(
+            child: switch (_subTab) {
+              0 => _buildCalendarTab(context, s, stats),
+              1 => _buildAnalysisTab(context, s, avg),
+              _ => AchievementsScreen(
+                  controller: widget.controller,
+                  embedded: true,
+                ),
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnalysisTab(
+    BuildContext context,
+    AppStrings s,
+    PeriodAverage avg,
+  ) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+      children: [
+        // 1. Clean Terracotta & Charcoal Daily Average Hero Card
+        ChunkyCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Clean Terracotta & Charcoal Daily Average Hero Card
-              ChunkyCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      s.dailyAverageTitle.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.8,
-                        color: TronoColors.muted(context),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: SegmentedButton<StatsPeriod>(
-                        segments: [
-                          ButtonSegment(
-                            value: StatsPeriod.week,
-                            label: Text(s.periodWeek),
-                          ),
-                          ButtonSegment(
-                            value: StatsPeriod.month,
-                            label: Text(s.periodMonth),
-                          ),
-                          ButtonSegment(
-                            value: StatsPeriod.allTime,
-                            label: Text(s.periodAll),
-                          ),
-                        ],
-                        selected: {_period},
-                        onSelectionChanged: (set) {
-                          setState(() => _period = set.first);
-                        },
-                        showSelectedIcon: false,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _AvgMetricReadout(
-                            label: s.poopPerDay,
-                            value: avg.avgPoopPerDay.toStringAsFixed(1),
-                            sub: avg.daysSpan > 0
-                                ? s.visitsTotalSub(
-                                    avg.poopVisits,
-                                    avg.daysSpan,
-                                  )
-                                : '—',
-                            valueColor: TronoColors.terracotta,
-                          ),
-                        ),
-                        Container(
-                          width: 2,
-                          height: 58,
-                          color: TronoColors.border(context),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _AvgMetricReadout(
-                            label: s.totalVisitsPerDay,
-                            value: avg.avgTotalPerDay.toStringAsFixed(1),
-                            sub: avg.daysSpan > 0
-                                ? s.visitsTotalSub(
-                                    avg.totalVisits,
-                                    avg.daysSpan,
-                                  )
-                                : '—',
-                            valueColor: TronoColors.ink(context),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // 1.1 Monthly Comparison (Current Month vs Previous Month)
-              MonthlyComparisonCard(
-                snapshot: widget.controller.monthlyComparison,
-              ),
-              const SizedBox(height: 16),
-
-              // 1.2 8-Week Rolling Trend Chart
-              WeeklyTrendChartCard(
-                weeks: widget.controller.monthlyComparison.weeklyTrend,
-              ),
-              const SizedBox(height: 16),
-
-              // 1.5 Territory: Home vs Away Ratio & Throne Map Card
-              _TerritoryStatsCard(
-                stats: stats,
-                onOpenMap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => MapScreen(controller: widget.controller),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // 1.6 Paid on the Throne Card (Work Earnings)
-              _PaidOnThroneCard(
-                paid: widget.controller.paidOnThrone,
-                hasSalary: widget.controller.hasHourlyRate,
-                currency: widget.controller.currencySymbol,
-                onConfigure: () =>
-                    showSalaryConfigDialog(context, widget.controller),
-              ),
-              const SizedBox(height: 16),
-
-              // 1.7 Automatic Pattern Insights
-              if (widget.controller.insights.isNotEmpty) ...[
-                _InsightsCard(insights: widget.controller.insights),
-                const SizedBox(height: 16),
-              ],
-
-              // 2. Monochromatic Warm Terracotta Monthly Heatmap
-              ChunkyCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _capitalize(
-                                  DateFormat(
-                                    'MMMM yyyy',
-                                    s.locale.languageCode,
-                                  ).format(_visibleMonth),
-                                ),
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                              Text(
-                                s.tapDayHint,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: TronoColors.muted(context),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton.filledTonal(
-                          onPressed: () => _shiftMonth(-1),
-                          icon: const Icon(Icons.chevron_left_rounded),
-                        ),
-                        const SizedBox(width: 6),
-                        IconButton.filledTonal(
-                          onPressed: () => _shiftMonth(1),
-                          icon: const Icon(Icons.chevron_right_rounded),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    _MonthlyHeatmapGrid(
-                      month: _visibleMonth,
-                      dailyCounts: stats.dailyCounts,
-                      weekdayHeaders: s.weekdayShorts,
-                      onTapDay: _openDaySheet,
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          s.heatmapLegendLess,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: TronoColors.muted(context),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        ...[0, 1, 2, 4, 6].map(
-                          (lvl) => Container(
-                            width: 14,
-                            height: 14,
-                            margin: const EdgeInsets.symmetric(horizontal: 2),
-                            decoration: BoxDecoration(
-                              color: _heatColor(lvl, context),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          s.heatmapLegendMore,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: TronoColors.muted(context),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // 3. Peak Hours Chart (Charcoal bars + Terracotta Peak Bar)
-              ChunkyCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          s.peakHoursTitle,
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        const Spacer(),
-                        if (stats.peakHour != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: TronoColors.terracotta.withValues(
-                                alpha: 0.14,
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              '${stats.peakHour!.toString().padLeft(2, '0')}:00',
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w900,
-                                color: TronoColors.terracotta,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      stats.peakHour != null
-                          ? s.peakHourSummary(stats.peakHour!)
-                          : s.noPeakHourYet,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                        color: TronoColors.muted(context),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _PeakHoursChart(
-                      hourlyCounts: stats.hourlyCounts,
-                      peakHour: stats.peakHour,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-
-              // 4. Clean Cohesive Personal Records Grid (Terracotta + Gold only)
               Text(
-                s.recordsTitle.toUpperCase(),
+                s.dailyAverageTitle.toUpperCase(),
                 style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 12,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0.8,
                   color: TronoColors.muted(context),
                 ),
               ),
-              const SizedBox(height: 10),
-              GridView.count(
-                padding: EdgeInsets.zero,
-                crossAxisCount: 2,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: 1.42,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<StatsPeriod>(
+                  segments: [
+                    ButtonSegment(
+                      value: StatsPeriod.week,
+                      label: Text(s.periodWeek),
+                    ),
+                    ButtonSegment(
+                      value: StatsPeriod.month,
+                      label: Text(s.periodMonth),
+                    ),
+                    ButtonSegment(
+                      value: StatsPeriod.allTime,
+                      label: Text(s.periodAll),
+                    ),
+                  ],
+                  selected: {_period},
+                  onSelectionChanged: (set) {
+                    setState(() => _period = set.first);
+                  },
+                  showSelectedIcon: false,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
                 children: [
-                  _RecordCard(
-                    icon: Icons.emoji_events_rounded,
-                    accent: TronoColors.gold,
-                    label: s.recordDayLabel,
-                    value: stats.recordDayCount > 0
-                        ? s.visitsCount(stats.recordDayCount)
-                        : '—',
-                    sub: stats.recordDayDate != null
-                        ? DateFormat(
-                            'd MMM yyyy',
-                            s.locale.languageCode,
-                          ).format(stats.recordDayDate!)
-                        : '',
+                  Expanded(
+                    child: _AvgMetricReadout(
+                      label: s.poopPerDay,
+                      value: avg.avgPoopPerDay.toStringAsFixed(1),
+                      sub: avg.daysSpan > 0
+                          ? s.visitsTotalSub(
+                              avg.poopVisits,
+                              avg.daysSpan,
+                            )
+                          : '—',
+                      valueColor: TronoColors.terracotta,
+                    ),
                   ),
-                  _RecordCard(
-                    icon: Icons.local_fire_department_rounded,
-                    accent: TronoColors.terracotta,
-                    label: s.longestStreakLabel,
-                    value: stats.longestStreak > 0
-                        ? s.daysCount(stats.longestStreak)
-                        : '—',
-                    sub: stats.currentStreak > 0
-                        ? '${s.streakLabel}: ${s.daysShort(stats.currentStreak)}'
-                        : '',
+                  Container(
+                    width: 2,
+                    height: 58,
+                    color: TronoColors.border(context),
                   ),
-                  _RecordCard(
-                    icon: Icons.timer_rounded,
-                    accent: TronoColors.terracotta,
-                    label: s.longestSessionLabel,
-                    value: stats.longestSessionSeconds > 0
-                        ? s.formatDuration(stats.longestSessionSeconds)
-                        : '—',
-                    sub: stats.longestSessionDate != null
-                        ? DateFormat(
-                            'd MMM',
-                            s.locale.languageCode,
-                          ).format(stats.longestSessionDate!)
-                        : '',
-                  ),
-                  _RecordCard(
-                    icon: Icons.hourglass_bottom_rounded,
-                    accent: TronoColors.gold,
-                    label: s.totalTimeLabel,
-                    value: stats.totalBathroomSeconds > 0
-                        ? s.formatDuration(stats.totalBathroomSeconds)
-                        : '—',
-                    sub: s.visitsCount(stats.allTimeAvg.totalVisits),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _AvgMetricReadout(
+                      label: s.totalVisitsPerDay,
+                      value: avg.avgTotalPerDay.toStringAsFixed(1),
+                      sub: avg.daysSpan > 0
+                          ? s.visitsTotalSub(
+                              avg.totalVisits,
+                              avg.daysSpan,
+                            )
+                          : '—',
+                      valueColor: TronoColors.ink(context),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
 
-              // 5. Shareable Trono Wrapped Banner at the bottom
-              ChunkyButton(
-                width: double.infinity,
-                color: TronoColors.obsidian,
-                lipColor: TronoColors.obsidianLip,
-                borderColor: TronoColors.gold.withValues(alpha: 0.5),
-                lipHeight: 4,
-                borderRadius: 20,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 14,
+        // 2. Monthly Comparison (Current Month vs Previous Month)
+        MonthlyComparisonCard(
+          snapshot: widget.controller.monthlyComparison,
+        ),
+        const SizedBox(height: 16),
+
+        // 3. 8-Week Rolling Trend Chart
+        WeeklyTrendChartCard(
+          weeks: widget.controller.monthlyComparison.weeklyTrend,
+        ),
+        const SizedBox(height: 16),
+
+        // 4. Paid on the Throne Card (Work Earnings)
+        _PaidOnThroneCard(
+          paid: widget.controller.paidOnThrone,
+          hasSalary: widget.controller.hasHourlyRate,
+          currency: widget.controller.currencySymbol,
+          onConfigure: () =>
+              showSalaryConfigDialog(context, widget.controller),
+        ),
+        const SizedBox(height: 16),
+
+        // 5. Automatic Pattern Insights
+        if (widget.controller.insights.isNotEmpty) ...[
+          _InsightsCard(insights: widget.controller.insights),
+          const SizedBox(height: 16),
+        ],
+
+        // 6. Shareable Trono Wrapped Banner
+        ChunkyButton(
+          width: double.infinity,
+          color: TronoColors.obsidian,
+          lipColor: TronoColors.obsidianLip,
+          borderColor: TronoColors.gold.withValues(alpha: 0.5),
+          lipHeight: 4,
+          borderRadius: 20,
+          padding: const EdgeInsets.symmetric(
+            horizontal: 18,
+            vertical: 14,
+          ),
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) =>
+                    WrappedScreen(controller: widget.controller),
+              ),
+            );
+          },
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: TronoColors.gold.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) =>
-                          WrappedScreen(controller: widget.controller),
-                    ),
-                  );
-                },
-                child: Row(
-                  children: [
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: TronoColors.gold.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.auto_awesome_rounded,
-                        color: TronoColors.gold,
-                        size: 21,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        s.wrappedButtonLabel,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      color: TronoColors.gold,
-                    ),
-                  ],
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: TronoColors.gold,
+                  size: 21,
                 ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  s.wrappedButtonLabel,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: TronoColors.gold,
               ),
             ],
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCalendarTab(
+    BuildContext context,
+    AppStrings s,
+    StatsSummary stats,
+  ) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+      children: [
+        // 1. Monochromatic Warm Terracotta Monthly Heatmap
+        ChunkyCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _capitalize(
+                            DateFormat(
+                              'MMMM yyyy',
+                              s.locale.languageCode,
+                            ).format(_visibleMonth),
+                          ),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        Text(
+                          s.tapDayHint,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: TronoColors.muted(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton.filledTonal(
+                    onPressed: () => _shiftMonth(-1),
+                    icon: const Icon(Icons.chevron_left_rounded),
+                  ),
+                  const SizedBox(width: 6),
+                  IconButton.filledTonal(
+                    onPressed: () => _shiftMonth(1),
+                    icon: const Icon(Icons.chevron_right_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              _MonthlyHeatmapGrid(
+                month: _visibleMonth,
+                dailyCounts: stats.dailyCounts,
+                weekdayHeaders: s.weekdayShorts,
+                onTapDay: _openDaySheet,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    s.heatmapLegendLess,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: TronoColors.muted(context),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  ...[0, 1, 2, 4, 6].map(
+                    (lvl) => Container(
+                      width: 14,
+                      height: 14,
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      decoration: BoxDecoration(
+                        color: _heatColor(lvl, context),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    s.heatmapLegendMore,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: TronoColors.muted(context),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // 2. Peak Hours Chart (Charcoal bars + Terracotta Peak Bar)
+        ChunkyCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    s.peakHoursTitle,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (stats.peakHour != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: TronoColors.terracotta.withValues(
+                          alpha: 0.14,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${stats.peakHour!.toString().padLeft(2, '0')}:00',
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w900,
+                          color: TronoColors.terracotta,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                stats.peakHour != null
+                    ? s.peakHourSummary(stats.peakHour!)
+                    : s.noPeakHourYet,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: TronoColors.muted(context),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _PeakHoursChart(
+                hourlyCounts: stats.hourlyCounts,
+                peakHour: stats.peakHour,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+
+        // 3. Clean Cohesive Personal Records Grid
+        Text(
+          s.recordsTitle.toUpperCase(),
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.8,
+            color: TronoColors.muted(context),
+          ),
+        ),
+        const SizedBox(height: 10),
+        GridView.count(
+          padding: EdgeInsets.zero,
+          crossAxisCount: 2,
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: 1.42,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            _RecordCard(
+              icon: Icons.emoji_events_rounded,
+              accent: TronoColors.gold,
+              label: s.recordDayLabel,
+              value: stats.recordDayCount > 0
+                  ? s.visitsCount(stats.recordDayCount)
+                  : '—',
+              sub: stats.recordDayDate != null
+                  ? DateFormat(
+                      'd MMM yyyy',
+                      s.locale.languageCode,
+                    ).format(stats.recordDayDate!)
+                  : '',
+            ),
+            _RecordCard(
+              icon: Icons.local_fire_department_rounded,
+              accent: TronoColors.terracotta,
+              label: s.longestStreakLabel,
+              value: stats.longestStreak > 0
+                  ? s.daysCount(stats.longestStreak)
+                  : '—',
+              sub: stats.currentStreak > 0
+                  ? '${s.streakLabel}: ${s.daysShort(stats.currentStreak)}'
+                  : '',
+            ),
+            _RecordCard(
+              icon: Icons.timer_rounded,
+              accent: TronoColors.terracotta,
+              label: s.longestSessionLabel,
+              value: stats.longestSessionSeconds > 0
+                  ? s.formatDuration(stats.longestSessionSeconds)
+                  : '—',
+              sub: stats.longestSessionDate != null
+                  ? DateFormat(
+                      'd MMM',
+                      s.locale.languageCode,
+                    ).format(stats.longestSessionDate!)
+                  : '',
+            ),
+            _RecordCard(
+              icon: Icons.hourglass_bottom_rounded,
+              accent: TronoColors.gold,
+              label: s.totalTimeLabel,
+              value: stats.totalBathroomSeconds > 0
+                  ? s.formatDuration(stats.totalBathroomSeconds)
+                  : '—',
+              sub: s.visitsCount(stats.allTimeAvg.totalVisits),
+            ),
+          ],
         ),
       ],
     );
@@ -916,194 +990,6 @@ class _InsightsCard extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TerritoryStatsCard extends StatelessWidget {
-  const _TerritoryStatsCard({
-    required this.stats,
-    required this.onOpenMap,
-  });
-
-  final StatsSummary stats;
-  final VoidCallback onOpenMap;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = AppStrings.of(context);
-    final hasRatio = stats.classifiedLocationCount > 0;
-    final homeFlex = stats.homePoopCount;
-    final awayFlex = stats.awayPoopCount;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return ChunkyCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                s.territoryTitle.toUpperCase(),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.8,
-                  color: TronoColors.muted(context),
-                ),
-              ),
-              const Spacer(),
-              if (stats.distinctSpotsCount > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: TronoColors.gold.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: Text(
-                    s.spotsConqueredLabel(stats.distinctSpotsCount),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      color: isDark ? TronoColors.gold : TronoColors.goldLip,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (!hasRatio)
-            Text(
-              s.noLocationDataYet,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: TronoColors.muted(context),
-              ),
-            )
-          else ...[
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${stats.homePercent.round()}%',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w900,
-                          color: isDark
-                              ? TronoColors.gold
-                              : TronoColors.obsidian,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                      Text(
-                        '🏠 ${s.homeShort} (${stats.homePoopCount})',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w800,
-                          color: TronoColors.muted(context),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '${stats.awayPercent.round()}%',
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w900,
-                          color: TronoColors.terracotta,
-                          fontFeatures: [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                      Text(
-                        '🌍 ${s.awayShort} (${stats.awayPoopCount})',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w800,
-                          color: TronoColors.muted(context),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: SizedBox(
-                height: 14,
-                child: Row(
-                  children: [
-                    if (homeFlex > 0)
-                      Expanded(
-                        flex: homeFlex,
-                        child: Container(color: TronoColors.gold),
-                      ),
-                    if (awayFlex > 0)
-                      Expanded(
-                        flex: awayFlex,
-                        child: Container(color: TronoColors.terracotta),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            if (stats.maxDistanceFromHomeKm >= 0.5) ...[
-              const SizedBox(height: 8),
-              Text(
-                s.farthestDropLabel(stats.maxDistanceFromHomeKm),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: TronoColors.muted(context),
-                ),
-              ),
-            ],
-          ],
-          const SizedBox(height: 14),
-          ChunkyButton(
-            width: double.infinity,
-            color: isDark ? const Color(0xFF282E3C) : TronoColors.obsidian,
-            lipColor: TronoColors.obsidianLip,
-            lipHeight: 4,
-            borderRadius: 16,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            onPressed: onOpenMap,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.map_rounded,
-                  color: TronoColors.gold,
-                  size: 19,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  s.openMapButton.toUpperCase(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 13,
-                    letterSpacing: 0.4,
-                  ),
-                ),
-              ],
             ),
           ),
         ],
