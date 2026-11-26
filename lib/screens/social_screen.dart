@@ -111,6 +111,56 @@ Future<void> showEditProfileDialog(
                       border: const OutlineInputBorder(),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: TronoColors.coral,
+                        side: BorderSide(
+                          color: TronoColors.coral.withValues(alpha: 0.45),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: saving
+                          ? null
+                          : () async {
+                              final ok = await showDialog<bool>(
+                                context: ctx,
+                                builder: (confirmCtx) => AlertDialog(
+                                  title: Text(s.signOutBtn),
+                                  content: Text(s.signOutConfirmBody),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(confirmCtx).pop(false),
+                                      child: Text(s.cancelTimer),
+                                    ),
+                                    FilledButton(
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: TronoColors.coral,
+                                      ),
+                                      onPressed: () =>
+                                          Navigator.of(confirmCtx).pop(true),
+                                      child: Text(s.signOutBtn),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (ok == true) {
+                                await social.signOut();
+                                if (ctx.mounted) Navigator.of(ctx).pop(false);
+                              }
+                            },
+                      icon: const Icon(Icons.logout_rounded, size: 18),
+                      label: Text(
+                        s.signOutBtn,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

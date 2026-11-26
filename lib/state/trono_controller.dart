@@ -74,6 +74,9 @@ class TronoController extends ChangeNotifier {
   double? _hourlyRate;
   String _currencySymbol = '€';
 
+  // V2.2 Onboarding mirror
+  bool _onboardingCompleted = false;
+
   // V2.2 Favorite Places & Top Bathrooms mirrors
   List<FavoritePlace> _favoritePlaces = const [];
   List<TopPlaceStat> _topPlaces = const [];
@@ -106,6 +109,7 @@ class TronoController extends ChangeNotifier {
   double? get hourlyRate => _hourlyRate;
   bool get hasHourlyRate => _hourlyRate != null && _hourlyRate! > 0;
   String get currencySymbol => _currencySymbol;
+  bool get onboardingCompleted => _onboardingCompleted;
 
   List<BathroomLog> get geotaggedLogs =>
       _logs.where((l) => l.hasCoordinates).toList();
@@ -121,6 +125,7 @@ class TronoController extends ChangeNotifier {
     _autoGpsEnabled = _settings.autoGpsEnabled;
     _hourlyRate = _settings.hourlyRate;
     _currencySymbol = _settings.currencySymbol;
+    _onboardingCompleted = _settings.onboardingCompleted;
     _favoritePlaces = _settings.favoritePlaces;
 
     _activeTimerStart = _settings.activeTimerStart;
@@ -129,6 +134,10 @@ class TronoController extends ChangeNotifier {
     }
 
     await reloadLogs(suppressNotifications: true);
+    if (!_onboardingCompleted && _logs.isNotEmpty) {
+      _onboardingCompleted = true;
+      await _settings.setOnboardingCompleted(true);
+    }
     _isLoading = false;
     notifyListeners();
   }
@@ -480,6 +489,19 @@ class TronoController extends ChangeNotifier {
 
   Future<void> clearPin() async {
     await _settings.clearPin();
+    notifyListeners();
+  }
+
+  Future<void> completeOnboarding() async {
+    if (_onboardingCompleted) return;
+    _onboardingCompleted = true;
+    await _settings.setOnboardingCompleted(true);
+    notifyListeners();
+  }
+
+  Future<void> resetOnboarding() async {
+    _onboardingCompleted = false;
+    await _settings.setOnboardingCompleted(false);
     notifyListeners();
   }
 
