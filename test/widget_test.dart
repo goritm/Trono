@@ -4,6 +4,7 @@ import 'package:trono/models/achievement.dart';
 import 'package:trono/models/bathroom_log.dart';
 import 'package:trono/models/insights.dart';
 import 'package:trono/models/social_models.dart';
+import 'package:trono/models/social_plus.dart';
 import 'package:trono/models/stats_summary.dart';
 import 'package:trono/services/location_service.dart';
 import 'package:trono/widgets/trono_toast.dart';
@@ -367,6 +368,126 @@ void main() {
       await tester.pump(const Duration(seconds: 4));
       await tester.pumpAndSettle();
       expect(find.text('Registro eliminado'), findsNothing);
+    });
+  });
+
+  group('Trono Social+ Engine (V2.1)', () {
+    test('detects Synced Duos, unlocks social badges, and builds Group Weekly Wrapped', () {
+      final now = DateTime(2026, 11, 26, 18, 0);
+      final group = SocialGroup(
+        id: 'g1',
+        name: 'Los cagones',
+        emoji: '🍻',
+        inviteCode: 'TRN8K2',
+        createdBy: 'u1',
+        createdAt: now.subtract(const Duration(days: 10)),
+      );
+
+      final feed = [
+        SharedFeedItem(
+          logId: 'l1',
+          userId: 'u1',
+          displayName: 'Jose',
+          avatarEmoji: '🦍',
+          rankLevel: 3,
+          type: BathroomType.poop,
+          timestamp: now.subtract(const Duration(minutes: 10)),
+          shareLevel: ShareLevel.summaryOnly,
+          locationKind: LocationKind.away,
+          reactions: const [
+            LogReaction(id: 'r1', logId: 'l1', userId: 'u2', emoji: '👑'),
+            LogReaction(id: 'r2', logId: 'l1', userId: 'u2', emoji: '🔥'),
+            LogReaction(id: 'r3', logId: 'l1', userId: 'u3', emoji: '👑'),
+            LogReaction(id: 'r4', logId: 'l1', userId: 'u4', emoji: '👑'),
+            LogReaction(id: 'r5', logId: 'l1', userId: 'u5', emoji: '👏'),
+          ],
+        ),
+        SharedFeedItem(
+          logId: 'l2',
+          userId: 'u2',
+          displayName: 'Ana',
+          avatarEmoji: '🦄',
+          rankLevel: 2,
+          type: BathroomType.poop,
+          // 6 minutes apart from Jose -> Synced Duo!
+          timestamp: now.subtract(const Duration(minutes: 16)),
+          shareLevel: ShareLevel.summaryOnly,
+          locationKind: LocationKind.home,
+          reactions: const [
+            LogReaction(id: 'r6', logId: 'l2', userId: 'u1', emoji: '👑'),
+            LogReaction(id: 'r7', logId: 'l2', userId: 'u1', emoji: '🔥'),
+            LogReaction(id: 'r8', logId: 'l2', userId: 'u1', emoji: '💀'),
+            LogReaction(id: 'r9', logId: 'l2', userId: 'u1', emoji: '👏'),
+            LogReaction(id: 'r10', logId: 'l2', userId: 'u1', emoji: '👑'),
+          ],
+        ),
+        SharedFeedItem(
+          logId: 'l3',
+          userId: 'u1',
+          displayName: 'Jose',
+          avatarEmoji: '🦍',
+          rankLevel: 3,
+          type: BathroomType.poop,
+          // 2 hours earlier -> not a duo
+          timestamp: now.subtract(const Duration(hours: 2)),
+          shareLevel: ShareLevel.summaryOnly,
+          locationKind: LocationKind.work,
+        ),
+      ];
+
+      final leaderboard = const [
+        LeaderboardEntry(
+          userId: 'u1',
+          displayName: 'Jose',
+          avatarEmoji: '🦍',
+          totalXp: 400,
+          rankLevel: 3,
+          currentStreak: 5,
+          poopCount: 6,
+          awayCount: 4,
+          workCount: 2,
+          totalDurationSeconds: 1200,
+        ),
+        LeaderboardEntry(
+          userId: 'u2',
+          displayName: 'Ana',
+          avatarEmoji: '🦄',
+          totalXp: 250,
+          rankLevel: 2,
+          currentStreak: 3,
+          poopCount: 4,
+          awayCount: 1,
+          workCount: 0,
+          totalDurationSeconds: 900,
+        ),
+      ];
+
+      final plus = SocialPlusEngine.evaluate(
+        currentUserId: 'u1',
+        groups: [group],
+        feed: feed,
+        weeklyLeaderboard: leaderboard,
+      );
+
+      expect(plus.duos, hasLength(1));
+      expect(plus.duos.first.gapMinutes, 6);
+      expect(plus.duoByLogId['l1']?.partnerNameFor('l1'), 'Ana');
+      expect(plus.duoByLogId['l2']?.partnerNameFor('l2'), 'Jose');
+      expect(plus.unlockedCount, 6);
+
+      final wrapped = SocialPlusEngine.buildGroupWeeklyWrapped(
+        group: group,
+        weeklyLeaderboard: leaderboard,
+        feed: feed,
+        now: now,
+      );
+      expect(wrapped.totalPoops, 10);
+      expect(wrapped.awayPercent, 50);
+      expect(wrapped.syncedDuosCount, 1);
+      expect(wrapped.weeklyKing?.displayName, 'Jose');
+      expect(wrapped.awayMvp?.displayName, 'Jose');
+      expect(wrapped.totalReactions, 10);
+      expect(wrapped.topReactionEmoji, '👑');
     });
   });
 }

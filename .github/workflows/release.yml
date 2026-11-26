@@ -1,0 +1,91 @@
+name: Build & Release Signed Android APK
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v2.1.0)'
+        required: true
+        default: 'v2.1.0'
+
+permissions:
+  contents: write
+
+jobs:
+  release-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run unit & widget tests
+        run: flutter test
+
+      - name: Decode Android release keystore
+        env:
+          TRONO_KEYSTORE_BASE64: ${{ secrets.TRONO_KEYSTORE_BASE64 }}
+          TRONO_KEYSTORE_PASSWORD: ${{ secrets.TRONO_KEYSTORE_PASSWORD }}
+          TRONO_KEY_ALIAS: ${{ secrets.TRONO_KEY_ALIAS }}
+          TRONO_KEY_PASSWORD: ${{ secrets.TRONO_KEY_PASSWORD }}
+        run: |
+          if [ -z "$TRONO_KEYSTORE_BASE64" ]; then
+            echo "ERROR: Missing TRONO_KEYSTORE_BASE64 secret"
+            exit 1
+          fi
+          echo "$TRONO_KEYSTORE_BASE64" | base64 --decode > android/app/trono-release.jks
+          cat <<EOF > android/key.properties
+          storePassword=$TRONO_KEYSTORE_PASSWORD
+          keyPassword=$TRONO_KEY_PASSWORD
+          keyAlias=$TRONO_KEY_ALIAS
+          storeFile=trono-release.jks
+          EOF
+
+      - name: Determine release version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          CLEAN_NAME="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "name=$CLEAN_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Build signed release APK
+        run: |
+          flutter build apk --release --build-name="${{ steps.version.outputs.name }}"
+          cp build/app/outputs/flutter-apk/app-release.apk "trono-${{ steps.version.outputs.tag }}.apk"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "Trono ${{ steps.version.outputs.tag }} 👑"
+          generate_release_notes: true
+          body: |
+            ## 👑 Trono ${{ steps.version.outputs.tag }}
+
+            Descarga e instala el archivo **`trono-${{ steps.version.outputs.tag }}.apk`** directamente en Android.
+
+            > **Nota:** Firmado con la clave oficial de release de Trono para que las futuras actualizaciones se instalen encima sin perder datos.
+          files: |
+            trono-${{ steps.version.outputs.tag }}.apk

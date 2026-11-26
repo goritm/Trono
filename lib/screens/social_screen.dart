@@ -6,11 +6,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../l10n/app_strings.dart';
 import '../models/bathroom_log.dart';
 import '../models/social_models.dart';
+import '../models/social_plus.dart';
 import '../services/supabase_sync_service.dart';
 import '../state/social_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/chunky_widgets.dart';
 import '../widgets/trono_toast.dart';
+import 'group_wrapped_screen.dart';
 
 /// Opens the tactile Sign Up / Sign In modal sheet.
 Future<void> showAuthSheet(
@@ -624,7 +626,20 @@ class _SocialScreenState extends State<SocialScreen> {
                         group: activeGroup,
                         currentUserId: social.currentUserId,
                         onLeave: () => _confirmLeaveGroup(activeGroup),
+                        onOpenWrapped: () {
+                          final wrapped = social.buildGroupWeeklyWrapped();
+                          if (wrapped == null) return;
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  GroupWrappedScreen(wrapped: wrapped),
+                            ),
+                          );
+                        },
                       ),
+                      const SizedBox(height: 12),
+
+                      _SocialBadgesStrip(snapshot: social.socialPlus),
                       const SizedBox(height: 14),
 
                       SizedBox(
@@ -705,12 +720,14 @@ class _SocialScreenState extends State<SocialScreen> {
       ];
     }
 
+    final duoByLogId = social.socialPlus.duoByLogId;
     return social.feed.map((item) {
       return Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: _FeedItemCard(
           item: item,
           currentUserId: social.currentUserId,
+          syncedDuo: duoByLogId[item.logId],
           onReact: (emoji) {
             HapticFeedback.selectionClick();
             social.toggleReaction(item.logId, emoji);
@@ -1197,11 +1214,13 @@ class _ActiveGroupHeaderCard extends StatelessWidget {
     required this.group,
     required this.currentUserId,
     required this.onLeave,
+    required this.onOpenWrapped,
   });
 
   final SocialGroup group;
   final String? currentUserId;
   final VoidCallback onLeave;
+  final VoidCallback onOpenWrapped;
 
   @override
   Widget build(BuildContext context) {
@@ -1394,8 +1413,149 @@ class _ActiveGroupHeaderCard extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: ChunkyButton(
+              color: TronoColors.gold,
+              lipColor: TronoColors.goldLip,
+              lipHeight: 4,
+              borderRadius: 14,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              onPressed: onOpenWrapped,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.auto_awesome_rounded,
+                    size: 18,
+                    color: TronoColors.obsidian,
+                  ),
+                  const SizedBox(width: 7),
+                  Text(
+                    s.groupWrappedButton,
+                    style: const TextStyle(
+                      color: TronoColors.obsidian,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _SocialBadgesStrip extends StatelessWidget {
+  const _SocialBadgesStrip({required this.snapshot});
+
+  final SocialPlusSnapshot snapshot;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    if (snapshot.badges.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+          child: Row(
+            children: [
+              Text(
+                s.socialBadgesTitle.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.8,
+                  color: TronoColors.muted(context),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${snapshot.unlockedCount}/${snapshot.badges.length}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  color: TronoColors.goldLip,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: snapshot.badges.map((badge) {
+              final unlocked = badge.isUnlocked;
+              final bg = unlocked
+                  ? (isDark ? const Color(0xFF2B2618) : const Color(0xFFFFF8E6))
+                  : TronoColors.surface(context);
+              final border =
+                  unlocked ? TronoColors.gold : TronoColors.border(context);
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: GestureDetector(
+                  onTap: () {
+                    final prog = unlocked
+                        ? '✓'
+                        : '${badge.current}/${badge.target}';
+                    showTronoToast(
+                      context,
+                      '${badge.emoji} ${s.socialBadgeTitle(badge.id)} ($prog) · ${s.socialBadgeDesc(badge.id)}',
+                      duration: const Duration(seconds: 3),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 11,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: bg,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: border,
+                        width: unlocked ? 2 : 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Opacity(
+                          opacity: unlocked ? 1.0 : 0.45,
+                          child: Text(
+                            badge.emoji,
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          s.socialBadgeTitle(badge.id),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight:
+                                unlocked ? FontWeight.w900 : FontWeight.w700,
+                            color: unlocked
+                                ? TronoColors.ink(context)
+                                : TronoColors.muted(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1405,11 +1565,13 @@ class _FeedItemCard extends StatelessWidget {
     required this.item,
     required this.currentUserId,
     required this.onReact,
+    this.syncedDuo,
   });
 
   final SharedFeedItem item;
   final String? currentUserId;
   final ValueChanged<String> onReact;
+  final SyncedDuoPair? syncedDuo;
 
   @override
   Widget build(BuildContext context) {
@@ -1519,6 +1681,41 @@ class _FeedItemCard extends StatelessWidget {
                 ),
             ],
           ),
+
+          if (syncedDuo != null) ...[
+            const SizedBox(height: 9),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF2B2618)
+                    : const Color(0xFFFFF8E6),
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(color: TronoColors.gold, width: 1.5),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('⚡', style: TextStyle(fontSize: 13)),
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(
+                      s.syncedDuoPill(
+                        syncedDuo!.partnerEmojiFor(item.logId),
+                        syncedDuo!.partnerNameFor(item.logId),
+                        syncedDuo!.gapMinutes,
+                      ),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w900,
+                        color: TronoColors.ink(context),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
 
           if (item.shareLevel == ShareLevel.full) ...[
             if (item.bristolType != null ||

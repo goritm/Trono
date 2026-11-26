@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/database_helper.dart';
 import '../models/social_models.dart';
+import '../models/social_plus.dart';
 import '../services/settings_service.dart';
 import '../services/supabase_sync_service.dart';
 import 'trono_controller.dart';
@@ -35,6 +36,8 @@ class SocialController extends ChangeNotifier {
   String? _selectedGroupId;
   List<SharedFeedItem> _feed = const [];
   List<LeaderboardEntry> _leaderboard = const [];
+  List<LeaderboardEntry> _weeklyLeaderboard = const [];
+  SocialPlusSnapshot _socialPlus = const SocialPlusSnapshot();
   int _leaderboardDays = 7;
 
   bool _isSyncing = false;
@@ -61,7 +64,28 @@ class SocialController extends ChangeNotifier {
 
   List<SharedFeedItem> get feed => _feed;
   List<LeaderboardEntry> get leaderboard => _leaderboard;
+  List<LeaderboardEntry> get weeklyLeaderboard => _weeklyLeaderboard;
+  SocialPlusSnapshot get socialPlus => _socialPlus;
   int get leaderboardDays => _leaderboardDays;
+
+  GroupWrappedSnapshot? buildGroupWeeklyWrapped() {
+    final active = selectedGroup;
+    if (active == null) return null;
+    return SocialPlusEngine.buildGroupWeeklyWrapped(
+      group: active,
+      weeklyLeaderboard: _weeklyLeaderboard,
+      feed: _feed,
+    );
+  }
+
+  void _recomputeSocialPlus() {
+    _socialPlus = SocialPlusEngine.evaluate(
+      currentUserId: currentUserId,
+      groups: _groups,
+      feed: _feed,
+      weeklyLeaderboard: _weeklyLeaderboard,
+    );
+  }
 
   bool get isSyncing => _isSyncing;
   bool get isLoadingSocial => _isLoadingSocial;
@@ -165,6 +189,8 @@ class SocialController extends ChangeNotifier {
     _groups = const [];
     _feed = const [];
     _leaderboard = const [];
+    _weeklyLeaderboard = const [];
+    _socialPlus = const SocialPlusSnapshot();
     _lastError = null;
     unawaited(_service.unsubscribeChannel(_realtimeChannel));
     _realtimeChannel = null;
@@ -239,6 +265,8 @@ class SocialController extends ChangeNotifier {
         _selectedGroupId = null;
         _feed = const [];
         _leaderboard = const [];
+        _weeklyLeaderboard = const [];
+        _recomputeSocialPlus();
       } else {
         final active = selectedGroup!;
         if (_selectedGroupId != active.id) {
@@ -246,15 +274,25 @@ class SocialController extends ChangeNotifier {
           await _settings.setSelectedGroupId(active.id);
         }
 
-        final results = await Future.wait([
+        final futures = <Future<dynamic>>[
           _service.fetchGroupFeed(active),
           _service.fetchGroupLeaderboard(
             groupId: active.id,
             days: _leaderboardDays,
           ),
-        ]);
+          if (_leaderboardDays != 7)
+            _service.fetchGroupLeaderboard(
+              groupId: active.id,
+              days: 7,
+            ),
+        ];
+        final results = await Future.wait(futures);
         _feed = results[0] as List<SharedFeedItem>;
         _leaderboard = results[1] as List<LeaderboardEntry>;
+        _weeklyLeaderboard = _leaderboardDays == 7
+            ? _leaderboard
+            : (results[2] as List<LeaderboardEntry>);
+        _recomputeSocialPlus();
       }
     } catch (e) {
       _lastError = e.toString();
@@ -345,6 +383,7 @@ class SocialController extends ChangeNotifier {
     final nextFeed = List<SharedFeedItem>.from(_feed);
     nextFeed[idx] = item.copyWith(reactions: updatedReactions);
     _feed = nextFeed;
+    _recomputeSocialPlus();
     notifyListeners();
 
     try {
