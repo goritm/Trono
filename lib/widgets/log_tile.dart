@@ -239,36 +239,47 @@ class _LogTileState extends State<LogTile> with SingleTickerProviderStateMixin {
       child: Stack(
         alignment: Alignment.centerRight,
         children: [
-          // Revealed right-side drawer actions (Edit + Delete)
+          // Revealed right-side drawer actions (Edit + Delete) — 100% hidden when closed
           Positioned.fill(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  _DrawerActionBtn(
-                    icon: Icons.edit_rounded,
-                    color: TronoColors.obsidian,
-                    iconColor: TronoColors.gold,
-                    tooltip: s.editLogTitle,
-                    onTap: () {
-                      _close();
-                      widget.onTap();
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  _DrawerActionBtn(
-                    icon: Icons.delete_outline_rounded,
-                    color: TronoColors.coral,
-                    iconColor: Colors.white,
-                    tooltip: s.deleteButton,
-                    onTap: () {
-                      HapticFeedback.mediumImpact();
-                      _close();
-                      widget.onDelete?.call();
-                    },
-                  ),
-                ],
+            child: AnimatedBuilder(
+              animation: _slideCtrl,
+              builder: (context, child) {
+                final t = _slideCtrl.value;
+                if (t <= 0.01) return const SizedBox.shrink();
+                return Opacity(
+                  opacity: (t * 2.4).clamp(0.0, 1.0),
+                  child: IgnorePointer(ignoring: t < 0.25, child: child),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(0, 2, 2, 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    _DrawerActionBtn(
+                      icon: Icons.edit_rounded,
+                      color: TronoColors.obsidian,
+                      iconColor: TronoColors.gold,
+                      tooltip: s.editLogTitle,
+                      onTap: () {
+                        _close();
+                        widget.onTap();
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    _DrawerActionBtn(
+                      icon: Icons.delete_outline_rounded,
+                      color: TronoColors.coral,
+                      iconColor: Colors.white,
+                      tooltip: s.deleteButton,
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _close();
+                        widget.onDelete?.call();
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -311,10 +322,10 @@ class _DrawerActionBtn extends StatelessWidget {
       message: tooltip,
       child: Material(
         color: color,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(20),
           child: SizedBox(
             width: 54,
             height: double.infinity,
