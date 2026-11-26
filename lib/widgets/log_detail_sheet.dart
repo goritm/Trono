@@ -1,9 +1,11 @@
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:uuid/uuid.dart';
 
 import '../l10n/app_strings.dart';
 import '../models/bathroom_log.dart';
+import '../models/favorite_place.dart';
 import '../services/location_service.dart';
 import '../theme/app_theme.dart';
 import 'trono_toast.dart';
@@ -28,6 +30,7 @@ Future<LogDetailSheetResult?> showLogDetailSheet(
   BathroomLog? initialLog,
   DateTime? initialDate,
   ShareLevel defaultShareLevel = ShareLevel.summaryOnly,
+  List<FavoritePlace> favoritePlaces = const [],
 }) {
   return showModalBottomSheet<LogDetailSheetResult>(
     context: context,
@@ -45,6 +48,7 @@ Future<LogDetailSheetResult?> showLogDetailSheet(
       initialLog: initialLog,
       initialDate: initialDate,
       defaultShareLevel: defaultShareLevel,
+      favoritePlaces: favoritePlaces,
     ),
   );
 }
@@ -55,12 +59,14 @@ class _LogDetailSheetBody extends StatefulWidget {
     this.initialLog,
     this.initialDate,
     required this.defaultShareLevel,
+    this.favoritePlaces = const [],
   });
 
   final LogSheetMode mode;
   final BathroomLog? initialLog;
   final DateTime? initialDate;
   final ShareLevel defaultShareLevel;
+  final List<FavoritePlace> favoritePlaces;
 
   @override
   State<_LogDetailSheetBody> createState() => _LogDetailSheetBodyState();
@@ -80,6 +86,7 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
   LocationKind? _locationKind;
   double? _latitude;
   double? _longitude;
+  int? _rating;
   bool _capturingGps = false;
   late ShareLevel _shareLevel;
 
@@ -115,6 +122,7 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
     _locationKind = log?.locationKind;
     _latitude = log?.latitude;
     _longitude = log?.longitude;
+    _rating = log?.rating;
     _shareLevel = log?.shareLevel ?? widget.defaultShareLevel;
   }
 
@@ -134,6 +142,17 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
       if (pos != null) {
         _latitude = pos.latitude;
         _longitude = pos.longitude;
+        final matched = FavoritePlacesEngine.matchPlace(
+          pos.latitude,
+          pos.longitude,
+          widget.favoritePlaces,
+        );
+        if (matched != null) {
+          if (_placeController.text.trim().isEmpty) {
+            _placeController.text = matched.name;
+          }
+          _locationKind ??= matched.locationKind;
+        }
       }
     });
     if (pos == null) {
@@ -187,6 +206,7 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
       placeLabel: _placeController.text.trim().isEmpty
           ? null
           : _placeController.text.trim(),
+      rating: _rating,
       shareLevel: _shareLevel,
       syncStatus: base?.syncStatus ?? SyncStatus.localOnly,
       createdAt: base?.createdAt ?? now,
@@ -456,8 +476,39 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
                       ],
                     ),
                     const SizedBox(height: 10),
+                    if (widget.favoritePlaces.isNotEmpty) ...[
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: widget.favoritePlaces.map((place) {
+                          final selected = _placeController.text
+                                  .trim()
+                                  .toLowerCase() ==
+                              place.name.trim().toLowerCase();
+                          return ChoiceChip(
+                            label: Text('${place.emoji} ${place.name}'),
+                            selected: selected,
+                            onSelected: (_) {
+                              HapticFeedback.selectionClick();
+                              setState(() {
+                                _placeController.text = place.name;
+                                _locationKind = place.locationKind;
+                                _latitude = place.latitude;
+                                _longitude = place.longitude;
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
                     TextField(
                       controller: _placeController,
+                      onChanged: (_) {
+                        if (widget.favoritePlaces.isNotEmpty) {
+                          setState(() {});
+                        }
+                      },
                       textCapitalization: TextCapitalization.sentences,
                       decoration: InputDecoration(
                         hintText: s.placeNamePlaceholder,
@@ -474,6 +525,22 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
                           vertical: 10,
                         ),
                       ),
+                    ),
+                    const SizedBox(height: 18),
+
+                    // 3.5 Bathroom Rating (1–5 ⭐)
+                    _SectionLabel(
+                      _rating != null
+                          ? '${s.bathroomRatingField} · ${s.ratingLabel(_rating!)}'
+                          : s.bathroomRatingField,
+                    ),
+                    const SizedBox(height: 8),
+                    _StarRatingPicker(
+                      rating: _rating,
+                      onChanged: (value) {
+                        HapticFeedback.selectionClick();
+                        setState(() => _rating = value);
+                      },
                     ),
                     const SizedBox(height: 18),
 
@@ -724,6 +791,62 @@ class _SectionLabel extends StatelessWidget {
         fontWeight: FontWeight.w700,
         color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
+    );
+  }
+}
+
+class _StarRatingPicker extends StatelessWidget {
+  const _StarRatingPicker({
+    required this.rating,
+    required this.onChanged,
+  });
+
+  final int? rating;
+  final ValueChanged<int?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Row(
+      children: List.generate(5, (index) {
+        final star = index + 1;
+        final filled = rating != null && star <= rating!;
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(right: index < 4 ? 8 : 0),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () => onChanged(rating == star ? null : star),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 140),
+                height: 46,
+                decoration: BoxDecoration(
+                  color: filled
+                      ? (isDark
+                          ? const Color(0xFF3A3014)
+                          : const Color(0xFFFEF3D2))
+                      : TronoColors.bg(context),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: filled
+                        ? TronoColors.gold
+                        : TronoColors.border(context),
+                    width: filled ? 2 : 1.4,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  filled ? Icons.star_rounded : Icons.star_outline_rounded,
+                  color: filled
+                      ? TronoColors.gold
+                      : TronoColors.muted(context),
+                  size: 26,
+                ),
+              ),
+            ),
+          ),
+        );
+      }),
     );
   }
 }

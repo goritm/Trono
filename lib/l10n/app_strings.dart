@@ -229,6 +229,78 @@ class AppStrings {
   String get homeSavedToast => _t('¡Ubicación de Casa guardada!', 'Home location saved!');
   String get clearHomeLabel => _t('Borrar ubicación de Casa', 'Clear Home location');
 
+  // V2.2 Favorite Places & 1–5 ⭐ Bathroom Ratings
+  String get bathroomRatingField => _t('Valoración del baño', 'Bathroom rating');
+  String ratingLabel(int stars) => switch (stars) {
+    1 => _t('1/5 · Para olvidar', '1/5 · Never again'),
+    2 => _t('2/5 · Justito', '2/5 · Barely okay'),
+    3 => _t('3/5 · Cumple', '3/5 · Gets it done'),
+    4 => _t('4/5 · Muy bien', '4/5 · Very nice'),
+    5 => _t('5/5 · Trono VIP', '5/5 · VIP Throne'),
+    _ => '$stars/5',
+  };
+  String get favoritePlacesQuickPickLabel =>
+      _t('Lugares favoritos', 'Favorite places');
+  String get favoritePlacesTitle =>
+      _t('Lugares Favoritos y Top Baños ⭐', 'Favorite Places & Top Bathrooms ⭐');
+  String get favoritePlacesShortTitle =>
+      _t('Lugares y Top Baños', 'Places & Top Bathrooms');
+  String get favoritePlacesMenuTitle =>
+      _t('Lugares Favoritos y Top Baños ⭐', 'Favorite Places & Top Bathrooms ⭐');
+  String favoritePlacesMenuSub(int count) {
+    if (count == 0) {
+      return _t(
+        'Guarda lugares para autodetectarlos por GPS',
+        'Save spots for silent GPS auto-detection',
+      );
+    }
+    if (count == 1) {
+      return _t('1 lugar guardado · radio 150 m', '1 saved place · 150 m radius');
+    }
+    return _t(
+      '$count lugares guardados · radio 150 m',
+      '$count saved places · 150 m radius',
+    );
+  }
+
+  String get saveCurrentLocationButton =>
+      _t('Guardar ubicación actual', 'Save current location');
+  String get addFavoritePlaceTitle =>
+      _t('Guardar lugar favorito', 'Save favorite place');
+  String get favoritePlaceNameLabel => _t('Nombre del lugar', 'Place name');
+  String get favoritePlaceNameHint =>
+      _t('Ej. Oficina, Gimnasio, Café...', 'e.g. Office, Gym, Cafe...');
+  String get favoritePlaceEmojiLabel => _t('Icono del lugar', 'Place icon');
+  String get favoritePlaceKindLabel => _t('Tipo de ubicación', 'Location type');
+  String get favoritePlaceGpsNotice => _t(
+    'Captura tu GPS actual solo en tu dispositivo (radio 150 m). Nunca se sube a la nube.',
+    'Captures your current GPS on this device only (150 m radius). Never uploaded to the cloud.',
+  );
+  String get favoritePlaceSavedToast =>
+      _t('¡Lugar favorito guardado!', 'Favorite place saved!');
+  String get favoritePlaceDeletedToast =>
+      _t('Lugar favorito eliminado', 'Favorite place deleted');
+  String get savedPlacesSectionTitle =>
+      _t('Lugares favoritos', 'Favorite places');
+  String get noFavoritePlacesTitle =>
+      _t('Sin lugares favoritos aún', 'No favorite places yet');
+  String get noFavoritePlacesBody => _t(
+    'Guarda tu oficina, gimnasio o bar favorito para que Trono los autodetecte por GPS al registrar un pupú.',
+    'Save your office, gym, or go-to cafe so Trono auto-labels your poops via GPS.',
+  );
+  String get topBathroomsSectionTitle => _t('Top Baños ⭐', 'Top Bathrooms ⭐');
+  String get noTopBathroomsTitle =>
+      _t('Tu ranking espera visitas', 'Your ranking awaits visits');
+  String get noTopBathroomsBody => _t(
+    'Ponle nombre al lugar o guarda favoritos y valora los baños de 1 a 5 ⭐ para ver tu Top Baños.',
+    'Add a place name or save favorites and rate bathrooms 1–5 ⭐ to build your Top Bathrooms.',
+  );
+  String placeVisitsCount(int n) =>
+      n == 1 ? _t('1 visita', '1 visit') : _t('$n visitas', '$n visits');
+  String get unratedLabel => _t('Sin valorar', 'Unrated');
+  String radiusMetersLabel(int meters) =>
+      _t('Radio $meters m · Solo local', '$meters m radius · Local only');
+
   // V1.6 Paid on the Throne, Insights, Wrapped & Map Filters
   String get paidThroneTitle => _t('Pagado en el Trono', 'Paid on the Throne');
   String get paidThisMonthLabel => _t('Este mes', 'This month');

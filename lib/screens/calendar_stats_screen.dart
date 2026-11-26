@@ -102,6 +102,8 @@ class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
                                 initialDate: day,
                                 defaultShareLevel:
                                     widget.controller.defaultShareLevel,
+                                favoritePlaces:
+                                    widget.controller.favoritePlaces,
                               );
                               if (res?.savedLog != null) {
                                 final unlocks = await widget.controller.saveLog(
@@ -197,6 +199,7 @@ class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
       mode: LogSheetMode.editExisting,
       initialLog: log,
       defaultShareLevel: widget.controller.defaultShareLevel,
+      favoritePlaces: widget.controller.favoritePlaces,
     );
     if (res == null) return;
     if (res.deleted) {

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:trono/models/achievement.dart';
 import 'package:trono/models/bathroom_log.dart';
+import 'package:trono/models/favorite_place.dart';
 import 'package:trono/models/insights.dart';
 import 'package:trono/models/social_models.dart';
 import 'package:trono/models/social_plus.dart';
@@ -488,6 +489,241 @@ void main() {
       expect(wrapped.awayMvp?.displayName, 'Jose');
       expect(wrapped.totalReactions, 10);
       expect(wrapped.topReactionEmoji, '👑');
+    });
+  });
+
+  group('Favorite Places & Bathroom Ratings (V2.2)', () {
+    test('FavoritePlacesEngine.matchPlace returns closest match within radius', () {
+      final now = DateTime(2026, 11, 26, 12, 0);
+      final office = FavoritePlace(
+        id: 'p1',
+        name: 'Oficina Central',
+        emoji: '🏢',
+        locationKind: LocationKind.work,
+        latitude: 40.4168,
+        longitude: -3.7038,
+        radiusMeters: 150.0,
+        createdAt: now,
+      );
+      final cafe = FavoritePlace(
+        id: 'p2',
+        name: 'Café Esquina',
+        emoji: '☕',
+        locationKind: LocationKind.away,
+        // ~45 meters north of office
+        latitude: 40.4172,
+        longitude: -3.7038,
+        radiusMeters: 150.0,
+        createdAt: now,
+      );
+
+      // Closer to cafe (overlapping radii) -> should pick cafe
+      final matchedCafe = FavoritePlacesEngine.matchPlace(
+        40.41715,
+        -3.7038,
+        [office, cafe],
+      );
+      expect(matchedCafe?.id, 'p2');
+
+      // Right on top of office -> should pick office
+      final matchedOffice = FavoritePlacesEngine.matchPlace(
+        40.41682,
+        -3.7038,
+        [office, cafe],
+      );
+      expect(matchedOffice?.id, 'p1');
+
+      // Far away (~3 km) -> null
+      final noMatch = FavoritePlacesEngine.matchPlace(
+        40.4450,
+        -3.7038,
+        [office, cafe],
+      );
+      expect(noMatch, isNull);
+
+      // Empty places list -> null
+      expect(FavoritePlacesEngine.matchPlace(40.4168, -3.7038, const []), isNull);
+
+      // FavoritePlace JSON round-trip
+      final restored = FavoritePlace.fromJson(office.toJson());
+      expect(restored.id, office.id);
+      expect(restored.name, office.name);
+      expect(restored.emoji, '🏢');
+      expect(restored.locationKind, LocationKind.work);
+      expect(restored.latitude, closeTo(40.4168, 0.0001));
+      expect(restored.longitude, closeTo(-3.7038, 0.0001));
+      expect(restored.radiusMeters, 150.0);
+    });
+
+    test('FavoritePlacesEngine.computeTopPlaces groups case-insensitively and sorts by visits & rating', () {
+      final now = DateTime(2026, 11, 26, 15, 0);
+      final places = [
+        FavoritePlace(
+          id: 'fav-office',
+          name: 'Oficina',
+          emoji: '🏢',
+          locationKind: LocationKind.work,
+          latitude: 40.4168,
+          longitude: -3.7038,
+          createdAt: now,
+        ),
+        FavoritePlace(
+          id: 'fav-gym',
+          name: 'Gimnasio',
+          emoji: '🏋️',
+          locationKind: LocationKind.away,
+          latitude: 40.4200,
+          longitude: -3.7000,
+          createdAt: now,
+        ),
+      ];
+
+      final logs = [
+        // Oficina: 3 visits, ratings 4 and 5 => avg 4.5
+        BathroomLog(
+          id: '1',
+          type: BathroomType.poop,
+          timestamp: now,
+          placeLabel: 'Oficina',
+          rating: 5,
+          createdAt: now,
+          updatedAt: now,
+        ),
+        BathroomLog(
+          id: '2',
+          type: BathroomType.poop,
+          timestamp: now,
+          placeLabel: '  oficina ',
+          rating: 4,
+          createdAt: now,
+          updatedAt: now,
+        ),
+        BathroomLog(
+          id: '3',
+          type: BathroomType.poop,
+          timestamp: now,
+          placeLabel: 'OFICINA',
+          createdAt: now,
+          updatedAt: now,
+        ),
+        // Gimnasio: 2 visits, avg 5.0
+        BathroomLog(
+          id: '4',
+          type: BathroomType.poop,
+          timestamp: now,
+          placeLabel: 'Gimnasio',
+          rating: 5,
+          createdAt: now,
+          updatedAt: now,
+        ),
+        BathroomLog(
+          id: '5',
+          type: BathroomType.poop,
+          timestamp: now,
+          placeLabel: 'gimnasio',
+          rating: 5,
+          createdAt: now,
+          updatedAt: now,
+        ),
+        // Aeropuerto: 2 visits, avg 2.0 (tie on visits with Gimnasio, lower rating)
+        BathroomLog(
+          id: '6',
+          type: BathroomType.poop,
+          timestamp: now,
+          placeLabel: 'Aeropuerto',
+          locationKind: LocationKind.away,
+          rating: 2,
+          createdAt: now,
+          updatedAt: now,
+        ),
+        BathroomLog(
+          id: '7',
+          type: BathroomType.poop,
+          timestamp: now,
+          placeLabel: 'Aeropuerto',
+          locationKind: LocationKind.away,
+          createdAt: now,
+          updatedAt: now,
+        ),
+        // Unlabeled / blank logs must be ignored
+        BathroomLog(
+          id: '8',
+          type: BathroomType.poop,
+          timestamp: now,
+          placeLabel: '   ',
+          rating: 5,
+          createdAt: now,
+          updatedAt: now,
+        ),
+        BathroomLog(
+          id: '9',
+          type: BathroomType.poop,
+          timestamp: now,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      ];
+
+      final top = FavoritePlacesEngine.computeTopPlaces(logs, places);
+      expect(top, hasLength(3));
+
+      expect(top[0].name, 'Oficina');
+      expect(top[0].emoji, '🏢');
+      expect(top[0].locationKind, LocationKind.work);
+      expect(top[0].visitCount, 3);
+      expect(top[0].ratedCount, 2);
+      expect(top[0].averageRating, closeTo(4.5, 0.001));
+
+      expect(top[1].name, 'Gimnasio');
+      expect(top[1].emoji, '🏋️');
+      expect(top[1].visitCount, 2);
+      expect(top[1].averageRating, closeTo(5.0, 0.001));
+
+      expect(top[2].name, 'Aeropuerto');
+      expect(top[2].emoji, '🌍');
+      expect(top[2].locationKind, LocationKind.away);
+      expect(top[2].visitCount, 2);
+      expect(top[2].ratedCount, 1);
+      expect(top[2].averageRating, closeTo(2.0, 0.001));
+    });
+
+    test('BathroomLog.rating round-trips through DB map, JSON, copyWith, and cloud merge', () {
+      final t1 = DateTime.utc(2026, 11, 26, 10, 0);
+      final t2 = DateTime.utc(2026, 11, 26, 10, 5);
+      final log = BathroomLog(
+        id: 'rate-1',
+        type: BathroomType.poop,
+        timestamp: t1,
+        rating: 5,
+        createdAt: t1,
+        updatedAt: t1,
+      );
+
+      expect(log.hasDetails, isTrue);
+
+      final fromDb = BathroomLog.fromDbMap(log.toDbMap());
+      expect(fromDb.rating, 5);
+
+      final fromJson = BathroomLog.fromJson(log.toJson());
+      expect(fromJson.rating, 5);
+
+      final cleared = log.copyWith(clearRating: true);
+      expect(cleared.rating, isNull);
+      expect(cleared.hasDetails, isFalse);
+
+      final changed = cleared.copyWith(rating: 3);
+      expect(changed.rating, 3);
+
+      // Cloud sync preserves local rating on remote merge
+      final remote = Map<String, dynamic>.from(
+        CloudLogMapper.toSupabaseRow(log, userId: 'u1'),
+      )..['updated_at'] = t2.toIso8601String();
+      final merges = CloudLogMapper.computeRemoteMerges(
+        remoteRows: [remote],
+        localById: {log.id: log},
+      );
+      expect(merges, hasLength(1));
+      expect(merges.first.rating, 5);
     });
   });
 }

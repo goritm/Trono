@@ -37,7 +37,7 @@ class BackupService {
   static Future<void> exportCsv(List<BathroomLog> logs) async {
     final buf = StringBuffer();
     buf.writeln(
-      'id,type,timestamp,bristol_type,size,effort,duration_seconds,color,tags,note,share_level,location_kind,latitude,longitude,place_label',
+      'id,type,timestamp,bristol_type,size,effort,duration_seconds,color,tags,note,share_level,location_kind,latitude,longitude,place_label,rating',
     );
     for (final l in logs) {
       buf.writeln([
@@ -56,6 +56,7 @@ class BackupService {
         l.latitude?.toString() ?? '',
         l.longitude?.toString() ?? '',
         _csvEscape(l.placeLabel ?? ''),
+        l.rating?.toString() ?? '',
       ].join(','));
     }
 
@@ -150,6 +151,7 @@ class BackupService {
       final lng = cols.length > 13 ? double.tryParse(cols[13].trim()) : null;
       final placeLabel =
           cols.length > 14 && cols[14].trim().isNotEmpty ? cols[14] : null;
+      final rating = cols.length > 15 ? int.tryParse(cols[15].trim()) : null;
 
       logs.add(
         BathroomLog(
@@ -167,6 +169,7 @@ class BackupService {
           latitude: lat,
           longitude: lng,
           placeLabel: placeLabel,
+          rating: rating,
           shareLevel: share,
           createdAt: ts,
           updatedAt: DateTime.now(),

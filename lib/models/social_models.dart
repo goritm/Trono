@@ -392,10 +392,11 @@ class CloudLogMapper {
       tags: tags,
       note: row['note']?.toString(),
       locationKind: LocationKind.fromDb(row['location_kind']?.toString()),
-      // Always preserve local-only GPS coordinates if this log exists on device
+      // Always preserve local-only GPS coordinates and rating if this log exists on device
       latitude: existingLocal?.latitude,
       longitude: existingLocal?.longitude,
       placeLabel: row['place_label']?.toString(),
+      rating: existingLocal?.rating,
       shareLevel: ShareLevel.fromDb(row['share_level']?.toString()),
       syncStatus: SyncStatus.synced,
       createdAt:

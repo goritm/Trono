@@ -12,6 +12,7 @@ import '../widgets/chunky_widgets.dart';
 import '../widgets/log_detail_sheet.dart';
 import '../widgets/log_tile.dart';
 import '../widgets/trono_toast.dart';
+import 'favorite_places_screen.dart';
 
 enum _MapFilter { all, thisMonth, awayOnly, workOnly, homeOnly }
 
@@ -101,6 +102,7 @@ class _MapScreenState extends State<MapScreen> {
       mode: LogSheetMode.editExisting,
       initialLog: log,
       defaultShareLevel: widget.controller.defaultShareLevel,
+      favoritePlaces: widget.controller.favoritePlaces,
     );
     if (res == null) return;
     if (res.deleted) {
@@ -221,6 +223,18 @@ class _MapScreenState extends State<MapScreen> {
           appBar: AppBar(
             title: Text(s.mapScreenTitle),
             actions: [
+              IconButton(
+                tooltip: s.favoritePlacesTitle,
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          FavoritePlacesScreen(controller: widget.controller),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.star_rounded, color: TronoColors.gold),
+              ),
               if (hasHome)
                 IconButton(
                   tooltip: s.homePinLabel,
@@ -640,7 +654,8 @@ class _SelectedPinCard extends StatelessWidget {
               ),
             ],
           ),
-          if (log.bristolType != null ||
+          if (log.rating != null ||
+              log.bristolType != null ||
               log.durationSeconds != null ||
               (log.note != null && log.note!.isNotEmpty)) ...[
             const SizedBox(height: 8),
@@ -648,6 +663,7 @@ class _SelectedPinCard extends StatelessWidget {
               spacing: 6,
               runSpacing: 6,
               children: [
+                if (log.rating != null) _Pill('⭐ ${log.rating}'),
                 if (log.bristolType != null)
                   _Pill(s.bristolShort(log.bristolType!)),
                 if (log.durationSeconds != null && log.durationSeconds! > 0)
