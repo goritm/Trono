@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="claim_throne"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_claim"
+        android:shortcutShortLabel="@string/shortcut_claim_short"
+        android:shortcutLongLabel="@string/shortcut_claim_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.trono.trono"
+            android:targetClass="com.trono.trono.MainActivity">
+            <extra
+                android:name="shortcut_action"
+                android:value="claim_throne" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="start_timer"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_timer"
+        android:shortcutShortLabel="@string/shortcut_timer_short"
+        android:shortcutLongLabel="@string/shortcut_timer_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.trono.trono"
+            android:targetClass="com.trono.trono.MainActivity">
+            <extra
+                android:name="shortcut_action"
+                android:value="start_timer" />
+        </intent>
+    </shortcut>
+</shortcuts>

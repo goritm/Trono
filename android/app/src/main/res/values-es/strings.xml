@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shortcut_claim_short">Registrar Trono</string>
+    <string name="shortcut_claim_long">Registrar Trono (+1)</string>
+    <string name="shortcut_timer_short">Cronómetro</string>
+    <string name="shortcut_timer_long">Iniciar Cronómetro</string>
+</resources>
