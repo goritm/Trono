@@ -594,7 +594,7 @@ class _AnimatedHeroLogButtonState extends State<_AnimatedHeroLogButton>
     _cardBounce = TweenSequence<double>([
       TweenSequenceItem(tween: Tween(begin: 0.97, end: 1.02), weight: 55),
       TweenSequenceItem(tween: Tween(begin: 1.02, end: 1.0), weight: 45),
-    ]).animate(CurvedAnimation(parent: _popCtrl, curve: Curves.easeOutBack));
+    ]).animate(CurvedAnimation(parent: _popCtrl, curve: Curves.easeOutCubic));
   }
 
   @override
