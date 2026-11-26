@@ -7,6 +7,7 @@ import '../data/database_helper.dart';
 import '../models/achievement.dart';
 import '../models/bathroom_log.dart';
 import '../models/stats_summary.dart';
+import '../services/location_service.dart';
 import '../services/settings_service.dart';
 import '../services/widget_sync_service.dart';
 
@@ -49,6 +50,11 @@ class TronoController extends ChangeNotifier {
   bool _lockEnabled = false;
   bool _biometricEnabled = true;
 
+  // V1.5 Location & Home mirrors
+  double? _homeLat;
+  double? _homeLng;
+  bool _autoGpsEnabled = true;
+
   List<BathroomLog> get logs => _logs;
   StatsSummary get stats => _stats;
   GamificationSnapshot get gamification => _gamification;
@@ -64,12 +70,23 @@ class TronoController extends ChangeNotifier {
   bool get biometricEnabled => _biometricEnabled;
   bool get hasPin => _settings.hasPin;
 
+  double? get homeLat => _homeLat;
+  double? get homeLng => _homeLng;
+  bool get hasHomeLocation => _homeLat != null && _homeLng != null;
+  bool get autoGpsEnabled => _autoGpsEnabled;
+
+  List<BathroomLog> get geotaggedLogs =>
+      _logs.where((l) => l.hasCoordinates).toList();
+
   Future<void> init() async {
     _themeMode = _settings.themeMode;
     _locale = _settings.locale;
     _defaultShareLevel = _settings.defaultShareLevel;
     _lockEnabled = _settings.lockEnabled;
     _biometricEnabled = _settings.biometricEnabled;
+    _homeLat = _settings.homeLat;
+    _homeLng = _settings.homeLng;
+    _autoGpsEnabled = _settings.autoGpsEnabled;
 
     _activeTimerStart = _settings.activeTimerStart;
     if (_activeTimerStart != null) {
@@ -83,11 +100,9 @@ class TronoController extends ChangeNotifier {
 
   Future<void> reloadLogs({bool suppressNotifications = false}) async {
     _logs = await _repo.getAllLogs();
-    _stats = StatsCalculator.calculate(_logs);
-    _gamification = GamificationEngine.evaluate(_logs);
+    _recomputeDerived();
 
     if (suppressNotifications) {
-      // Sync baseline unlocked achievements so we don't spam on startup
       final unlockedIds = _gamification.achievements
           .where((a) => a.isUnlocked)
           .map((a) => a.id)
@@ -103,8 +118,25 @@ class TronoController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Instant 1-tap log creation. Returns the saved log + any newly unlocked badges/rank.
-  Future<(BathroomLog, UnlockEvent)> quickLog(BathroomType type) async {
+  void _recomputeDerived() {
+    _stats = StatsCalculator.calculate(
+      _logs,
+      homeLat: _homeLat,
+      homeLng: _homeLng,
+    );
+    _gamification = GamificationEngine.evaluate(
+      _logs,
+      homeLat: _homeLat,
+      homeLng: _homeLng,
+    );
+  }
+
+  /// Instant 1-tap log creation. Saves immediately (0ms), then silently enriches
+  /// with GPS coordinates in the background if permission is granted.
+  Future<(BathroomLog, UnlockEvent)> quickLog(
+    BathroomType type, {
+    LocationKind? locationKind,
+  }) async {
     int? durationSecs;
     if (_activeTimerStart != null) {
       final diff = DateTime.now().difference(_activeTimerStart!).inSeconds;
@@ -113,11 +145,20 @@ class TronoController extends ChangeNotifier {
     }
 
     final now = DateTime.now();
+    // If user explicitly tapped "Home" shortcut and has saved Home coords, attach them immediately!
+    final initialLat =
+        (locationKind == LocationKind.home && _homeLat != null) ? _homeLat : null;
+    final initialLng =
+        (locationKind == LocationKind.home && _homeLng != null) ? _homeLng : null;
+
     final log = BathroomLog(
       id: _uuid.v4(),
       type: type,
       timestamp: now,
       durationSeconds: durationSecs,
+      locationKind: locationKind,
+      latitude: initialLat,
+      longitude: initialLng,
       shareLevel: _defaultShareLevel,
       createdAt: now,
       updatedAt: now,
@@ -125,7 +166,44 @@ class TronoController extends ChangeNotifier {
 
     await _repo.upsertLog(log);
     final unlocks = await _refreshAndDetectUnlocks();
+
+    // Non-blocking background GPS enrichment when auto-GPS is enabled
+    if (_autoGpsEnabled && !log.hasCoordinates) {
+      unawaited(_enrichLogWithSilentGps(log.id, explicitKind: locationKind));
+    }
+
     return (log, unlocks);
+  }
+
+  Future<void> _enrichLogWithSilentGps(
+    String logId, {
+    LocationKind? explicitKind,
+  }) async {
+    final pos = await LocationService.tryGetPositionSilently();
+    if (pos == null) return;
+
+    final idx = _logs.indexWhere((l) => l.id == logId);
+    if (idx < 0) return;
+    final current = _logs[idx];
+    if (current.hasCoordinates) return;
+
+    final inferredKind = explicitKind ??
+        current.locationKind ??
+        LocationService.classifyAgainstHome(
+          pos.latitude,
+          pos.longitude,
+          homeLat: _homeLat,
+          homeLng: _homeLng,
+        );
+
+    final enriched = current.copyWith(
+      latitude: pos.latitude,
+      longitude: pos.longitude,
+      locationKind: inferredKind,
+      updatedAt: DateTime.now(),
+    );
+    await _repo.upsertLog(enriched);
+    await reloadLogs(suppressNotifications: true);
   }
 
   Future<UnlockEvent> saveLog(BathroomLog log) async {
@@ -154,8 +232,7 @@ class TronoController extends ChangeNotifier {
     final prevRankLevel = _settings.highestRankLevel;
 
     _logs = await _repo.getAllLogs();
-    _stats = StatsCalculator.calculate(_logs);
-    _gamification = GamificationEngine.evaluate(_logs);
+    _recomputeDerived();
 
     final nowUnlocked =
         _gamification.achievements.where((a) => a.isUnlocked).toList();
@@ -180,6 +257,36 @@ class TronoController extends ChangeNotifier {
     notifyListeners();
 
     return UnlockEvent(newAchievements: newlyUnlocked, newRank: newRank);
+  }
+
+  // V1.5 Location & Home controls
+  Future<bool> captureCurrentAsHome() async {
+    final pos = await LocationService.requestAndGetPosition();
+    if (pos == null) return false;
+    _homeLat = pos.latitude;
+    _homeLng = pos.longitude;
+    await _settings.setHomeLocation(_homeLat, _homeLng);
+    _recomputeDerived();
+    notifyListeners();
+    return true;
+  }
+
+  Future<void> clearHomeLocation() async {
+    _homeLat = null;
+    _homeLng = null;
+    await _settings.setHomeLocation(null, null);
+    _recomputeDerived();
+    notifyListeners();
+  }
+
+  Future<void> setAutoGpsEnabled(bool enabled) async {
+    _autoGpsEnabled = enabled;
+    await _settings.setAutoGpsEnabled(enabled);
+    if (enabled) {
+      // Prompt once nicely when user enables auto-GPS
+      await LocationService.requestAndGetPosition();
+    }
+    notifyListeners();
   }
 
   // Live timer controls

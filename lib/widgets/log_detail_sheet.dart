@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../l10n/app_strings.dart';
 import '../models/bathroom_log.dart';
+import '../services/location_service.dart';
 import '../theme/app_theme.dart';
 import 'chunky_widgets.dart';
 
@@ -71,6 +72,11 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
   StoolColor? _color;
   late Set<String> _tags;
   late TextEditingController _noteController;
+  late TextEditingController _placeController;
+  LocationKind? _locationKind;
+  double? _latitude;
+  double? _longitude;
+  bool _capturingGps = false;
   late ShareLevel _shareLevel;
 
   static const _quickDurationSeconds = [60, 120, 300, 600, 900, 1200];
@@ -101,13 +107,36 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
     _color = log?.color;
     _tags = {...?log?.tags};
     _noteController = TextEditingController(text: log?.note ?? '');
+    _placeController = TextEditingController(text: log?.placeLabel ?? '');
+    _locationKind = log?.locationKind;
+    _latitude = log?.latitude;
+    _longitude = log?.longitude;
     _shareLevel = log?.shareLevel ?? widget.defaultShareLevel;
   }
 
   @override
   void dispose() {
     _noteController.dispose();
+    _placeController.dispose();
     super.dispose();
+  }
+
+  Future<void> _captureGps() async {
+    setState(() => _capturingGps = true);
+    final pos = await LocationService.requestAndGetPosition();
+    if (!mounted) return;
+    setState(() {
+      _capturingGps = false;
+      if (pos != null) {
+        _latitude = pos.latitude;
+        _longitude = pos.longitude;
+      }
+    });
+    if (pos == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppStrings.of(context).gpsUnavailableToast)),
+      );
+    }
   }
 
   Future<void> _pickDateTime() async {
@@ -150,6 +179,12 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
       note: _noteController.text.trim().isEmpty
           ? null
           : _noteController.text.trim(),
+      locationKind: _locationKind,
+      latitude: _latitude,
+      longitude: _longitude,
+      placeLabel: _placeController.text.trim().isEmpty
+          ? null
+          : _placeController.text.trim(),
       shareLevel: _shareLevel,
       syncStatus: base?.syncStatus ?? SyncStatus.localOnly,
       createdAt: base?.createdAt ?? now,
@@ -258,6 +293,74 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
                       ),
                       const SizedBox(height: 18),
                     ],
+
+                    // Location: Home vs Away + GPS Pin + Place Label
+                    _SectionLabel(s.locationField),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ...LocationKind.values.map((kind) {
+                          final selected = _locationKind == kind;
+                          return ChoiceChip(
+                            label: Text('${kind.emoji} ${s.locationKindName(kind)}'),
+                            selected: selected,
+                            onSelected: (_) => setState(() {
+                              _locationKind = selected ? null : kind;
+                            }),
+                          );
+                        }),
+                        if (_latitude != null && _longitude != null)
+                          InputChip(
+                            avatar: const Icon(
+                              Icons.location_on_rounded,
+                              size: 16,
+                              color: TronoColors.terracotta,
+                            ),
+                            label: Text(s.gpsPinnedLabel),
+                            onDeleted: () => setState(() {
+                              _latitude = null;
+                              _longitude = null;
+                            }),
+                          )
+                        else
+                          ActionChip(
+                            avatar: _capturingGps
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.my_location_rounded, size: 16),
+                            label: Text(s.captureGpsButton),
+                            onPressed: _capturingGps ? null : _captureGps,
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _placeController,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: InputDecoration(
+                        hintText: s.placeNamePlaceholder,
+                        prefixIcon: const Icon(Icons.place_outlined, size: 18),
+                        filled: true,
+                        fillColor: scheme.surfaceContainerHighest
+                            .withValues(alpha: 0.45),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
 
                     // Bristol Scale (shown when poop or both)
                     if (_type.includesPoop) ...[

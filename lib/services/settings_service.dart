@@ -16,6 +16,9 @@ class SettingsService {
   static const _kActiveTimerStart = 'active_timer_start';
   static const _kUnlockedAchievements = 'unlocked_achievements';
   static const _kHighestRankLevel = 'highest_rank_level';
+  static const _kHomeLat = 'home_lat';
+  static const _kHomeLng = 'home_lng';
+  static const _kAutoGps = 'auto_gps';
 
   late final SharedPreferences _prefs;
 
@@ -116,5 +119,26 @@ class SettingsService {
 
   Future<void> setHighestRankLevel(int level) async {
     await _prefs.setInt(_kHighestRankLevel, level);
+  }
+
+  // V1.5 Home Coordinates & Auto-GPS
+  double? get homeLat => _prefs.getDouble(_kHomeLat);
+  double? get homeLng => _prefs.getDouble(_kHomeLng);
+  bool get hasHomeLocation => homeLat != null && homeLng != null;
+
+  Future<void> setHomeLocation(double? lat, double? lng) async {
+    if (lat == null || lng == null) {
+      await _prefs.remove(_kHomeLat);
+      await _prefs.remove(_kHomeLng);
+    } else {
+      await _prefs.setDouble(_kHomeLat, lat);
+      await _prefs.setDouble(_kHomeLng, lng);
+    }
+  }
+
+  bool get autoGpsEnabled => _prefs.getBool(_kAutoGps) ?? true;
+
+  Future<void> setAutoGpsEnabled(bool enabled) async {
+    await _prefs.setBool(_kAutoGps, enabled);
   }
 }

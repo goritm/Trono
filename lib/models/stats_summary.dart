@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../services/location_service.dart';
 import 'bathroom_log.dart';
 
 enum StatsPeriod { week, month, allTime }
@@ -36,6 +37,11 @@ class StatsSummary {
     required this.longestSessionSeconds,
     required this.longestSessionDate,
     required this.totalBathroomSeconds,
+    required this.homePoopCount,
+    required this.awayPoopCount,
+    required this.distinctSpotsCount,
+    required this.geotaggedCount,
+    required this.maxDistanceFromHomeKm,
   });
 
   final int todayTotal;
@@ -54,6 +60,21 @@ class StatsSummary {
   final DateTime? longestSessionDate;
   final int totalBathroomSeconds;
 
+  // V1.5 Home vs Away & Territory stats
+  final int homePoopCount;
+  final int awayPoopCount;
+  final int distinctSpotsCount;
+  final int geotaggedCount;
+  final double maxDistanceFromHomeKm;
+
+  int get classifiedLocationCount => homePoopCount + awayPoopCount;
+  double get homePercent => classifiedLocationCount == 0
+      ? 0
+      : (homePoopCount / classifiedLocationCount) * 100;
+  double get awayPercent => classifiedLocationCount == 0
+      ? 0
+      : (awayPoopCount / classifiedLocationCount) * 100;
+
   PeriodAverage averageFor(StatsPeriod period) => switch (period) {
     StatsPeriod.week => weeklyAvg,
     StatsPeriod.month => monthlyAvg,
@@ -62,8 +83,6 @@ class StatsSummary {
 }
 
 class StatsCalculator {
-  /// Default estimated duration (in seconds) used when computing total
-  /// estimated bathroom time for logs without an explicit duration.
   static int _estimatedSeconds(BathroomLog log) {
     if (log.durationSeconds != null && log.durationSeconds! > 0) {
       return log.durationSeconds!;
@@ -74,7 +93,12 @@ class StatsCalculator {
     };
   }
 
-  static StatsSummary calculate(List<BathroomLog> logs, {DateTime? now}) {
+  static StatsSummary calculate(
+    List<BathroomLog> logs, {
+    DateTime? now,
+    double? homeLat,
+    double? homeLng,
+  }) {
     final current = now ?? DateTime.now();
     final today = DateUtils.dateOnly(current);
 
@@ -94,6 +118,11 @@ class StatsCalculator {
     int allTotal = logs.length;
     int allPoop = 0;
 
+    int homePoopCount = 0;
+    int awayPoopCount = 0;
+    int geotaggedCount = 0;
+    double maxDistMeters = 0;
+
     DateTime? firstDay;
     int longestSessionSeconds = 0;
     DateTime? longestSessionDate;
@@ -109,7 +138,36 @@ class StatsCalculator {
       }
 
       final isPoop = log.type.includesPoop;
-      if (isPoop) allPoop++;
+      if (isPoop) {
+        allPoop++;
+        final loc = log.effectiveLocationKind ??
+            (log.hasCoordinates
+                ? LocationService.classifyAgainstHome(
+                    log.latitude!,
+                    log.longitude!,
+                    homeLat: homeLat,
+                    homeLng: homeLng,
+                  )
+                : null);
+        if (loc == LocationKind.home) {
+          homePoopCount++;
+        } else if (loc == LocationKind.away) {
+          awayPoopCount++;
+        }
+      }
+
+      if (log.hasCoordinates) {
+        geotaggedCount++;
+        if (homeLat != null && homeLng != null) {
+          final d = LocationService.distanceMeters(
+            homeLat,
+            homeLng,
+            log.latitude!,
+            log.longitude!,
+          );
+          if (d > maxDistMeters) maxDistMeters = d;
+        }
+      }
 
       if (day == today) {
         todayTotal++;
@@ -134,15 +192,12 @@ class StatsCalculator {
       totalBathroomSeconds += _estimatedSeconds(log);
     }
 
-    // Active days span for averages: if user just started 2 days ago, use
-    // actual days since first log (capped to 7 / 30) so averages are honest!
     final daysSinceFirst = firstDay == null
         ? 0
         : today.difference(firstDay).inDays + 1;
     final weekSpan = daysSinceFirst == 0 ? 0 : daysSinceFirst.clamp(1, 7);
     final monthSpan = daysSinceFirst == 0 ? 0 : daysSinceFirst.clamp(1, 30);
 
-    // Record day
     int recordDayCount = 0;
     DateTime? recordDayDate;
     dailyCounts.forEach((date, count) {
@@ -154,7 +209,6 @@ class StatsCalculator {
       }
     });
 
-    // Peak hour
     int? peakHour;
     int maxHourCount = 0;
     for (int h = 0; h < 24; h++) {
@@ -164,7 +218,6 @@ class StatsCalculator {
       }
     }
 
-    // Streaks
     final sortedDays = dailyCounts.keys.toList()..sort();
     int longestStreak = 0;
     int run = 0;
@@ -185,6 +238,8 @@ class StatsCalculator {
       currentStreak++;
       cursor = cursor.subtract(const Duration(days: 1));
     }
+
+    final distinctSpots = LocationService.countDistinctSpots(logs);
 
     return StatsSummary(
       todayTotal: todayTotal,
@@ -214,6 +269,11 @@ class StatsCalculator {
       longestSessionSeconds: longestSessionSeconds,
       longestSessionDate: longestSessionDate,
       totalBathroomSeconds: totalBathroomSeconds,
+      homePoopCount: homePoopCount,
+      awayPoopCount: awayPoopCount,
+      distinctSpotsCount: distinctSpots,
+      geotaggedCount: geotaggedCount,
+      maxDistanceFromHomeKm: maxDistMeters / 1000.0,
     );
   }
 }

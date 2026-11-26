@@ -32,6 +32,26 @@ enum BathroomType {
   }
 }
 
+enum LocationKind {
+  home,
+  away;
+
+  String get dbValue => name;
+
+  String get emoji => switch (this) {
+    LocationKind.home => '🏠',
+    LocationKind.away => '🌍',
+  };
+
+  static LocationKind? fromDb(String? value) {
+    return switch (value) {
+      'home' => LocationKind.home,
+      'away' => LocationKind.away,
+      _ => null,
+    };
+  }
+}
+
 enum PoopSize {
   small,
   normal,
@@ -151,9 +171,9 @@ enum SyncStatus {
 const List<String> kDefaultQuickTags = [
   'coffee',
   'spicy',
-  'home',
   'work',
   'travel',
+  'restaurant',
   'dairy',
   'morning',
   'late_night',
@@ -171,6 +191,10 @@ class BathroomLog {
     this.color,
     this.tags = const [],
     this.note,
+    this.locationKind,
+    this.latitude,
+    this.longitude,
+    this.placeLabel,
     this.shareLevel = ShareLevel.summaryOnly,
     this.syncStatus = SyncStatus.localOnly,
     required this.createdAt,
@@ -189,12 +213,32 @@ class BathroomLog {
   final List<String> tags;
   final String? note;
 
+  // V1.5 Territory & Map metadata (stored locally only)
+  final LocationKind? locationKind;
+  final double? latitude;
+  final double? longitude;
+  final String? placeLabel;
+
   // V2 sync & multiplayer metadata
   final ShareLevel shareLevel;
   final SyncStatus syncStatus;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
+
+  bool get hasCoordinates => latitude != null && longitude != null;
+
+  /// Effective Home vs Away classification (falls back cleanly to legacy tags).
+  LocationKind? get effectiveLocationKind {
+    if (locationKind != null) return locationKind;
+    if (tags.contains('home')) return LocationKind.home;
+    if (tags.contains('work') ||
+        tags.contains('travel') ||
+        tags.contains('restaurant')) {
+      return LocationKind.away;
+    }
+    return null;
+  }
 
   bool get hasDetails =>
       bristolType != null ||
@@ -203,6 +247,9 @@ class BathroomLog {
       durationSeconds != null ||
       color != null ||
       tags.isNotEmpty ||
+      locationKind != null ||
+      hasCoordinates ||
+      (placeLabel != null && placeLabel!.trim().isNotEmpty) ||
       (note != null && note!.trim().isNotEmpty);
 
   BathroomLog copyWith({
@@ -222,6 +269,13 @@ class BathroomLog {
     List<String>? tags,
     String? note,
     bool clearNote = false,
+    LocationKind? locationKind,
+    bool clearLocationKind = false,
+    double? latitude,
+    double? longitude,
+    bool clearCoordinates = false,
+    String? placeLabel,
+    bool clearPlaceLabel = false,
     ShareLevel? shareLevel,
     SyncStatus? syncStatus,
     DateTime? createdAt,
@@ -240,6 +294,11 @@ class BathroomLog {
       color: clearColor ? null : (color ?? this.color),
       tags: tags ?? this.tags,
       note: clearNote ? null : (note ?? this.note),
+      locationKind:
+          clearLocationKind ? null : (locationKind ?? this.locationKind),
+      latitude: clearCoordinates ? null : (latitude ?? this.latitude),
+      longitude: clearCoordinates ? null : (longitude ?? this.longitude),
+      placeLabel: clearPlaceLabel ? null : (placeLabel ?? this.placeLabel),
       shareLevel: shareLevel ?? this.shareLevel,
       syncStatus: syncStatus ?? this.syncStatus,
       createdAt: createdAt ?? this.createdAt,
@@ -260,6 +319,10 @@ class BathroomLog {
       'color': color?.dbValue,
       'tags': tags.join(','),
       'note': note,
+      'location_kind': locationKind?.dbValue,
+      'latitude': latitude,
+      'longitude': longitude,
+      'place_label': placeLabel,
       'share_level': shareLevel.dbValue,
       'sync_status': syncStatus.dbValue,
       'created_at': createdAt.millisecondsSinceEpoch,
@@ -287,6 +350,10 @@ class BathroomLog {
       color: StoolColor.fromDb(map['color'] as String?),
       tags: parsedTags,
       note: map['note'] as String?,
+      locationKind: LocationKind.fromDb(map['location_kind'] as String?),
+      latitude: (map['latitude'] as num?)?.toDouble(),
+      longitude: (map['longitude'] as num?)?.toDouble(),
+      placeLabel: map['place_label'] as String?,
       shareLevel: ShareLevel.fromDb(map['share_level'] as String?),
       syncStatus: SyncStatus.fromDb(map['sync_status'] as String?),
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
@@ -309,6 +376,10 @@ class BathroomLog {
       'color': color?.dbValue,
       'tags': tags,
       'note': note,
+      'locationKind': locationKind?.dbValue,
+      'latitude': latitude,
+      'longitude': longitude,
+      'placeLabel': placeLabel,
       'shareLevel': shareLevel.dbValue,
       'syncStatus': syncStatus.dbValue,
       'createdAt': createdAt.toIso8601String(),
@@ -337,6 +408,14 @@ class BathroomLog {
           ? (json['tags'] as List).map((e) => e.toString()).toList()
           : const [],
       note: json['note']?.toString(),
+      locationKind: LocationKind.fromDb(json['locationKind']?.toString()),
+      latitude: (json['latitude'] is num)
+          ? (json['latitude'] as num).toDouble()
+          : double.tryParse(json['latitude']?.toString() ?? ''),
+      longitude: (json['longitude'] is num)
+          ? (json['longitude'] as num).toDouble()
+          : double.tryParse(json['longitude']?.toString() ?? ''),
+      placeLabel: json['placeLabel']?.toString(),
       shareLevel: ShareLevel.fromDb(json['shareLevel']?.toString()),
       syncStatus: SyncStatus.fromDb(json['syncStatus']?.toString()),
       createdAt:

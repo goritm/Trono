@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../services/location_service.dart';
 import 'bathroom_log.dart';
 
 class UserRank {
@@ -64,7 +65,11 @@ class GamificationEngine {
     UserRank(level: 7, id: 'deity', minXp: 5000, emoji: '✨'),
   ];
 
-  static GamificationSnapshot evaluate(List<BathroomLog> logs) {
+  static GamificationSnapshot evaluate(
+    List<BathroomLog> logs, {
+    double? homeLat,
+    double? homeLng,
+  }) {
     final totalLogs = logs.length;
     final poopLogs = logs.where((l) => l.type.includesPoop).length;
     final spicyLogs = logs.where((l) => l.tags.contains('spicy')).length;
@@ -82,7 +87,36 @@ class GamificationEngine {
     final perfectBristolLogs = logs.where((l) => l.bristolType == 4).length;
     final epicSizeLogs = logs.where((l) => l.size == PoopSize.epic).length;
     final marathonLogs =
-        logs.where((l) => (l.durationSeconds ?? 0) >= 900).length; // 15+ min
+        logs.where((l) => (l.durationSeconds ?? 0) >= 900).length;
+
+    // V1.5 Territory metrics
+    int awayPoopLogs = 0;
+    double maxDistKm = 0;
+    for (final l in logs) {
+      if (l.type.includesPoop) {
+        final loc = l.effectiveLocationKind ??
+            (l.hasCoordinates
+                ? LocationService.classifyAgainstHome(
+                    l.latitude!,
+                    l.longitude!,
+                    homeLat: homeLat,
+                    homeLng: homeLng,
+                  )
+                : null);
+        if (loc == LocationKind.away) awayPoopLogs++;
+      }
+      if (l.hasCoordinates && homeLat != null && homeLng != null) {
+        final dKm = LocationService.distanceMeters(
+              homeLat,
+              homeLng,
+              l.latitude!,
+              l.longitude!,
+            ) /
+            1000.0;
+        if (dKm > maxDistKm) maxDistKm = dKm;
+      }
+    }
+    final distinctSpots = LocationService.countDistinctSpots(logs);
 
     // Visits per day & max streak
     final dayCounts = <DateTime, int>{};
@@ -102,6 +136,34 @@ class GamificationEngine {
         current: totalLogs,
         target: 1,
         xpReward: 25,
+      ),
+      AchievementProgress(
+        id: 'survival_fittest',
+        emoji: '🏕️',
+        current: awayPoopLogs,
+        target: 5,
+        xpReward: 80,
+      ),
+      AchievementProgress(
+        id: 'throne_nomad',
+        emoji: '🌍',
+        current: awayPoopLogs,
+        target: 15,
+        xpReward: 150,
+      ),
+      AchievementProgress(
+        id: 'territory_conqueror',
+        emoji: '🗺️',
+        current: distinctSpots,
+        target: 5,
+        xpReward: 120,
+      ),
+      AchievementProgress(
+        id: 'international_drop',
+        emoji: '✈️',
+        current: maxDistKm.floor(),
+        target: 50,
+        xpReward: 200,
       ),
       AchievementProgress(
         id: 'hat_trick',
@@ -217,7 +279,6 @@ class GamificationEngine {
       ),
     ];
 
-    // Base XP: 10 per log + 5 bonus if detailed + unlocked achievement rewards
     final logXp = totalLogs * 10 + detailedLogs * 5;
     final badgeXp = achievements
         .where((a) => a.isUnlocked)

@@ -37,7 +37,7 @@ class BackupService {
   static Future<void> exportCsv(List<BathroomLog> logs) async {
     final buf = StringBuffer();
     buf.writeln(
-      'id,type,timestamp,bristol_type,size,effort,duration_seconds,color,tags,note,share_level',
+      'id,type,timestamp,bristol_type,size,effort,duration_seconds,color,tags,note,share_level,location_kind,latitude,longitude,place_label',
     );
     for (final l in logs) {
       buf.writeln([
@@ -52,6 +52,10 @@ class BackupService {
         _csvEscape(l.tags.join(';')),
         _csvEscape(l.note ?? ''),
         _csvEscape(l.shareLevel.dbValue),
+        _csvEscape(l.locationKind?.dbValue ?? ''),
+        l.latitude?.toString() ?? '',
+        l.longitude?.toString() ?? '',
+        _csvEscape(l.placeLabel ?? ''),
       ].join(','));
     }
 
@@ -139,6 +143,13 @@ class BackupService {
       final share = cols.length > 10
           ? ShareLevel.fromDb(cols[10].trim())
           : ShareLevel.summaryOnly;
+      final locKind = cols.length > 11
+          ? LocationKind.fromDb(cols[11].trim())
+          : null;
+      final lat = cols.length > 12 ? double.tryParse(cols[12].trim()) : null;
+      final lng = cols.length > 13 ? double.tryParse(cols[13].trim()) : null;
+      final placeLabel =
+          cols.length > 14 && cols[14].trim().isNotEmpty ? cols[14] : null;
 
       logs.add(
         BathroomLog(
@@ -152,6 +163,10 @@ class BackupService {
           color: color,
           tags: tags,
           note: note,
+          locationKind: locKind,
+          latitude: lat,
+          longitude: lng,
+          placeLabel: placeLabel,
           shareLevel: share,
           createdAt: ts,
           updatedAt: DateTime.now(),

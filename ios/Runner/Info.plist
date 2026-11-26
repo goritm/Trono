@@ -10,6 +10,8 @@
 	<string>Trono</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Unlock Trono using Face ID</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Trono uses your location only when you log a visit to map your spots and track Home vs Away stats locally on your device.</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

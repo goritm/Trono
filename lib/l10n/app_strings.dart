@@ -156,11 +156,64 @@ class AppStrings {
     'home' => _t('🏠 Casa', '🏠 Home'),
     'work' => _t('💼 Trabajo', '💼 Work'),
     'travel' => _t('✈️ Viaje', '✈️ Travel'),
+    'restaurant' => _t('🍽️ Restaurante', '🍽️ Restaurant'),
     'dairy' => _t('🧀 Lácteos', '🧀 Dairy'),
     'morning' => _t('🌅 Mañana', '🌅 Morning'),
     'late_night' => _t('🌙 Madrugada', '🌙 Late night'),
     _ => tag,
   };
+
+  // V1.5 Location, Home vs Away & Map
+  String locationKindName(LocationKind kind) => switch (kind) {
+    LocationKind.home => _t('En casa', 'At home'),
+    LocationKind.away => _t('Fuera de casa', 'Away'),
+  };
+
+  String get quickHomeButton => _t('En casa', 'At home');
+  String get quickAwayButton => _t('Fuera', 'Away');
+  String get quickAutoChip => _t('Auto', 'Auto');
+  String get locationField => _t('Ubicación', 'Location');
+  String get placeNamePlaceholder =>
+      _t('Ej. Oficina, Aeropuerto, Bar...', 'e.g. Office, Airport, Cafe...');
+  String get captureGpsButton => _t('Fijar pin GPS aquí', 'Pin current GPS');
+  String get gpsPinnedLabel => _t('Pin GPS guardado', 'GPS pin saved');
+  String get clearPinGps => _t('Quitar pin', 'Remove pin');
+  String get gpsUnavailableToast => _t(
+    'No se pudo obtener GPS (revisa permisos)',
+    'Could not get GPS (check permissions)',
+  );
+
+  String get territoryTitle => _t('En casa vs Fuera', 'Home vs Away');
+  String get homeShort => _t('Casa', 'Home');
+  String get awayShort => _t('Fuera', 'Away');
+  String get noLocationDataYet => _t(
+    'Marca "En casa" o "Fuera" al registrar para descubrir tu porcentaje de supervivencia.',
+    'Mark "At home" or "Away" when logging to unlock your survival ratio.',
+  );
+  String spotsConqueredLabel(int n) =>
+      _t('$n lugares conquistados', '$n spots conquered');
+  String farthestDropLabel(double km) =>
+      _t('Máx. distancia: ${km.toStringAsFixed(1)} km', 'Farthest: ${km.toStringAsFixed(1)} km');
+  String get openMapButton => _t('Ver Mapa de Tronos', 'Open Throne Map');
+  String get mapScreenTitle => _t('Mapa de Tronos', 'Throne Map');
+  String get mapEmptyTitle => _t('Tu mapa espera conquistas', 'No pins on your map yet');
+  String get mapEmptyBody => _t(
+    'Activa el GPS en Ajustes o toca "Fijar pin GPS" al registrar un pupu para ir marcando tu territorio en el mapa.',
+    'Enable GPS in Settings or tap "Pin current GPS" when logging to map your conquered spots.',
+  );
+  String get homePinLabel => _t('Tu Casa (Base)', 'Home Base');
+
+  String get locationSettingsSection => _t('Ubicación y Casa', 'Location & Home');
+  String get autoGpsLabel => _t('Guardar GPS automáticamente', 'Auto-save GPS pin');
+  String get autoGpsSub => _t(
+    'Detecta Casa vs Fuera y marca pines en tu mapa local',
+    'Auto-detects Home vs Away & drops local map pins',
+  );
+  String get setHomeLocationLabel => _t('Guardar ubicación actual como Casa', 'Set current spot as Home');
+  String get homeConfiguredSub => _t('Casa configurada (radio 150 m)', 'Home set (150 m radius)');
+  String get homeNotSetSub => _t('Útil para detectar Casa vs Fuera sin tocar nada', 'Auto-detects Home vs Away automatically');
+  String get homeSavedToast => _t('¡Ubicación de Casa guardada!', 'Home location saved!');
+  String get clearHomeLabel => _t('Borrar ubicación de Casa', 'Clear Home location');
 
   String shareLevelName(ShareLevel level) => switch (level) {
     ShareLevel.private => _t('🔒 Privado', '🔒 Private'),
@@ -244,6 +297,10 @@ class AppStrings {
 
   String achievementTitle(String id) => switch (id) {
     'first_visit' => _t('Bautizo Oficial', 'First Drop'),
+    'survival_fittest' => _t('Supervivencia del Más Apto', 'Survival of the Fittest'),
+    'throne_nomad' => _t('Nómada del Trono', 'Throne Nomad'),
+    'territory_conqueror' => _t('Conquistador', 'Conqueror'),
+    'international_drop' => _t('Alcance Internacional', 'Long-Distance Drop'),
     'hat_trick' => _t('Tripleta', 'Hat-Trick'),
     'turbo_day' => _t('Modo Turbo', 'Turbo Day'),
     'streak_7' => _t('Semana de Acero', '7-Day Streak'),
@@ -265,6 +322,10 @@ class AppStrings {
 
   String achievementDesc(String id) => switch (id) {
     'first_visit' => _t('Registra tu primera visita', 'Log your very first visit'),
+    'survival_fittest' => _t('5 pupus fuera de casa (superpoder)', '5 poops away from home (superpower)'),
+    'throne_nomad' => _t('15 pupus fuera de casa', '15 poops away from home'),
+    'territory_conqueror' => _t('Marca 5 ubicaciones distintas en el mapa', 'Pin 5 distinct spots on the map'),
+    'international_drop' => _t('Un pupu a +50 km de tu casa', 'A poop 50+ km away from home'),
     'hat_trick' => _t('3 o más visitas en un solo día', '3+ visits in a single day'),
     'turbo_day' => _t('6 o más visitas en un solo día', '6+ visits in a single day'),
     'streak_7' => _t('Registra 7 días seguidos', 'Log 7 days in a row'),

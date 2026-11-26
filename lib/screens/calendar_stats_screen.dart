@@ -12,6 +12,7 @@ import '../widgets/achievement_unlock_dialog.dart';
 import '../widgets/chunky_widgets.dart';
 import '../widgets/log_detail_sheet.dart';
 import '../widgets/log_tile.dart';
+import 'map_screen.dart';
 
 class CalendarStatsScreen extends StatefulWidget {
   const CalendarStatsScreen({super.key, required this.controller});
@@ -204,6 +205,20 @@ class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
         SliverAppBar(
           floating: true,
           title: Text(s.calendarStatsTitle),
+          actions: [
+            IconButton(
+              tooltip: s.mapScreenTitle,
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => MapScreen(controller: widget.controller),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.map_rounded),
+            ),
+            const SizedBox(width: 6),
+          ],
         ),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 6, 16, 28),
@@ -287,6 +302,19 @@ class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 16),
+
+              // 1.5 Territory: Home vs Away Ratio & Throne Map Card
+              _TerritoryStatsCard(
+                stats: stats,
+                onOpenMap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => MapScreen(controller: widget.controller),
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 16),
 
@@ -544,6 +572,194 @@ Color _heatColor(int count, BuildContext context) {
         : const Color(0xFFE87D55);
   }
   return TronoColors.terracotta;
+}
+
+class _TerritoryStatsCard extends StatelessWidget {
+  const _TerritoryStatsCard({
+    required this.stats,
+    required this.onOpenMap,
+  });
+
+  final StatsSummary stats;
+  final VoidCallback onOpenMap;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final hasRatio = stats.classifiedLocationCount > 0;
+    final homeFlex = stats.homePoopCount;
+    final awayFlex = stats.awayPoopCount;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return ChunkyCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                s.territoryTitle.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.8,
+                  color: TronoColors.muted(context),
+                ),
+              ),
+              const Spacer(),
+              if (stats.distinctSpotsCount > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: TronoColors.gold.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Text(
+                    s.spotsConqueredLabel(stats.distinctSpotsCount),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: isDark ? TronoColors.gold : TronoColors.goldLip,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (!hasRatio)
+            Text(
+              s.noLocationDataYet,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: TronoColors.muted(context),
+              ),
+            )
+          else ...[
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${stats.homePercent.round()}%',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          color: isDark
+                              ? TronoColors.gold
+                              : TronoColors.obsidian,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      Text(
+                        '🏠 ${s.homeShort} (${stats.homePoopCount})',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: TronoColors.muted(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '${stats.awayPercent.round()}%',
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          color: TronoColors.terracotta,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      Text(
+                        '🌍 ${s.awayShort} (${stats.awayPoopCount})',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: TronoColors.muted(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: SizedBox(
+                height: 14,
+                child: Row(
+                  children: [
+                    if (homeFlex > 0)
+                      Expanded(
+                        flex: homeFlex,
+                        child: Container(color: TronoColors.gold),
+                      ),
+                    if (awayFlex > 0)
+                      Expanded(
+                        flex: awayFlex,
+                        child: Container(color: TronoColors.terracotta),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            if (stats.maxDistanceFromHomeKm >= 0.5) ...[
+              const SizedBox(height: 8),
+              Text(
+                s.farthestDropLabel(stats.maxDistanceFromHomeKm),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: TronoColors.muted(context),
+                ),
+              ),
+            ],
+          ],
+          const SizedBox(height: 14),
+          ChunkyButton(
+            width: double.infinity,
+            color: isDark ? const Color(0xFF282E3C) : TronoColors.obsidian,
+            lipColor: TronoColors.obsidianLip,
+            lipHeight: 4,
+            borderRadius: 16,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            onPressed: onOpenMap,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.map_rounded,
+                  color: TronoColors.gold,
+                  size: 19,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  s.openMapButton.toUpperCase(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 13,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _AvgMetricReadout extends StatelessWidget {
