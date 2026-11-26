@@ -319,61 +319,6 @@ class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
               ),
               const SizedBox(height: 16),
 
-              // 1.4 Shareable Trono Wrapped Banner
-              ChunkyButton(
-                width: double.infinity,
-                color: TronoColors.obsidian,
-                lipColor: TronoColors.obsidianLip,
-                borderColor: TronoColors.gold.withValues(alpha: 0.5),
-                lipHeight: 4,
-                borderRadius: 20,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 14,
-                ),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) =>
-                          WrappedScreen(controller: widget.controller),
-                    ),
-                  );
-                },
-                child: Row(
-                  children: [
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: TronoColors.gold.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.auto_awesome_rounded,
-                        color: TronoColors.gold,
-                        size: 21,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        s.wrappedButtonLabel,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      color: TronoColors.gold,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
               // 1.5 Territory: Home vs Away Ratio & Throne Map Card
               _TerritoryStatsCard(
                 stats: stats,
@@ -623,6 +568,61 @@ class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 20),
+
+              // 5. Shareable Trono Wrapped Banner at the bottom
+              ChunkyButton(
+                width: double.infinity,
+                color: TronoColors.obsidian,
+                lipColor: TronoColors.obsidianLip,
+                borderColor: TronoColors.gold.withValues(alpha: 0.5),
+                lipHeight: 4,
+                borderRadius: 20,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 14,
+                ),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          WrappedScreen(controller: widget.controller),
+                    ),
+                  );
+                },
+                child: Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: TronoColors.gold.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.auto_awesome_rounded,
+                        color: TronoColors.gold,
+                        size: 21,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        s.wrappedButtonLabel,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: TronoColors.gold,
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -700,23 +700,31 @@ class _PaidOnThroneCard extends StatelessWidget {
                   ),
                 ),
               ),
-              TextButton(
-                onPressed: onConfigure,
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  minimumSize: const Size(0, 32),
-                ),
-                child: Text(
-                  s.configureSalaryButton,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12.5,
+              InkWell(
+                onTap: onConfigure,
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: TronoColors.terracotta.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    s.configureSalaryButton,
+                    style: const TextStyle(
+                      color: TronoColors.terracotta,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           if (!hasSalary)
             Text(
               s.paidSetupHint,
