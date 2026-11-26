@@ -38,6 +38,8 @@ class AppStrings {
   String get streakLabel => _t('Racha', 'Streak');
   String daysShort(int n) => _t('${n}d', '${n}d');
   String get addPastVisit => _t('Registrar visita pasada', 'Log past visit');
+  String get pastVisitShort => _t('Pasada', 'Past');
+  String get timerShort => _t('Cronómetro', 'Timer');
   String get todayHistory => _t('Hoy en el baño', 'Today’s visits');
   String get recentHistory => _t('Últimos registros', 'Recent visits');
   String get noLogsYetTitle => _t('Tu historial está vacío', 'No visits logged yet');
@@ -46,6 +48,8 @@ class AppStrings {
     'Tap the button above to log your first poop in 1 second.',
   );
   String get savedInstantToast => _t('¡Registrado! (+10 XP)', 'Logged! (+10 XP)');
+  String get undoAction => _t('Deshacer', 'Undo');
+  String get undoneToast => _t('Registro deshecho', 'Log undone');
   String get detailsSavedToast => _t('Detalles guardados', 'Details saved');
   String get logDeletedToast => _t('Registro eliminado', 'Visit deleted');
 
@@ -153,23 +157,31 @@ class AppStrings {
   String tagLabel(String tag) => switch (tag) {
     'coffee' => _t('☕ Café', '☕ Coffee'),
     'spicy' => _t('🌶️ Picante', '🌶️ Spicy'),
+    'dairy' => _t('🧀 Lácteos', '🧀 Dairy'),
+    'alcohol' => _t('🍺 Alcohol', '🍺 Alcohol'),
+    'fast_food' => _t('🍔 Comida rápida', '🍔 Fast food'),
+    'fiber' => _t('🥗 Fibra', '🥗 Fiber'),
+    'sweets' => _t('🍫 Dulces', '🍫 Sweets'),
+    'stress' => _t('😰 Estrés', '😰 Stress'),
+    // Legacy fallbacks for previously saved logs
     'home' => _t('🏠 Casa', '🏠 Home'),
     'work' => _t('💼 Trabajo', '💼 Work'),
     'travel' => _t('✈️ Viaje', '✈️ Travel'),
     'restaurant' => _t('🍽️ Restaurante', '🍽️ Restaurant'),
-    'dairy' => _t('🧀 Lácteos', '🧀 Dairy'),
     'morning' => _t('🌅 Mañana', '🌅 Morning'),
     'late_night' => _t('🌙 Madrugada', '🌙 Late night'),
     _ => tag,
   };
 
-  // V1.5 Location, Home vs Away & Map
+  // V1.5 Location, Home / Work / Away & Map
   String locationKindName(LocationKind kind) => switch (kind) {
     LocationKind.home => _t('En casa', 'At home'),
+    LocationKind.work => _t('En el trabajo', 'At work'),
     LocationKind.away => _t('Fuera de casa', 'Away'),
   };
 
-  String get quickHomeButton => _t('En casa', 'At home');
+  String get quickHomeButton => _t('Casa', 'Home');
+  String get quickWorkButton => _t('Trabajo', 'Work');
   String get quickAwayButton => _t('Fuera', 'Away');
   String get quickAutoChip => _t('Auto', 'Auto');
   String get locationField => _t('Ubicación', 'Location');
@@ -214,6 +226,100 @@ class AppStrings {
   String get homeNotSetSub => _t('Útil para detectar Casa vs Fuera sin tocar nada', 'Auto-detects Home vs Away automatically');
   String get homeSavedToast => _t('¡Ubicación de Casa guardada!', 'Home location saved!');
   String get clearHomeLabel => _t('Borrar ubicación de Casa', 'Clear Home location');
+
+  // V1.6 Paid on the Throne, Insights, Wrapped & Map Filters
+  String get paidThroneTitle => _t('Pagado en el Trono', 'Paid on the Throne');
+  String get paidThisMonthLabel => _t('Este mes', 'This month');
+  String get paidAllTimeLabel => _t('Total acumulado', 'All-time earned');
+  String get paidSetupHint => _t(
+    'Configura tu sueldo aproximado en Ajustes (100% local) y elige 💼 Trabajo al registrar para ver cuánto ganas en el trono.',
+    'Set your approximate pay in Settings (100% local) and pick 💼 Work when logging to see how much you earn on the throne.',
+  );
+  String get configureSalaryButton => _t('Configurar sueldo', 'Set pay rate');
+  String get salarySettingsSection => _t('Pagado en el Trono', 'Paid on the Throne');
+  String get salarySettingsLabel => _t('Sueldo aproximado (100% local)', 'Approximate pay (100% local)');
+  String salaryConfiguredSub(String symbol, double hourly) => _t(
+    '$symbol${hourly.toStringAsFixed(2)}/hora · nunca sale de tu teléfono',
+    '$symbol${hourly.toStringAsFixed(2)}/hr · stays 100% on device',
+  );
+  String get salaryNotSetSub => _t(
+    'Opcional · calcula cuánto te pagan en horario laboral',
+    'Optional · calculates money earned during work hours',
+  );
+  String get salaryDialogTitle => _t('Configurar sueldo (local)', 'Set pay rate (local)');
+  String get salaryModeMonthly => _t('Mensual neto', 'Monthly net');
+  String get salaryModeHourly => _t('Por hora', 'Hourly');
+  String get salaryAmountHint => _t('Ej. 2000', 'e.g. 2000');
+  String get salarySavedToast => _t('Sueldo guardado localmente', 'Pay rate saved locally');
+  String get clearSalaryButton => _t('Quitar sueldo', 'Clear pay');
+  String workVisitsSub(int count, String duration) =>
+      _t('$count visitas · $duration en el trabajo', '$count visits · $duration at work');
+
+  String get insightsTitle => _t('Tus Patrones', 'Your Insights');
+  String weekdayFull(int weekday) => switch (weekday) {
+    1 => _t('lunes', 'Mondays'),
+    2 => _t('martes', 'Tuesdays'),
+    3 => _t('miércoles', 'Wednesdays'),
+    4 => _t('jueves', 'Thursdays'),
+    5 => _t('viernes', 'Fridays'),
+    6 => _t('sábados', 'Saturdays'),
+    7 => _t('domingos', 'Sundays'),
+    _ => '',
+  };
+
+  String insightText(
+    String typeName, {
+    int int1 = 0,
+    int int2 = 0,
+    String str = '',
+  }) => switch (typeName) {
+    'busiestWeekday' => _t(
+        'Tu día estrella son los ${weekdayFull(int1)} ($int2 pupus).',
+        'Your busiest day is ${weekdayFull(int1)} ($int2 poops).',
+      ),
+    'topBristol' => _t(
+        'Tu clásico: Bristol ${bristolShort(int1)} ($int2% de las veces).',
+        'Your signature: Bristol ${bristolShort(int1)} ($int2% of logs).',
+      ),
+    'topTriggerTag' => _t(
+        '${tagLabel(str)} aparece en el $int1% de tus pupus ($int2 veces).',
+        '${tagLabel(str)} shows up in $int1% of your poops ($int2 times).',
+      ),
+    'awaySuperpower' => _t(
+        'Superpoder activo: $int1% de tus pupus son fuera de casa ($int2).',
+        'Superpower unlocked: $int1% of your poops are away from home ($int2).',
+      ),
+    'timeMovies' => _t(
+        'Llevas ${formatDuration(int1 * 60)} en el trono — equivale a ~$int2 película(s).',
+        'You’ve spent ${formatDuration(int1 * 60)} on the throne — roughly ~$int2 movie(s).',
+      ),
+    _ => '',
+  };
+
+  // Trono Wrapped
+  String get wrappedButtonLabel => _t('Ver mi Trono Wrapped', 'View Trono Wrapped');
+  String get wrappedTitle => 'Trono Wrapped';
+  String get wrappedThisMonth => _t('Este mes', 'This month');
+  String get wrappedAllTime => _t('Histórico', 'All time');
+  String get shareWrappedButton => _t('Compartir tarjeta', 'Share card');
+  String get showEarningsToggle => _t('Mostrar dinero ganado', 'Show work earnings');
+  String get wrappedFooter => _t('Generado en local con Trono 👑', 'Made locally with Trono 👑');
+  String archetypeTitle(String name) => switch (name) {
+    'nomad' => _t('Nómada del Trono', 'Throne Nomad'),
+    'officeKing' => _t('Ejecutivo de Porcelana', 'Office Porcelain VIP'),
+    'nightOwl' => _t('Búho del Trono', 'Midnight Ruler'),
+    'coffeeRocket' => _t('Propulsión a Café', 'Espresso Powered'),
+    'swissClock' => _t('Reloj Suizo', 'Swiss Clockwork'),
+    _ => _t('Monarca Constante', 'Steady Monarch'),
+  };
+
+  // Map filters & clusters
+  String get mapFilterAll => _t('Todos', 'All');
+  String get mapFilterMonth => _t('Este mes', 'This month');
+  String get mapFilterAway => _t('🌍 Fuera', '🌍 Away');
+  String get mapFilterWork => _t('💼 Trabajo', '💼 Work');
+  String get mapFilterHome => _t('🏠 Casa', '🏠 Home');
+  String clusterHeader(int count) => _t('$count pupus en este lugar', '$count poops at this spot');
 
   String shareLevelName(ShareLevel level) => switch (level) {
     ShareLevel.private => _t('🔒 Privado', '🔒 Private'),
@@ -310,6 +416,7 @@ class AppStrings {
     'perfect_four' => _t('El 4 Perfecto', 'The Perfect 4'),
     'false_alarm_pro' => _t('Falsa Alarma Pro', 'False Alarm Pro'),
     'paid_to_poop' => _t('En Horario Laboral', 'Paid to Go'),
+    'paid_throne_pro' => _t('Sueldo de Porcelana', 'Porcelain Paycheck'),
     'coffee_effect' => _t('Efecto Cafeína', 'Caffeine Kick'),
     'marathoner' => _t('Maratonista', 'Marathoner'),
     'epic_drop' => _t('Obra Maestra', 'Masterpiece'),
@@ -334,7 +441,8 @@ class AppStrings {
     'early_bird' => _t('5 visitas entre 05:00 y 08:00', '5 visits between 5am and 8am'),
     'perfect_four' => _t('5 veces Bristol tipo 4 (perfección)', '5 times Bristol type 4 (ideal)'),
     'false_alarm_pro' => _t('5 falsas alarmas registradas', '5 false alarms logged'),
-    'paid_to_poop' => _t('5 visitas con el tag Trabajo', '5 visits tagged Work'),
+    'paid_to_poop' => _t('5 visitas en el Trabajo', '5 visits at Work'),
+    'paid_throne_pro' => _t('Acumula 60 min en el trono en el trabajo', 'Reach 60 min on the throne at work'),
     'coffee_effect' => _t('5 visitas con el tag Café', '5 visits tagged Coffee'),
     'marathoner' => _t('Una sesión de 15+ minutos', 'A 15+ minute session'),
     'epic_drop' => _t('3 registros con tamaño Épico', '3 logs with Epic size'),

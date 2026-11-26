@@ -19,6 +19,8 @@ class SettingsService {
   static const _kHomeLat = 'home_lat';
   static const _kHomeLng = 'home_lng';
   static const _kAutoGps = 'auto_gps';
+  static const _kHourlyRate = 'hourly_rate';
+  static const _kCurrencySymbol = 'currency_symbol';
 
   late final SharedPreferences _prefs;
 
@@ -140,5 +142,21 @@ class SettingsService {
 
   Future<void> setAutoGpsEnabled(bool enabled) async {
     await _prefs.setBool(_kAutoGps, enabled);
+  }
+
+  // V1.6 Paid on the Throne (100% local salary estimate)
+  double? get hourlyRate => _prefs.getDouble(_kHourlyRate);
+  String get currencySymbol => _prefs.getString(_kCurrencySymbol) ?? '€';
+
+  Future<void> setHourlyRate(double? rate) async {
+    if (rate == null || rate <= 0) {
+      await _prefs.remove(_kHourlyRate);
+    } else {
+      await _prefs.setDouble(_kHourlyRate, rate);
+    }
+  }
+
+  Future<void> setCurrencySymbol(String symbol) async {
+    await _prefs.setString(_kCurrencySymbol, symbol);
   }
 }

@@ -82,7 +82,18 @@ class GamificationEngine {
     final earlyBirdLogs = logs
         .where((l) => l.timestamp.hour >= 5 && l.timestamp.hour < 8)
         .length;
-    final workLogs = logs.where((l) => l.tags.contains('work')).length;
+    final workLogs = logs.where((l) => l.isWorkVisit).length;
+    final workMinutes = logs
+            .where((l) => l.isWorkVisit)
+            .fold<int>(
+              0,
+              (sum, l) =>
+                  sum +
+                  ((l.durationSeconds != null && l.durationSeconds! > 0)
+                      ? l.durationSeconds!
+                      : (l.type.includesPoop ? 300 : 120)),
+            ) ~/
+        60;
     final coffeeLogs = logs.where((l) => l.tags.contains('coffee')).length;
     final perfectBristolLogs = logs.where((l) => l.bristolType == 4).length;
     final epicSizeLogs = logs.where((l) => l.size == PoopSize.epic).length;
@@ -103,7 +114,7 @@ class GamificationEngine {
                     homeLng: homeLng,
                   )
                 : null);
-        if (loc == LocationKind.away) awayPoopLogs++;
+        if (loc != null && loc.isAwayFromHome) awayPoopLogs++;
       }
       if (l.hasCoordinates && homeLat != null && homeLng != null) {
         final dKm = LocationService.distanceMeters(
@@ -227,6 +238,13 @@ class GamificationEngine {
         current: workLogs,
         target: 5,
         xpReward: 70,
+      ),
+      AchievementProgress(
+        id: 'paid_throne_pro',
+        emoji: '🤑',
+        current: workMinutes,
+        target: 60,
+        xpReward: 110,
       ),
       AchievementProgress(
         id: 'coffee_effect',

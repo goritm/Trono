@@ -5,11 +5,13 @@ import 'package:uuid/uuid.dart';
 import '../data/database_helper.dart';
 import '../models/bathroom_log.dart';
 import '../models/stats_summary.dart';
+import 'location_service.dart';
+import 'settings_service.dart';
 
 const String kAndroidWidgetProvider = 'TronoWidgetProvider';
 
-/// Background entrypoint invoked when the user taps a quick-log button
-/// directly on the Android Home Screen Widget.
+/// Background entrypoint invoked when the user taps "+1 Pupu" directly
+/// on the Android Home Screen Widget. Also captures GPS silently if enabled!
 @pragma('vm:entry-point')
 Future<void> tronoWidgetBackgroundCallback(Uri? uri) async {
   if (uri == null) return;
@@ -18,12 +20,37 @@ Future<void> tronoWidgetBackgroundCallback(Uri? uri) async {
   final typeParam = uri.queryParameters['type'];
   if (typeParam == null) return;
 
+  final settings = SettingsService();
+  await settings.init();
+
+  double? lat;
+  double? lng;
+  LocationKind? locKind;
+
+  if (settings.autoGpsEnabled) {
+    final pos = await LocationService.tryGetPositionSilently();
+    if (pos != null) {
+      lat = pos.latitude;
+      lng = pos.longitude;
+      locKind = LocationService.classifyAgainstHome(
+        lat,
+        lng,
+        homeLat: settings.homeLat,
+        homeLng: settings.homeLng,
+      );
+    }
+  }
+
   final type = BathroomType.fromDb(typeParam);
   final now = DateTime.now();
   final log = BathroomLog(
     id: const Uuid().v4(),
     type: type,
     timestamp: now,
+    locationKind: locKind,
+    latitude: lat,
+    longitude: lng,
+    shareLevel: settings.defaultShareLevel,
     createdAt: now,
     updatedAt: now,
   );
@@ -31,7 +58,11 @@ Future<void> tronoWidgetBackgroundCallback(Uri? uri) async {
   final repo = LocalBathroomRepository.instance;
   await repo.upsertLog(log);
   final allLogs = await repo.getAllLogs();
-  final stats = StatsCalculator.calculate(allLogs);
+  final stats = StatsCalculator.calculate(
+    allLogs,
+    homeLat: settings.homeLat,
+    homeLng: settings.homeLng,
+  );
   await WidgetSyncService.syncStats(stats, lastType: type);
 }
 

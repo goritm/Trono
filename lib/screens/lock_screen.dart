@@ -156,6 +156,7 @@ class _LockScreenState extends State<LockScreen> {
                 SizedBox(
                   width: 260,
                   child: GridView.count(
+                    padding: EdgeInsets.zero,
                     crossAxisCount: 3,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),

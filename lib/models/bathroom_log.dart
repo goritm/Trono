@@ -34,18 +34,23 @@ enum BathroomType {
 
 enum LocationKind {
   home,
+  work,
   away;
 
   String get dbValue => name;
 
+  bool get isAwayFromHome => this == LocationKind.work || this == LocationKind.away;
+
   String get emoji => switch (this) {
     LocationKind.home => '🏠',
+    LocationKind.work => '💼',
     LocationKind.away => '🌍',
   };
 
   static LocationKind? fromDb(String? value) {
     return switch (value) {
       'home' => LocationKind.home,
+      'work' => LocationKind.work,
       'away' => LocationKind.away,
       _ => null,
     };
@@ -171,12 +176,12 @@ enum SyncStatus {
 const List<String> kDefaultQuickTags = [
   'coffee',
   'spicy',
-  'work',
-  'travel',
-  'restaurant',
   'dairy',
-  'morning',
-  'late_night',
+  'alcohol',
+  'fast_food',
+  'fiber',
+  'sweets',
+  'stress',
 ];
 
 class BathroomLog {
@@ -228,17 +233,19 @@ class BathroomLog {
 
   bool get hasCoordinates => latitude != null && longitude != null;
 
-  /// Effective Home vs Away classification (falls back cleanly to legacy tags).
+  /// Effective Home / Work / Away classification (falls back cleanly to legacy tags).
   LocationKind? get effectiveLocationKind {
     if (locationKind != null) return locationKind;
     if (tags.contains('home')) return LocationKind.home;
-    if (tags.contains('work') ||
-        tags.contains('travel') ||
-        tags.contains('restaurant')) {
+    if (tags.contains('work')) return LocationKind.work;
+    if (tags.contains('travel') || tags.contains('restaurant')) {
       return LocationKind.away;
     }
     return null;
   }
+
+  bool get isWorkVisit =>
+      effectiveLocationKind == LocationKind.work || tags.contains('work');
 
   bool get hasDetails =>
       bristolType != null ||
