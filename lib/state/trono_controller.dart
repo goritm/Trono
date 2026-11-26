@@ -7,6 +7,7 @@ import '../data/database_helper.dart';
 import '../models/achievement.dart';
 import '../models/bathroom_log.dart';
 import '../models/insights.dart';
+import '../models/monthly_comparison.dart';
 import '../models/stats_summary.dart';
 import '../services/location_service.dart';
 import '../services/settings_service.dart';
@@ -48,6 +49,8 @@ class TronoController extends ChangeNotifier {
     hourlyRate: null,
   );
   List<TronoInsight> _insights = const [];
+  MonthlyComparisonSnapshot _monthlyComparison =
+      MonthlyComparisonEngine.compute(const []);
 
   bool _isLoading = true;
   DateTime? _activeTimerStart;
@@ -75,6 +78,7 @@ class TronoController extends ChangeNotifier {
   GamificationSnapshot get gamification => _gamification;
   PaidOnThroneSummary get paidOnThrone => _paidOnThrone;
   List<TronoInsight> get insights => _insights;
+  MonthlyComparisonSnapshot get monthlyComparison => _monthlyComparison;
   bool get isLoading => _isLoading;
 
   bool get isTimerRunning => _activeTimerStart != null;
@@ -157,6 +161,11 @@ class TronoController extends ChangeNotifier {
       hourlyRate: _hourlyRate,
     );
     _insights = InsightsEngine.generateInsights(_logs, _stats);
+    _monthlyComparison = MonthlyComparisonEngine.compute(
+      _logs,
+      homeLat: _homeLat,
+      homeLng: _homeLng,
+    );
   }
 
   WrappedSnapshot buildWrapped(WrappedPeriod period) {
