@@ -17,7 +17,7 @@ class LocalBathroomRepository implements BathroomRepository {
   static final LocalBathroomRepository instance = LocalBathroomRepository._();
 
   static const _dbName = 'trono.db';
-  static const _dbVersion = 1;
+  static const _dbVersion = 2;
   static const _table = 'bathroom_logs';
 
   Database? _db;
@@ -42,6 +42,10 @@ class LocalBathroomRepository implements BathroomRepository {
             color TEXT,
             tags TEXT,
             note TEXT,
+            location_kind TEXT,
+            latitude REAL,
+            longitude REAL,
+            place_label TEXT,
             share_level TEXT NOT NULL DEFAULT 'summary_only',
             sync_status TEXT NOT NULL DEFAULT 'local_only',
             created_at INTEGER NOT NULL,
@@ -55,6 +59,14 @@ class LocalBathroomRepository implements BathroomRepository {
         await db.execute(
           'CREATE INDEX idx_logs_deleted ON $_table (deleted_at)',
         );
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('ALTER TABLE $_table ADD COLUMN location_kind TEXT');
+          await db.execute('ALTER TABLE $_table ADD COLUMN latitude REAL');
+          await db.execute('ALTER TABLE $_table ADD COLUMN longitude REAL');
+          await db.execute('ALTER TABLE $_table ADD COLUMN place_label TEXT');
+        }
       },
     );
     return _db!;

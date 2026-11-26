@@ -21,6 +21,20 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _localAuth = LocalAuthentication();
   bool _biometricsSupported = false;
+  bool _capturingHome = false;
+
+  Future<void> _handleSetHome() async {
+    final s = AppStrings.of(context);
+    setState(() => _capturingHome = true);
+    final ok = await widget.controller.captureCurrentAsHome();
+    if (!mounted) return;
+    setState(() => _capturingHome = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok ? s.homeSavedToast : s.gpsUnavailableToast),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -170,6 +184,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         showSelectedIcon: false,
                       ),
                     ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              _SectionTitle(s.locationSettingsSection),
+              ChunkyCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      title: Text(
+                        s.autoGpsLabel,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      subtitle: Text(s.autoGpsSub),
+                      value: ctrl.autoGpsEnabled,
+                      onChanged: ctrl.setAutoGpsEnabled,
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: _ColorIcon(
+                        Icons.home_rounded,
+                        TronoColors.gold,
+                      ),
+                      title: Text(
+                        s.setHomeLocationLabel,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      subtitle: Text(
+                        ctrl.hasHomeLocation
+                            ? s.homeConfiguredSub
+                            : s.homeNotSetSub,
+                      ),
+                      trailing: _capturingHome
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : ctrl.hasHomeLocation
+                              ? const Icon(
+                                  Icons.check_circle_rounded,
+                                  color: TronoColors.sage,
+                                  size: 22,
+                                )
+                              : const Icon(Icons.my_location_rounded, size: 20),
+                      onTap: _capturingHome ? null : _handleSetHome,
+                    ),
+                    if (ctrl.hasHomeLocation) ...[
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: _ColorIcon(
+                          Icons.location_off_rounded,
+                          TronoColors.coral,
+                        ),
+                        title: Text(
+                          s.clearHomeLabel,
+                          style: const TextStyle(
+                            color: TronoColors.coral,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        onTap: ctrl.clearHomeLocation,
+                      ),
+                    ],
                   ],
                 ),
               ),

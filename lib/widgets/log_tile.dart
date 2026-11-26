@@ -28,6 +28,14 @@ class LogTile extends StatelessWidget {
         : DateFormat('HH:mm').format(log.timestamp);
 
     final chips = <String>[];
+    final loc = log.effectiveLocationKind;
+    if (log.placeLabel != null && log.placeLabel!.trim().isNotEmpty) {
+      chips.add('${loc?.emoji ?? '📍'} ${log.placeLabel!.trim()}');
+    } else if (loc != null) {
+      chips.add('${loc.emoji} ${s.locationKindName(loc)}');
+    } else if (log.hasCoordinates) {
+      chips.add('📍 GPS');
+    }
     if (log.bristolType != null) {
       chips.add(s.bristolShort(log.bristolType!));
     }
