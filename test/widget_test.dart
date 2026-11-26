@@ -6,6 +6,7 @@ import 'package:trono/models/insights.dart';
 import 'package:trono/models/social_models.dart';
 import 'package:trono/models/stats_summary.dart';
 import 'package:trono/services/location_service.dart';
+import 'package:trono/widgets/trono_toast.dart';
 
 void main() {
   group('StatsCalculator', () {
@@ -333,6 +334,39 @@ void main() {
         'total_duration_seconds': 1800,
       });
       expect(lb.awayPercent, 75);
+    });
+  });
+
+  group('TronoToast auto-dismiss', () {
+    testWidgets('toast with Undo action auto-dismisses after duration', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => showTronoToast(
+                  context,
+                  'Registro eliminado',
+                  actionLabel: 'Deshacer',
+                  onAction: () {},
+                  duration: const Duration(seconds: 3),
+                ),
+                child: const Text('Trigger'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Trigger'));
+      await tester.pumpAndSettle();
+      expect(find.text('Registro eliminado'), findsOneWidget);
+      expect(find.text('Deshacer'), findsOneWidget);
+
+      // Advance past the 3s display duration + exit animation
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      expect(find.text('Registro eliminado'), findsNothing);
     });
   });
 }

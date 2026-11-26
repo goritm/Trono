@@ -15,6 +15,9 @@ const List<String> kAvatarEmojis = [
   '🚀',
   '😎',
   '👸',
+  '🦍',
+  '🦖',
+  '🐱',
 ];
 
 const List<String> kGroupEmojis = [

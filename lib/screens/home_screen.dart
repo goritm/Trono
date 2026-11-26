@@ -9,6 +9,7 @@ import '../widgets/achievement_unlock_dialog.dart';
 import '../widgets/chunky_widgets.dart';
 import '../widgets/log_detail_sheet.dart';
 import '../widgets/log_tile.dart';
+import '../widgets/trono_toast.dart';
 
 enum _QuickLocationMode { auto, home, work, away }
 
@@ -67,12 +68,10 @@ class _HomeScreenState extends State<HomeScreen> {
     if (result?.deleted == true) {
       await controller.deleteLog(savedLog.id);
       if (context.mounted) {
-        messenger.hideCurrentSnackBar();
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(s.undoneToast),
-            duration: const Duration(seconds: 2),
-          ),
+        showTronoToastOnMessenger(
+          messenger,
+          s.undoneToast,
+          duration: const Duration(seconds: 2),
         );
       }
       return;
@@ -89,34 +88,26 @@ class _HomeScreenState extends State<HomeScreen> {
         newRank: followUpUnlocks.newRank ?? initialUnlocks.newRank,
       );
       if (context.mounted) {
-        messenger.hideCurrentSnackBar();
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(s.detailsSavedToast),
-            duration: const Duration(seconds: 2),
-          ),
+        showTronoToastOnMessenger(
+          messenger,
+          s.detailsSavedToast,
+          duration: const Duration(seconds: 2),
         );
       }
     } else if (context.mounted) {
       // User skipped/dismissed the detail sheet — show crisp toast with Undo!
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('$prefix${s.savedInstantToast}'),
-          duration: const Duration(seconds: 4),
-          action: SnackBarAction(
-            label: s.undoAction,
-            textColor: TronoColors.gold,
-            onPressed: () async {
-              await controller.deleteLog(savedLog.id);
-              messenger.showSnackBar(
-                SnackBar(
-                  content: Text(s.undoneToast),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-          ),
-        ),
+      showTronoToastOnMessenger(
+        messenger,
+        '$prefix${s.savedInstantToast}',
+        actionLabel: s.undoAction,
+        onAction: () async {
+          await controller.deleteLog(savedLog.id);
+          showTronoToastOnMessenger(
+            messenger,
+            s.undoneToast,
+            duration: const Duration(seconds: 2),
+          );
+        },
       );
     }
 
@@ -135,9 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (result?.savedLog == null) return;
     final unlocks = await controller.saveLog(result!.savedLog!);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(s.savedInstantToast)),
-    );
+    showTronoToast(context, s.savedInstantToast);
     if (unlocks.hasAnything) {
       await showUnlockCelebrationIfNeeded(context, unlocks);
     }
@@ -155,16 +144,12 @@ class _HomeScreenState extends State<HomeScreen> {
     if (result.deleted) {
       await controller.deleteLog(log.id);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(s.logDeletedToast)),
-        );
+        showTronoToast(context, s.logDeletedToast);
       }
     } else if (result.savedLog != null) {
       final unlocks = await controller.saveLog(result.savedLog!);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(s.detailsSavedToast)),
-        );
+        showTronoToast(context, s.detailsSavedToast);
         if (unlocks.hasAnything) {
           await showUnlockCelebrationIfNeeded(context, unlocks);
         }
@@ -180,17 +165,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final messenger = ScaffoldMessenger.of(context);
     await controller.deleteLog(log.id);
     if (!context.mounted) return;
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(s.logDeletedToast),
-        duration: const Duration(seconds: 4),
-        action: SnackBarAction(
-          label: s.undoAction,
-          textColor: TronoColors.gold,
-          onPressed: () => controller.saveLog(log),
-        ),
-      ),
+    showTronoToastOnMessenger(
+      messenger,
+      s.logDeletedToast,
+      actionLabel: s.undoAction,
+      onAction: () => controller.saveLog(log),
     );
   }
 

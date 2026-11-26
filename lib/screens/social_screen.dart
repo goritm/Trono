@@ -10,6 +10,7 @@ import '../services/supabase_sync_service.dart';
 import '../state/social_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/chunky_widgets.dart';
+import '../widgets/trono_toast.dart';
 
 /// Opens the tactile Sign Up / Sign In modal sheet.
 Future<void> showAuthSheet(
@@ -59,36 +60,46 @@ Future<void> showEditProfileDialog(
                       fontSize: 13,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: kAvatarEmojis.map((emoji) {
-                      final active = emoji == selectedEmoji;
-                      return GestureDetector(
-                        onTap: () => setModalState(() => selectedEmoji = emoji),
-                        child: Container(
-                          width: 42,
-                          height: 42,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: active
-                                ? TronoColors.terracotta.withValues(alpha: 0.16)
-                                : TronoColors.surface(ctx),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: kAvatarEmojis.map((emoji) {
+                        final active = emoji == selectedEmoji;
+                        return GestureDetector(
+                          onTap: () =>
+                              setModalState(() => selectedEmoji = emoji),
+                          child: Container(
+                            width: 42,
+                            height: 42,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
                               color: active
-                                  ? TronoColors.terracotta
-                                  : TronoColors.border(ctx),
-                              width: active ? 2.5 : 1.5,
+                                  ? TronoColors.terracotta.withValues(
+                                      alpha: 0.16,
+                                    )
+                                  : TronoColors.surface(ctx),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: active
+                                    ? TronoColors.terracotta
+                                    : TronoColors.border(ctx),
+                                width: active ? 2.5 : 1.5,
+                              ),
+                            ),
+                            child: Text(
+                              emoji,
+                              style: const TextStyle(fontSize: 20),
                             ),
                           ),
-                          child: Text(emoji, style: const TextStyle(fontSize: 20)),
-                        ),
-                      );
-                    }).toList(),
+                        );
+                      }).toList(),
+                    ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   TextField(
                     controller: nameCtrl,
                     maxLength: 32,
@@ -139,9 +150,7 @@ Future<void> showEditProfileDialog(
   nameCtrl.dispose();
 
   if (updated == true && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(s.profileSavedToast)),
-    );
+    showTronoToast(context, s.profileSavedToast);
   }
 }
 
@@ -183,40 +192,46 @@ class _SocialScreenState extends State<SocialScreen> {
                         fontSize: 13,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: kGroupEmojis.map((emoji) {
-                        final active = emoji == selectedEmoji;
-                        return GestureDetector(
-                          onTap: () =>
-                              setModalState(() => selectedEmoji = emoji),
-                          child: Container(
-                            width: 42,
-                            height: 42,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: active
-                                  ? TronoColors.terracotta.withValues(alpha: 0.16)
-                                  : TronoColors.surface(ctx),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: kGroupEmojis.map((emoji) {
+                          final active = emoji == selectedEmoji;
+                          return GestureDetector(
+                            onTap: () =>
+                                setModalState(() => selectedEmoji = emoji),
+                            child: Container(
+                              width: 42,
+                              height: 42,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
                                 color: active
-                                    ? TronoColors.terracotta
-                                    : TronoColors.border(ctx),
-                                width: active ? 2.5 : 1.5,
+                                    ? TronoColors.terracotta.withValues(
+                                        alpha: 0.16,
+                                      )
+                                    : TronoColors.surface(ctx),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: active
+                                      ? TronoColors.terracotta
+                                      : TronoColors.border(ctx),
+                                  width: active ? 2.5 : 1.5,
+                                ),
+                              ),
+                              child: Text(
+                                emoji,
+                                style: const TextStyle(fontSize: 20),
                               ),
                             ),
-                            child: Text(
-                              emoji,
-                              style: const TextStyle(fontSize: 20),
-                            ),
-                          ),
-                        );
-                      }).toList(),
+                          );
+                        }).toList(),
+                      ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
                     TextField(
                       controller: nameCtrl,
                       autofocus: true,
@@ -289,10 +304,9 @@ class _SocialScreenState extends State<SocialScreen> {
     if (created != null && mounted) {
       await Clipboard.setData(ClipboardData(text: created.inviteCode));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${created.emoji} ${created.name} · ${created.inviteCode}'),
-        ),
+      showTronoToast(
+        context,
+        '${created.emoji} ${created.name} · ${created.inviteCode}',
       );
     }
   }
@@ -394,9 +408,7 @@ class _SocialScreenState extends State<SocialScreen> {
     codeCtrl.dispose();
 
     if (joined != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${joined.emoji} ${joined.name}')),
-      );
+      showTronoToast(context, '${joined.emoji} ${joined.name}');
     }
   }
 
@@ -1338,9 +1350,7 @@ class _ActiveGroupHeaderCard extends StatelessWidget {
                       ClipboardData(text: group.inviteCode),
                     );
                     if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(s.codeCopiedToast)),
-                    );
+                    showTronoToast(context, s.codeCopiedToast);
                   },
                   icon: const Icon(
                     Icons.copy_rounded,
@@ -1866,36 +1876,40 @@ class _AuthSheetState extends State<_AuthSheet> {
                   fontSize: 13,
                 ),
               ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: kAvatarEmojis.map((emoji) {
-                  final active = emoji == _selectedEmoji;
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedEmoji = emoji),
-                    child: Container(
-                      width: 42,
-                      height: 42,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: active
-                            ? TronoColors.terracotta.withValues(alpha: 0.16)
-                            : TronoColors.surface(context),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: kAvatarEmojis.map((emoji) {
+                    final active = emoji == _selectedEmoji;
+                    return GestureDetector(
+                      onTap: () => setState(() => _selectedEmoji = emoji),
+                      child: Container(
+                        width: 42,
+                        height: 42,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
                           color: active
-                              ? TronoColors.terracotta
-                              : TronoColors.border(context),
-                          width: active ? 2.5 : 1.5,
+                              ? TronoColors.terracotta.withValues(alpha: 0.16)
+                              : TronoColors.surface(context),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: active
+                                ? TronoColors.terracotta
+                                : TronoColors.border(context),
+                            width: active ? 2.5 : 1.5,
+                          ),
                         ),
+                        child: Text(emoji, style: const TextStyle(fontSize: 20)),
                       ),
-                      child: Text(emoji, style: const TextStyle(fontSize: 20)),
-                    ),
-                  );
-                }).toList(),
+                    );
+                  }).toList(),
+                ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 22),
               TextField(
                 controller: _nameCtrl,
                 textCapitalization: TextCapitalization.words,

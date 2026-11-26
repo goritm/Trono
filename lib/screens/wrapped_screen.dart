@@ -185,7 +185,7 @@ class _WrappedScreenState extends State<WrappedScreen> {
                     children: [
                       Expanded(
                         child: _WrappedStatBox(
-                          overrideLabel: 'PUPUS',
+                          overrideLabel: 'PUPÚS',
                           value: '${wrapped.totalPoops}',
                           accent: TronoColors.terracotta,
                         ),

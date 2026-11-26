@@ -9,6 +9,7 @@ import '../state/social_controller.dart';
 import '../state/trono_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/chunky_widgets.dart';
+import '../widgets/trono_toast.dart';
 import 'social_screen.dart';
 
 Future<void> showSalaryConfigDialog(
@@ -113,9 +114,7 @@ Future<void> showSalaryConfigDialog(
   amountCtrl.dispose();
 
   if (saved == true && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(s.salarySavedToast)),
-    );
+    showTronoToast(context, s.salarySavedToast);
   }
 }
 
@@ -144,10 +143,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final ok = await widget.controller.captureCurrentAsHome();
     if (!mounted) return;
     setState(() => _capturingHome = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(ok ? s.homeSavedToast : s.gpsUnavailableToast),
-      ),
+    showTronoToast(
+      context,
+      ok ? s.homeSavedToast : s.gpsUnavailableToast,
     );
   }
 
@@ -204,9 +202,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (saved != null && saved.length == 4) {
       await widget.controller.setPin(saved);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(s.pinSavedToast)),
-        );
+        showTronoToast(context, s.pinSavedToast);
       }
     }
   }
@@ -218,15 +214,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (logs == null) return;
       final count = await widget.controller.importLogs(logs);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(s.importedCountToast(count))),
-        );
+        showTronoToast(context, s.importedCountToast(count));
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(s.importFailedToast)),
-        );
+        showTronoToast(context, s.importFailedToast);
       }
     }
   }
@@ -410,14 +402,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     refreshFeedAfter: true,
                                   );
                                   if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        s.syncedToast(
-                                          report.pushedCount,
-                                          report.pulledCount,
-                                        ),
-                                      ),
+                                  showTronoToast(
+                                    context,
+                                    s.syncedToast(
+                                      report.pushedCount,
+                                      report.pulledCount,
                                     ),
                                   );
                                 },
