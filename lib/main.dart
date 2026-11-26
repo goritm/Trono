@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_localizations/flutter_localizations.dart'
     show GlobalWidgetsLocalizations;
@@ -9,8 +11,11 @@ import 'screens/calendar_stats_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/lock_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/social_screen.dart';
 import 'services/settings_service.dart';
+import 'services/supabase_sync_service.dart';
 import 'services/widget_sync_service.dart';
+import 'state/social_controller.dart';
 import 'state/trono_controller.dart';
 import 'theme/app_theme.dart';
 
@@ -20,6 +25,7 @@ Future<void> main() async {
   final settings = SettingsService();
   await settings.init();
   await WidgetSyncService.initialize();
+  await SupabaseSyncService.instance.initialize();
 
   final controller = TronoController(
     repository: LocalBathroomRepository.instance,
@@ -27,13 +33,30 @@ Future<void> main() async {
   );
   await controller.init();
 
-  runApp(TronoApp(controller: controller));
+  final socialController = SocialController(
+    tronoController: controller,
+    repository: LocalBathroomRepository.instance,
+    settings: settings,
+  );
+  await socialController.init();
+
+  runApp(
+    TronoApp(
+      controller: controller,
+      socialController: socialController,
+    ),
+  );
 }
 
 class TronoApp extends StatelessWidget {
-  const TronoApp({super.key, required this.controller});
+  const TronoApp({
+    super.key,
+    required this.controller,
+    required this.socialController,
+  });
 
   final TronoController controller;
+  final SocialController socialController;
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +76,10 @@ class TronoApp extends StatelessWidget {
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
           ],
-          home: _TronoShell(controller: controller),
+          home: _TronoShell(
+            controller: controller,
+            socialController: socialController,
+          ),
         );
       },
     );
@@ -61,9 +87,13 @@ class TronoApp extends StatelessWidget {
 }
 
 class _TronoShell extends StatefulWidget {
-  const _TronoShell({required this.controller});
+  const _TronoShell({
+    required this.controller,
+    required this.socialController,
+  });
 
   final TronoController controller;
+  final SocialController socialController;
 
   @override
   State<_TronoShell> createState() => _TronoShellState();
@@ -90,7 +120,13 @@ class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       // Refresh in case user logged directly from Android Home Widget
-      widget.controller.reloadLogs(suppressNotifications: true);
+      unawaited(
+        widget.controller.reloadLogs(suppressNotifications: true).then((_) {
+          if (widget.socialController.isSignedIn) {
+            unawaited(widget.socialController.syncNow(refreshFeedAfter: true));
+          }
+        }),
+      );
     }
   }
 
@@ -107,8 +143,12 @@ class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
     final screens = [
       HomeScreen(controller: widget.controller),
       CalendarStatsScreen(controller: widget.controller),
+      SocialScreen(social: widget.socialController),
       AchievementsScreen(controller: widget.controller),
-      SettingsScreen(controller: widget.controller),
+      SettingsScreen(
+        controller: widget.controller,
+        social: widget.socialController,
+      ),
     ];
 
     return Scaffold(
@@ -126,6 +166,11 @@ class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
             icon: const Icon(Icons.calendar_month_outlined),
             selectedIcon: const Icon(Icons.calendar_month_rounded),
             label: s.navCalendar,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.groups_outlined),
+            selectedIcon: const Icon(Icons.groups_rounded),
+            label: s.navSocial,
           ),
           NavigationDestination(
             icon: const Icon(Icons.emoji_events_outlined),

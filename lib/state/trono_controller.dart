@@ -34,6 +34,11 @@ class TronoController extends ChangeNotifier {
   final BathroomRepository _repo;
   final SettingsService _settings;
   final _uuid = const Uuid();
+  VoidCallback? _onLogsMutated;
+
+  void setOnLogsMutated(VoidCallback? callback) {
+    _onLogsMutated = callback;
+  }
 
   List<BathroomLog> _logs = const [];
   StatsSummary _stats = StatsCalculator.calculate(const []);
@@ -211,6 +216,7 @@ class TronoController extends ChangeNotifier {
 
     await _repo.upsertLog(log);
     final unlocks = await _refreshAndDetectUnlocks();
+    _onLogsMutated?.call();
 
     // Non-blocking background GPS enrichment when auto-GPS is enabled
     if (_autoGpsEnabled && !log.hasCoordinates) {
@@ -245,10 +251,12 @@ class TronoController extends ChangeNotifier {
       latitude: pos.latitude,
       longitude: pos.longitude,
       locationKind: inferredKind,
+      syncStatus: SyncStatus.pendingSync,
       updatedAt: DateTime.now(),
     );
     await _repo.upsertLog(enriched);
     await reloadLogs(suppressNotifications: true);
+    _onLogsMutated?.call();
   }
 
   Future<UnlockEvent> saveLog(BathroomLog log) async {
@@ -257,18 +265,22 @@ class TronoController extends ChangeNotifier {
       syncStatus: SyncStatus.pendingSync,
     );
     await _repo.upsertLog(updated);
-    return _refreshAndDetectUnlocks();
+    final unlocks = await _refreshAndDetectUnlocks();
+    _onLogsMutated?.call();
+    return unlocks;
   }
 
   Future<void> deleteLog(String id) async {
     await _repo.softDeleteLog(id);
     await reloadLogs(suppressNotifications: true);
+    _onLogsMutated?.call();
   }
 
   Future<int> importLogs(List<BathroomLog> incoming) async {
     if (incoming.isEmpty) return 0;
     await _repo.upsertLogsBatch(incoming);
     await reloadLogs(suppressNotifications: true);
+    _onLogsMutated?.call();
     return incoming.length;
   }
 
