@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:trono/models/achievement.dart';
 import 'package:trono/models/bathroom_log.dart';
+import 'package:trono/models/insights.dart';
 import 'package:trono/models/stats_summary.dart';
 import 'package:trono/services/location_service.dart';
 
@@ -163,6 +164,68 @@ void main() {
       expect(fromJson.locationKind, LocationKind.away);
       expect(fromJson.longitude, closeTo(-3.7000, 0.0001));
       expect(fromJson.placeLabel, 'Oficina');
+    });
+  });
+
+  group('InsightsEngine (V1.6 Paid on Throne, Insights & Wrapped)', () {
+    test('calculates work earnings, generates insights, and builds Wrapped', () {
+      final now = DateTime(2026, 11, 26, 14, 0);
+      final logs = List.generate(
+        4,
+        (i) => BathroomLog(
+          id: 'w-$i',
+          type: BathroomType.poop,
+          timestamp: DateTime(2026, 11, 23 + i, 10, 0),
+          bristolType: 4,
+          durationSeconds: 900, // 15 min each => 60 min total
+          tags: const ['work', 'coffee'],
+          locationKind: LocationKind.away,
+          latitude: 40.5 + i * 0.1,
+          longitude: -3.7,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+      final paid = InsightsEngine.calculatePaidOnThrone(
+        logs,
+        hourlyRate: 20.0,
+        now: now,
+      );
+      expect(paid.workVisitsTotal, 4);
+      expect(paid.workSecondsTotal, 3600);
+      expect(paid.earnedThisMonth, closeTo(20.0, 0.01));
+      expect(paid.earnedAllTime, closeTo(20.0, 0.01));
+
+      final stats = StatsCalculator.calculate(logs, now: now);
+      final insights = InsightsEngine.generateInsights(logs, stats);
+      expect(
+        insights.map((i) => i.type),
+        containsAll([
+          InsightType.busiestWeekday,
+          InsightType.topBristol,
+          InsightType.topTriggerTag,
+          InsightType.awaySuperpower,
+          InsightType.timeMovies,
+        ]),
+      );
+
+      final wrapped = InsightsEngine.buildWrapped(
+        logs,
+        period: WrappedPeriod.thisMonth,
+        hourlyRate: 20.0,
+        now: now,
+      );
+      expect(wrapped.totalPoops, 4);
+      expect(wrapped.awayPercent, 100);
+      expect(wrapped.earnedAtWork, closeTo(20.0, 0.01));
+      expect(wrapped.archetype, WrappedArchetype.nomad);
+
+      final gam = GamificationEngine.evaluate(logs);
+      expect(
+        gam.achievements.firstWhere((a) => a.id == 'paid_throne_pro').isUnlocked,
+        isTrue,
+      );
     });
   });
 }

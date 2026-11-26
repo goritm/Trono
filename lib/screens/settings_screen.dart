@@ -9,6 +9,114 @@ import '../state/trono_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/chunky_widgets.dart';
 
+Future<void> showSalaryConfigDialog(
+  BuildContext context,
+  TronoController controller,
+) async {
+  final s = AppStrings.of(context);
+  bool monthlyMode = true;
+  String currency = controller.currencySymbol;
+  final initialMonthly =
+      controller.hourlyRate != null ? (controller.hourlyRate! * 160).round() : null;
+  final amountCtrl = TextEditingController(
+    text: initialMonthly != null ? '$initialMonthly' : '',
+  );
+
+  final saved = await showDialog<bool>(
+    context: context,
+    builder: (ctx) {
+      return StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return AlertDialog(
+            title: Text(s.salaryDialogTitle),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SegmentedButton<bool>(
+                  segments: [
+                    ButtonSegment(value: true, label: Text(s.salaryModeMonthly)),
+                    ButtonSegment(value: false, label: Text(s.salaryModeHourly)),
+                  ],
+                  selected: {monthlyMode},
+                  onSelectionChanged: (set) =>
+                      setModalState(() => monthlyMode = set.first),
+                  showSelectedIcon: false,
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  children: ['€', r'$', '£'].map((sym) {
+                    return ChoiceChip(
+                      label: Text(sym),
+                      selected: currency == sym,
+                      onSelected: (_) => setModalState(() => currency = sym),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: amountCtrl,
+                  autofocus: true,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    prefixText: '$currency ',
+                    hintText: monthlyMode ? s.salaryAmountHint : '15',
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              if (controller.hasHourlyRate)
+                TextButton(
+                  onPressed: () async {
+                    await controller.setSalaryConfig(
+                      hourlyRate: null,
+                      currencySymbol: currency,
+                    );
+                    if (ctx.mounted) Navigator.of(ctx).pop(false);
+                  },
+                  child: Text(
+                    s.clearSalaryButton,
+                    style: const TextStyle(color: TronoColors.coral),
+                  ),
+                ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: Text(s.cancelTimer),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  final raw = double.tryParse(
+                    amountCtrl.text.trim().replaceAll(',', '.'),
+                  );
+                  if (raw == null || raw <= 0) return;
+                  final hourly = monthlyMode ? raw / 160.0 : raw;
+                  await controller.setSalaryConfig(
+                    hourlyRate: hourly,
+                    currencySymbol: currency,
+                  );
+                  if (ctx.mounted) Navigator.of(ctx).pop(true);
+                },
+                child: Text(s.saveButton),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+  amountCtrl.dispose();
+
+  if (saved == true && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(s.salarySavedToast)),
+    );
+  }
+}
+
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key, required this.controller});
 
@@ -251,6 +359,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ],
                   ],
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              _SectionTitle(s.salarySettingsSection),
+              ChunkyCard(
+                padding: EdgeInsets.zero,
+                child: ListTile(
+                  leading: _ColorIcon(
+                    Icons.payments_rounded,
+                    TronoColors.gold,
+                  ),
+                  title: Text(
+                    s.salarySettingsLabel,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  subtitle: Text(
+                    ctrl.hasHourlyRate
+                        ? s.salaryConfiguredSub(
+                            ctrl.currencySymbol,
+                            ctrl.hourlyRate!,
+                          )
+                        : s.salaryNotSetSub,
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => showSalaryConfigDialog(context, ctrl),
                 ),
               ),
               const SizedBox(height: 18),

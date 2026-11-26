@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_strings.dart';
 import '../models/bathroom_log.dart';
+import '../models/insights.dart';
 import '../models/stats_summary.dart';
 import '../state/trono_controller.dart';
 import '../theme/app_theme.dart';
@@ -13,6 +14,8 @@ import '../widgets/chunky_widgets.dart';
 import '../widgets/log_detail_sheet.dart';
 import '../widgets/log_tile.dart';
 import 'map_screen.dart';
+import 'settings_screen.dart';
+import 'wrapped_screen.dart';
 
 class CalendarStatsScreen extends StatefulWidget {
   const CalendarStatsScreen({super.key, required this.controller});
@@ -207,6 +210,17 @@ class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
           title: Text(s.calendarStatsTitle),
           actions: [
             IconButton(
+              tooltip: s.wrappedTitle,
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => WrappedScreen(controller: widget.controller),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.auto_awesome_rounded),
+            ),
+            IconButton(
               tooltip: s.mapScreenTitle,
               onPressed: () {
                 Navigator.of(context).push(
@@ -305,6 +319,61 @@ class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
               ),
               const SizedBox(height: 16),
 
+              // 1.4 Shareable Trono Wrapped Banner
+              ChunkyButton(
+                width: double.infinity,
+                color: TronoColors.obsidian,
+                lipColor: TronoColors.obsidianLip,
+                borderColor: TronoColors.gold.withValues(alpha: 0.5),
+                lipHeight: 4,
+                borderRadius: 20,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 14,
+                ),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          WrappedScreen(controller: widget.controller),
+                    ),
+                  );
+                },
+                child: Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: TronoColors.gold.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.auto_awesome_rounded,
+                        color: TronoColors.gold,
+                        size: 21,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        s.wrappedButtonLabel,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: TronoColors.gold,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
               // 1.5 Territory: Home vs Away Ratio & Throne Map Card
               _TerritoryStatsCard(
                 stats: stats,
@@ -317,6 +386,22 @@ class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
                 },
               ),
               const SizedBox(height: 16),
+
+              // 1.6 Paid on the Throne Card (Work Earnings)
+              _PaidOnThroneCard(
+                paid: widget.controller.paidOnThrone,
+                hasSalary: widget.controller.hasHourlyRate,
+                currency: widget.controller.currencySymbol,
+                onConfigure: () =>
+                    showSalaryConfigDialog(context, widget.controller),
+              ),
+              const SizedBox(height: 16),
+
+              // 1.7 Automatic Pattern Insights
+              if (widget.controller.insights.isNotEmpty) ...[
+                _InsightsCard(insights: widget.controller.insights),
+                const SizedBox(height: 16),
+              ],
 
               // 2. Monochromatic Warm Terracotta Monthly Heatmap
               ChunkyCard(
@@ -572,6 +657,231 @@ Color _heatColor(int count, BuildContext context) {
         : const Color(0xFFE87D55);
   }
   return TronoColors.terracotta;
+}
+
+class _PaidOnThroneCard extends StatelessWidget {
+  const _PaidOnThroneCard({
+    required this.paid,
+    required this.hasSalary,
+    required this.currency,
+    required this.onConfigure,
+  });
+
+  final PaidOnThroneSummary paid;
+  final bool hasSalary;
+  final String currency;
+  final VoidCallback onConfigure;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return ChunkyCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.payments_rounded,
+                color: TronoColors.gold,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  s.paidThroneTitle.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
+                    color: TronoColors.muted(context),
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: onConfigure,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(0, 32),
+                ),
+                child: Text(
+                  s.configureSalaryButton,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (!hasSalary)
+            Text(
+              s.paidSetupHint,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: TronoColors.muted(context),
+              ),
+            )
+          else ...[
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$currency${paid.earnedThisMonth.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
+                          color: isDark
+                              ? TronoColors.gold
+                              : TronoColors.goldLip,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      Text(
+                        s.paidThisMonthLabel,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: TronoColors.muted(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 2,
+                  height: 44,
+                  color: TronoColors.border(context),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$currency${paid.earnedAllTime.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          color: TronoColors.ink(context),
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      Text(
+                        s.paidAllTimeLabel,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: TronoColors.muted(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              s.workVisitsSub(
+                paid.workVisitsTotal,
+                s.formatDuration(paid.workSecondsTotal),
+              ),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: TronoColors.muted(context),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _InsightsCard extends StatelessWidget {
+  const _InsightsCard({required this.insights});
+
+  final List<TronoInsight> insights;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    return ChunkyCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.insights_rounded,
+                color: TronoColors.terracotta,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                s.insightsTitle.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.8,
+                  color: TronoColors.muted(context),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...insights.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: TronoColors.bg(context),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: TronoColors.border(context),
+                    width: 1.4,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Text(item.emoji, style: const TextStyle(fontSize: 18)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        s.insightText(
+                          item.type.name,
+                          int1: item.intValue,
+                          int2: item.intValue2,
+                          str: item.stringValue,
+                        ),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _TerritoryStatsCard extends StatelessWidget {

@@ -238,11 +238,22 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
                         ],
                       ),
                     ),
-                    if (widget.mode == LogSheetMode.quickFollowUp)
+                    if (widget.mode == LogSheetMode.quickFollowUp) ...[
+                      IconButton(
+                        tooltip: s.undoAction,
+                        onPressed: () => Navigator.of(context).pop(
+                          const LogDetailSheetResult(deleted: true),
+                        ),
+                        icon: Icon(
+                          Icons.undo_rounded,
+                          color: scheme.error,
+                        ),
+                      ),
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
                         child: Text(s.skipButton),
                       ),
+                    ],
                   ],
                 ),
               ),

@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../data/database_helper.dart';
 import '../models/achievement.dart';
 import '../models/bathroom_log.dart';
+import '../models/insights.dart';
 import '../models/stats_summary.dart';
 import '../services/location_service.dart';
 import '../services/settings_service.dart';
@@ -37,6 +38,11 @@ class TronoController extends ChangeNotifier {
   List<BathroomLog> _logs = const [];
   StatsSummary _stats = StatsCalculator.calculate(const []);
   GamificationSnapshot _gamification = GamificationEngine.evaluate(const []);
+  PaidOnThroneSummary _paidOnThrone = InsightsEngine.calculatePaidOnThrone(
+    const [],
+    hourlyRate: null,
+  );
+  List<TronoInsight> _insights = const [];
 
   bool _isLoading = true;
   DateTime? _activeTimerStart;
@@ -55,9 +61,15 @@ class TronoController extends ChangeNotifier {
   double? _homeLng;
   bool _autoGpsEnabled = true;
 
+  // V1.6 Paid on the Throne mirrors
+  double? _hourlyRate;
+  String _currencySymbol = '€';
+
   List<BathroomLog> get logs => _logs;
   StatsSummary get stats => _stats;
   GamificationSnapshot get gamification => _gamification;
+  PaidOnThroneSummary get paidOnThrone => _paidOnThrone;
+  List<TronoInsight> get insights => _insights;
   bool get isLoading => _isLoading;
 
   bool get isTimerRunning => _activeTimerStart != null;
@@ -75,6 +87,10 @@ class TronoController extends ChangeNotifier {
   bool get hasHomeLocation => _homeLat != null && _homeLng != null;
   bool get autoGpsEnabled => _autoGpsEnabled;
 
+  double? get hourlyRate => _hourlyRate;
+  bool get hasHourlyRate => _hourlyRate != null && _hourlyRate! > 0;
+  String get currencySymbol => _currencySymbol;
+
   List<BathroomLog> get geotaggedLogs =>
       _logs.where((l) => l.hasCoordinates).toList();
 
@@ -87,6 +103,8 @@ class TronoController extends ChangeNotifier {
     _homeLat = _settings.homeLat;
     _homeLng = _settings.homeLng;
     _autoGpsEnabled = _settings.autoGpsEnabled;
+    _hourlyRate = _settings.hourlyRate;
+    _currencySymbol = _settings.currencySymbol;
 
     _activeTimerStart = _settings.activeTimerStart;
     if (_activeTimerStart != null) {
@@ -129,6 +147,33 @@ class TronoController extends ChangeNotifier {
       homeLat: _homeLat,
       homeLng: _homeLng,
     );
+    _paidOnThrone = InsightsEngine.calculatePaidOnThrone(
+      _logs,
+      hourlyRate: _hourlyRate,
+    );
+    _insights = InsightsEngine.generateInsights(_logs, _stats);
+  }
+
+  WrappedSnapshot buildWrapped(WrappedPeriod period) {
+    return InsightsEngine.buildWrapped(
+      _logs,
+      period: period,
+      homeLat: _homeLat,
+      homeLng: _homeLng,
+      hourlyRate: _hourlyRate,
+    );
+  }
+
+  Future<void> setSalaryConfig({
+    required double? hourlyRate,
+    required String currencySymbol,
+  }) async {
+    _hourlyRate = (hourlyRate != null && hourlyRate > 0) ? hourlyRate : null;
+    _currencySymbol = currencySymbol;
+    await _settings.setHourlyRate(_hourlyRate);
+    await _settings.setCurrencySymbol(_currencySymbol);
+    _recomputeDerived();
+    notifyListeners();
   }
 
   /// Instant 1-tap log creation. Saves immediately (0ms), then silently enriches

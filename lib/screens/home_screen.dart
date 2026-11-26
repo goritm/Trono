@@ -28,12 +28,27 @@ class HomeScreen extends StatelessWidget {
     );
 
     if (!context.mounted) return;
-    final prefix = locationKind != null ? '${locationKind.emoji} ' : '${type.emoji} ';
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
+    final prefix =
+        locationKind != null ? '${locationKind.emoji} ' : '${type.emoji} ';
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
       SnackBar(
         content: Text('$prefix${s.savedInstantToast}'),
-        duration: const Duration(seconds: 2),
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: s.undoAction,
+          textColor: TronoColors.gold,
+          onPressed: () async {
+            await controller.deleteLog(savedLog.id);
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text(s.undoneToast),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          },
+        ),
       ),
     );
 
@@ -43,6 +58,20 @@ class HomeScreen extends StatelessWidget {
       initialLog: savedLog,
       defaultShareLevel: controller.defaultShareLevel,
     );
+
+    if (result?.deleted == true) {
+      await controller.deleteLog(savedLog.id);
+      if (context.mounted) {
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(s.undoneToast),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
 
     UnlockEvent combinedUnlocks = initialUnlocks;
     if (result?.savedLog != null) {
