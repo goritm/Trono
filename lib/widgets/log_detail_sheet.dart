@@ -6,6 +6,7 @@ import '../l10n/app_strings.dart';
 import '../models/bathroom_log.dart';
 import '../services/location_service.dart';
 import '../theme/app_theme.dart';
+import 'trono_toast.dart';
 import 'chunky_widgets.dart';
 
 enum LogSheetMode {
@@ -136,9 +137,7 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
       }
     });
     if (pos == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppStrings.of(context).gpsUnavailableToast)),
-      );
+      showTronoToast(context, AppStrings.of(context).gpsUnavailableToast);
     }
   }
 

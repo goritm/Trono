@@ -137,6 +137,8 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: TronoColors.obsidian,
+        showCloseIcon: true,
+        closeIconColor: Colors.white70,
         contentTextStyle: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w700,
@@ -230,6 +232,8 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: const Color(0xFF282D3A),
+        showCloseIcon: true,
+        closeIconColor: Colors.white70,
         contentTextStyle: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w700,

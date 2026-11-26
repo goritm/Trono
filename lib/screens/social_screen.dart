@@ -10,6 +10,7 @@ import '../services/supabase_sync_service.dart';
 import '../state/social_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/chunky_widgets.dart';
+import '../widgets/trono_toast.dart';
 
 /// Opens the tactile Sign Up / Sign In modal sheet.
 Future<void> showAuthSheet(
@@ -139,9 +140,7 @@ Future<void> showEditProfileDialog(
   nameCtrl.dispose();
 
   if (updated == true && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(s.profileSavedToast)),
-    );
+    showTronoToast(context, s.profileSavedToast);
   }
 }
 
@@ -289,10 +288,9 @@ class _SocialScreenState extends State<SocialScreen> {
     if (created != null && mounted) {
       await Clipboard.setData(ClipboardData(text: created.inviteCode));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${created.emoji} ${created.name} · ${created.inviteCode}'),
-        ),
+      showTronoToast(
+        context,
+        '${created.emoji} ${created.name} · ${created.inviteCode}',
       );
     }
   }
@@ -394,9 +392,7 @@ class _SocialScreenState extends State<SocialScreen> {
     codeCtrl.dispose();
 
     if (joined != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${joined.emoji} ${joined.name}')),
-      );
+      showTronoToast(context, '${joined.emoji} ${joined.name}');
     }
   }
 
@@ -1338,9 +1334,7 @@ class _ActiveGroupHeaderCard extends StatelessWidget {
                       ClipboardData(text: group.inviteCode),
                     );
                     if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(s.codeCopiedToast)),
-                    );
+                    showTronoToast(context, s.codeCopiedToast);
                   },
                   icon: const Icon(
                     Icons.copy_rounded,

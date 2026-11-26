@@ -11,6 +11,7 @@ import '../theme/app_theme.dart';
 import '../widgets/chunky_widgets.dart';
 import '../widgets/log_detail_sheet.dart';
 import '../widgets/log_tile.dart';
+import '../widgets/trono_toast.dart';
 
 enum _MapFilter { all, thisMonth, awayOnly, workOnly, homeOnly }
 
@@ -106,9 +107,7 @@ class _MapScreenState extends State<MapScreen> {
       await widget.controller.deleteLog(log.id);
       if (mounted) {
         setState(() => _selectedCluster = null);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(s.logDeletedToast)),
-        );
+        showTronoToast(context, s.logDeletedToast);
       }
     } else if (res.savedLog != null) {
       await widget.controller.saveLog(res.savedLog!);
@@ -421,18 +420,11 @@ class _MapScreenState extends State<MapScreen> {
                             await widget.controller.deleteLog(log.id);
                             if (mounted) {
                               setState(() => _selectedCluster = null);
-                              messenger.hideCurrentSnackBar();
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text(s.logDeletedToast),
-                                  duration: const Duration(seconds: 4),
-                                  action: SnackBarAction(
-                                    label: s.undoAction,
-                                    textColor: TronoColors.gold,
-                                    onPressed: () =>
-                                        widget.controller.saveLog(log),
-                                  ),
-                                ),
+                              showTronoToastOnMessenger(
+                                messenger,
+                                s.logDeletedToast,
+                                actionLabel: s.undoAction,
+                                onAction: () => widget.controller.saveLog(log),
                               );
                             }
                           },
