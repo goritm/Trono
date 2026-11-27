@@ -10,13 +10,13 @@ import androidx.credentials.GetCredentialRequest
 import androidx.credentials.GetCredentialResponse
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 
-/// Native Android Credential Manager Google One-Tap helper.
-/// Resolves `default_web_client_id` automatically from `google-services.json`
-/// (or an explicit client ID passed from Flutter) and returns a signed Google
-/// ID token for `Supabase.auth.signInWithIdToken(...)`.
+/// Native Android Credential Manager "Sign in with Google" sheet helper.
+/// Uses `GetSignInWithGoogleOption` (designed for explicit button taps so it
+/// always launches the native Android Google account picker without Chrome)
+/// and resolves `default_web_client_id` automatically from `google-services.json`.
 object TronoGoogleAuth {
 
     private fun resolveWebClientId(activity: Activity, explicitClientId: String?): String? {
@@ -48,9 +48,7 @@ object TronoGoogleAuth {
         }
 
         try {
-            val googleIdOption = GetGoogleIdOption.Builder()
-                .setFilterByAuthorizedAccounts(false)
-                .setServerClientId(clientId)
+            val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(clientId)
                 .apply {
                     if (!hashedNonce.isNullOrBlank()) {
                         setNonce(hashedNonce)
@@ -59,7 +57,7 @@ object TronoGoogleAuth {
                 .build()
 
             val request = GetCredentialRequest.Builder()
-                .addCredentialOption(googleIdOption)
+                .addCredentialOption(signInWithGoogleOption)
                 .build()
 
             val credentialManager = CredentialManager.create(activity)
