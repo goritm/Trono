@@ -71,6 +71,11 @@
             android:name=".TronoReminderReceiver"
             android:exported="false" />
 
+        <!-- Inline Quick Reply Receiver for Friend Comment Notifications -->
+        <receiver
+            android:name=".TronoReplyReceiver"
+            android:exported="false" />
+
         <!-- Firebase Cloud Messaging (Instant Social Push Notifications) -->
         <service
             android:name=".TronoMessagingService"
@@ -85,7 +90,10 @@
             android:value="trono_friend_thrones" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@mipmap/ic_launcher" />
+            android:resource="@drawable/ic_stat_trono" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/trono_terracotta" />
 
         <meta-data
             android:name="flutterEmbedding"

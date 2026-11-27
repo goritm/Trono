@@ -35,6 +35,7 @@ class MainActivity : FlutterFragmentActivity() {
         private const val REMINDERS_CHANNEL = "com.trono.trono/reminders"
         private const val LIVE_TIMER_CHANNEL = "com.trono.trono/live_timer"
         private const val PUSH_CHANNEL = "com.trono.trono/push"
+        private const val GOOGLE_AUTH_CHANNEL = "com.trono.trono/google_auth"
         private const val REQUEST_CODE_NOTIFICATIONS = 2501
         private const val REQUEST_CODE_LIVE_TIMER_NOTIFICATIONS = 2605
         private const val PREFS_LIVE_TIMER = "trono_live_timer_prefs"
@@ -64,6 +65,20 @@ class MainActivity : FlutterFragmentActivity() {
                 } catch (_: Exception) {
                 }
             }
+        }
+
+        fun notifyQuickReply(logId: String, body: String): Boolean {
+            val channel = activePushChannel ?: return false
+            mainHandler.post {
+                try {
+                    channel.invokeMethod(
+                        "onQuickReply",
+                        mapOf("logId" to logId, "body" to body)
+                    )
+                } catch (_: Exception) {
+                }
+            }
+            return true
         }
     }
 
@@ -164,6 +179,33 @@ class MainActivity : FlutterFragmentActivity() {
                         val ok = TronoNotificationChannels.openSystemSettings(this, channelId)
                         result.success(ok)
                     }
+                    "sendTestNotification" -> {
+                        val locale = call.argument<String>("locale")
+                        val ok = TronoNotificationChannels.sendTestNotification(this, locale)
+                        result.success(ok)
+                    }
+                    "syncAuthSession" -> {
+                        val url = call.argument<String>("url").orEmpty()
+                        val apiKey = call.argument<String>("apiKey").orEmpty()
+                        val accessToken = call.argument<String>("accessToken").orEmpty()
+                        val userId = call.argument<String>("userId").orEmpty()
+                        if (url.isNotEmpty() && apiKey.isNotEmpty() &&
+                            accessToken.isNotEmpty() && userId.isNotEmpty()
+                        ) {
+                            TronoNotificationChannels.saveAuthContext(
+                                this,
+                                url,
+                                apiKey,
+                                accessToken,
+                                userId
+                            )
+                        }
+                        result.success(null)
+                    }
+                    "clearAuthSession" -> {
+                        TronoNotificationChannels.clearAuthContext(this)
+                        result.success(null)
+                    }
                     "getInitialOpenTab" -> {
                         val tab = pendingOpenTab
                         pendingOpenTab = null
@@ -171,6 +213,22 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                     else -> result.notImplemented()
                 }
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            GOOGLE_AUTH_CHANNEL
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "signInWithGoogleNative" -> {
+                    val nonce = call.argument<String>("nonce")
+                    val serverClientId = call.argument<String>("serverClientId")
+                    TronoGoogleAuth.signIn(this, serverClientId, nonce) { payload ->
+                        result.success(payload)
+                    }
+                }
+                else -> result.notImplemented()
             }
         }
     }

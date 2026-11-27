@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../config/supabase_config.dart';
 import '../data/database_helper.dart';
 import '../models/group_challenges.dart';
 import '../models/push_notification_config.dart';
@@ -124,6 +125,24 @@ class SocialController extends ChangeNotifier {
   Future<bool> openSystemNotificationSettings({String? channelId}) =>
       _pushService.openSystemNotificationSettings(channelId: channelId);
 
+  Future<bool> sendTestNotification() =>
+      _pushService.sendTestNotification(locale: _trono.locale);
+
+  void _syncNativeAuthContext() {
+    final session = _service.client?.auth.currentSession;
+    final uid = _service.currentUser?.id;
+    if (session != null && uid != null && session.accessToken.isNotEmpty) {
+      unawaited(
+        _pushService.syncAuthSession(
+          url: SupabaseConfig.url,
+          apiKey: SupabaseConfig.publishableKey,
+          accessToken: session.accessToken,
+          userId: uid,
+        ),
+      );
+    }
+  }
+
   Future<void> setSocialNotificationPrefs(SocialNotificationPrefs prefs) async {
     _socialNotificationPrefs = prefs;
     await _settings.setSocialNotificationPrefs(prefs);
@@ -173,6 +192,11 @@ class SocialController extends ChangeNotifier {
           _onOpenSocialTab?.call();
         }
       },
+      onQuickReply: (logId, body) {
+        if (_service.isSignedIn) {
+          unawaited(addComment(logId, body));
+        }
+      },
     );
 
     _trono.setOnLogsMutated(() {
@@ -189,6 +213,7 @@ class SocialController extends ChangeNotifier {
           event == AuthChangeEvent.initialSession) {
         if (_service.isSignedIn) {
           _attachRealtime();
+          _syncNativeAuthContext();
           unawaited(syncAndRefreshSocial());
           unawaited(syncPushTokenNow());
         }
@@ -200,6 +225,7 @@ class SocialController extends ChangeNotifier {
 
     if (_service.isSignedIn) {
       _attachRealtime();
+      _syncNativeAuthContext();
       unawaited(syncAndRefreshSocial());
       unawaited(syncPushTokenNow());
     }
@@ -291,6 +317,7 @@ class SocialController extends ChangeNotifier {
     _lastError = null;
     unawaited(_service.unsubscribeChannel(_realtimeChannel));
     _realtimeChannel = null;
+    unawaited(_pushService.clearAuthSession());
   }
 
   Future<void> updateProfile({

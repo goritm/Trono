@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Android 13+ Material You themed icon silhouette centered in 66dp safe zone -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M31.5,67.5 L27.6,42.0 L42.6,52.8 L54.0,34.5 L65.4,52.8 L80.4,42.0 L76.5,67.5 Z M31.5,72.0 L76.5,72.0 L76.5,78.0 L31.5,78.0 Z" />
+</vector>

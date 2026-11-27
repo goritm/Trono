@@ -8,6 +8,7 @@ import '../l10n/app_strings.dart';
 import '../models/bathroom_log.dart';
 import '../models/social_models.dart';
 import '../models/social_plus.dart';
+import '../services/google_native_auth_service.dart';
 import '../services/supabase_sync_service.dart';
 import '../state/social_controller.dart';
 import '../theme/app_theme.dart';
@@ -2741,6 +2742,9 @@ class _AuthSheetState extends State<_AuthSheet> {
           _error = s.googleAuthLaunchError;
         }
       });
+    } on GoogleSignInCancelledException {
+      if (!mounted) return;
+      setState(() => _submittingGoogle = false);
     } on AuthException catch (e) {
       if (!mounted) return;
       setState(() {

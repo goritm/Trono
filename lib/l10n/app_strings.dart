@@ -1085,6 +1085,18 @@ class AppStrings {
     'Personaliza sonido, vibración o silencia cada categoría en el sistema',
     'Customize sound, vibration, or mute each category in system settings',
   );
+  String get testNotificationLabel => _t(
+    'Probar notificación',
+    'Test notification',
+  );
+  String get testNotificationSub => _t(
+    'Envía una alerta local ahora para comprobar sonido y permisos',
+    'Send a local alert right now to verify sound and permissions',
+  );
+  String get testNotificationSentToast => _t(
+    '🔔 Notificación de prueba enviada',
+    '🔔 Test notification sent',
+  );
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

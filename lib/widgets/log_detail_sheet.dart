@@ -294,23 +294,25 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
                   controller: scrollController,
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                   children: [
-                    // Type selector (always visible when creating past or editing)
+                    // Type selector (always visible so users can switch to False alarm right away)
+                    _SectionLabel(s.typeField),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: BathroomType.values.map((t) {
+                        final selected = _type == t;
+                        return ChoiceChip(
+                          label: Text('${t.emoji} ${s.typeName(t)}'),
+                          selected: selected,
+                          onSelected: (_) => setState(() => _type = t),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 18),
+
+                    // Date/time selector (visible when logging past visits or editing)
                     if (widget.mode != LogSheetMode.quickFollowUp) ...[
-                      _SectionLabel(s.typeField),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: BathroomType.values.map((t) {
-                          final selected = _type == t;
-                          return ChoiceChip(
-                            label: Text('${t.emoji} ${s.typeName(t)}'),
-                            selected: selected,
-                            onSelected: (_) => setState(() => _type = t),
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 18),
                       _SectionLabel(s.dateTimeField),
                       const SizedBox(height: 8),
                       OutlinedButton.icon(

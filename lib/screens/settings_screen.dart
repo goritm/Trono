@@ -744,6 +744,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Material(
                           type: MaterialType.transparency,
                           child: ListTile(
+                            key: const ValueKey('test_notification_tile'),
+                            leading: const _ColorIcon(
+                              Icons.notifications_active_rounded,
+                              TronoColors.terracotta,
+                            ),
+                            title: Text(
+                              s.testNotificationLabel,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            subtitle: Text(s.testNotificationSub),
+                            trailing: const Icon(Icons.send_rounded, size: 20),
+                            onTap: () async {
+                              final sent =
+                                  await widget.social.sendTestNotification();
+                              if (!context.mounted) return;
+                              showTronoToast(
+                                context,
+                                sent
+                                    ? s.testNotificationSentToast
+                                    : s.reminderPermissionDeniedToast,
+                              );
+                            },
+                          ),
+                        ),
+                        const Divider(height: 1),
+                        Material(
+                          type: MaterialType.transparency,
+                          child: ListTile(
                             key: const ValueKey(
                               'open_android_notif_settings_tile',
                             ),
