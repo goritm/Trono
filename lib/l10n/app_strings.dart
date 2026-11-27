@@ -753,7 +753,13 @@ class AppStrings {
     'Are you sure you want to leave this group? You can rejoin anytime with the code.',
   );
   String get socialTabFeed => _t('Feed en vivo', 'Live feed');
-  String get socialTabRanking => _t('Ranking', 'Leaderboard');
+  String get socialTabFeedShort => _t('Feed', 'Feed');
+  String get socialTabChallenges => _t('Retos', 'Challenges');
+  String get socialTabRanking => _t('Ranking', 'Ranking');
+  String get groupsSheetTitle => _t('Tus grupos', 'Your groups');
+  String get newGroupPill => _t('Grupo', 'Group');
+  String soloGroupInviteHint(String code) =>
+      _t('Invita amigos · código $code', 'Invite friends · code $code');
   String get emptyFeedTitle => _t('El trono está tranquilo', 'All quiet on the throne');
   String get emptyFeedBody => _t(
     'Cuando alguien del grupo registre un trono compartido (Solo resumen o Completo), aparecerá aquí al instante.',
@@ -892,6 +898,11 @@ class AppStrings {
   String releaseNotesTitle(String tag) =>
       _t('Novedades de $tag', 'What’s new in $tag');
   String get releaseNotesCloseBtn => _t('Cerrar', 'Close');
+  String get changelogMenuTitle => _t('Novedades de esta versión', 'What’s new');
+  String get changelogUnavailableToast => _t(
+    'No se pudieron cargar las novedades ahora',
+    'Could not load release notes right now',
+  );
   String get shortcutTimerStartedToast =>
       _t('Cronómetro iniciado ⏱️', 'Timer started ⏱️');
   String get checkUpdatesLabel => _t('Buscar actualizaciones', 'Check for updates');

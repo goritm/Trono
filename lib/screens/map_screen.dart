@@ -246,12 +246,14 @@ class _MapScreenState extends State<MapScreen> {
                   },
                   icon: const Icon(Icons.home_rounded),
                 ),
-              if (widget.onOpenSettings != null)
+              if (widget.onOpenSettings != null) ...[
                 IconButton(
                   tooltip: s.navSettings,
                   onPressed: widget.onOpenSettings,
                   icon: const Icon(Icons.settings_outlined),
                 ),
+                const SizedBox(width: 4),
+              ],
             ],
           ),
           body: Column(

@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../config/feature_flags.dart';
 import '../l10n/app_strings.dart';
 import '../models/bathroom_log.dart';
 import '../models/social_models.dart';
@@ -208,16 +209,21 @@ Future<void> showEditProfileDialog(
 }
 
 class SocialScreen extends StatefulWidget {
-  const SocialScreen({super.key, required this.social});
+  const SocialScreen({
+    super.key,
+    required this.social,
+    this.onOpenSettings,
+  });
 
   final SocialController social;
+  final VoidCallback? onOpenSettings;
 
   @override
   State<SocialScreen> createState() => _SocialScreenState();
 }
 
 class _SocialScreenState extends State<SocialScreen> {
-  int _subTab = 0; // 0 = Live Feed, 1 = Leaderboard
+  int _subTab = 0; // 0 = Feed, 1 = Challenges, 2 = Ranking
 
   Future<void> _showCreateGroupDialog() async {
     final s = AppStrings.of(context);
@@ -492,6 +498,52 @@ class _SocialScreenState extends State<SocialScreen> {
     }
   }
 
+  Future<void> _showGroupSwitcherSheet(
+    BuildContext context,
+    SocialController social,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: TronoColors.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (sheetCtx) {
+        return _GroupSwitcherSheet(
+          social: social,
+          onSelectGroup: (id) async {
+            Navigator.of(sheetCtx).pop();
+            await social.selectGroup(id);
+          },
+          onCreateGroup: () {
+            Navigator.of(sheetCtx).pop();
+            _showCreateGroupDialog();
+          },
+          onJoinGroup: () {
+            Navigator.of(sheetCtx).pop();
+            _showJoinGroupDialog();
+          },
+          onLeaveGroup: (group) {
+            Navigator.of(sheetCtx).pop();
+            _confirmLeaveGroup(group);
+          },
+          onOpenWrapped: () {
+            Navigator.of(sheetCtx).pop();
+            final wrapped = social.buildGroupWeeklyWrapped();
+            if (wrapped == null) return;
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => GroupWrappedScreen(wrapped: wrapped),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -501,239 +553,223 @@ class _SocialScreenState extends State<SocialScreen> {
         final social = widget.social;
 
         if (!social.isSignedIn) {
-          return _SignedOutView(social: social);
+          return _SignedOutView(
+            social: social,
+            onOpenSettings: widget.onOpenSettings,
+          );
         }
 
         final activeGroup = social.selectedGroup;
 
-        return RefreshIndicator(
-          color: TronoColors.terracotta,
-          onRefresh: social.syncAndRefreshSocial,
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverAppBar(
-                floating: true,
-                title: Text(s.socialTitle),
-                actions: [
-                  if (social.myProfile != null)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 4),
-                      child: InkWell(
-                        onTap: () => showEditProfileDialog(context, social),
-                        borderRadius: BorderRadius.circular(14),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(s.socialTitle),
+            actions: [
+              // Compact Group Switcher Pill in Header (next to Profile & Settings)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: InkWell(
+                  key: const ValueKey('social_group_switcher_btn'),
+                  onTap: () => _showGroupSwitcherSheet(context, social),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: TronoColors.surface(context),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: TronoColors.border(context),
+                        width: 2,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (activeGroup != null) ...[
+                          Text(
+                            activeGroup.emoji,
+                            style: const TextStyle(fontSize: 14),
                           ),
+                          const SizedBox(width: 4),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 100),
+                            child: Text(
+                              activeGroup.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w800,
+                                color: TronoColors.ink(context),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 1),
+                          Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            size: 17,
+                            color: TronoColors.muted(context),
+                          ),
+                        ] else ...[
+                          const Icon(
+                            Icons.add_rounded,
+                            size: 16,
+                            color: TronoColors.terracotta,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            s.newGroupPill,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w800,
+                              color: TronoColors.ink(context),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // Compact Profile Avatar Button (with subtle sync status dot)
+              if (social.myProfile != null)
+                Padding(
+                  padding: EdgeInsets.only(
+                    right: widget.onOpenSettings != null ? 2 : 12,
+                  ),
+                  child: InkWell(
+                    key: const ValueKey('social_profile_btn'),
+                    onTap: () => showEditProfileDialog(context, social),
+                    borderRadius: BorderRadius.circular(13),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: TronoColors.surface(context),
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(13),
                             border: Border.all(
                               color: TronoColors.border(context),
                               width: 2,
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                social.myProfile!.avatarEmoji,
-                                style: const TextStyle(fontSize: 15),
-                              ),
-                              const SizedBox(width: 5),
-                              ConstrainedBox(
-                                constraints: const BoxConstraints(maxWidth: 96),
-                                child: Text(
-                                  social.myProfile!.displayName,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: TronoColors.ink(context),
+                          child: social.isSyncing
+                              ? const SizedBox(
+                                  width: 15,
+                                  height: 15,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: TronoColors.terracotta,
                                   ),
+                                )
+                              : Text(
+                                  social.myProfile!.avatarEmoji,
+                                  style: const TextStyle(fontSize: 17),
+                                ),
+                        ),
+                        if (social.pendingSyncCount > 0 && !social.isSyncing)
+                          Positioned(
+                            top: -2,
+                            right: -2,
+                            child: Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: TronoColors.gold,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: TronoColors.bg(context),
+                                  width: 1.5,
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  IconButton(
-                    tooltip: s.syncNowBtn,
-                    onPressed: social.isSyncing
-                        ? null
-                        : () => social.syncAndRefreshSocial(),
-                    icon: social.isSyncing
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.2,
-                              color: TronoColors.terracotta,
                             ),
-                          )
-                        : Icon(
-                            social.pendingSyncCount > 0
-                                ? Icons.cloud_upload_rounded
-                                : Icons.cloud_done_rounded,
-                            color: social.pendingSyncCount > 0
-                                ? TronoColors.gold
-                                : TronoColors.sage,
                           ),
-                  ),
-                ],
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 6, 16, 32),
-                sliver: SliverList.list(
-                  children: [
-                    // Group Selector Strip
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          ...social.groups.map((g) {
-                            final selected = g.id == activeGroup?.id;
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: GestureDetector(
-                                onTap: () => social.selectGroup(g.id),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 140),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 13,
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: selected
-                                        ? TronoColors.terracotta
-                                        : TronoColors.surface(context),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: selected
-                                          ? TronoColors.terracottaLip
-                                          : TronoColors.border(context),
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        g.emoji,
-                                        style: const TextStyle(fontSize: 15),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        g.name,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 13,
-                                          color: selected
-                                              ? Colors.white
-                                              : TronoColors.ink(context),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          }),
-                          _SmallActionPill(
-                            icon: Icons.add_rounded,
-                            label: s.createGroupBtn,
-                            onTap: _showCreateGroupDialog,
-                          ),
-                          const SizedBox(width: 8),
-                          _SmallActionPill(
-                            icon: Icons.tag_rounded,
-                            label: s.joinGroupBtn,
-                            onTap: _showJoinGroupDialog,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    if (social.isLoadingSocial && social.groups.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 48),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: TronoColors.terracotta,
-                          ),
-                        ),
-                      )
-                    else if (activeGroup == null)
-                      _NoGroupsCard(
-                        onCreate: _showCreateGroupDialog,
-                        onJoin: _showJoinGroupDialog,
-                      )
-                    else ...[
-                      _ActiveGroupHeaderCard(
-                        group: activeGroup,
-                        currentUserId: social.currentUserId,
-                        onLeave: () => _confirmLeaveGroup(activeGroup),
-                        onOpenWrapped: () {
-                          final wrapped = social.buildGroupWeeklyWrapped();
-                          if (wrapped == null) return;
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  GroupWrappedScreen(wrapped: wrapped),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 12),
-
-                      if (social.challenges.challenges.isNotEmpty) ...[
-                        GroupChallengesCard(snapshot: social.challenges),
-                        const SizedBox(height: 12),
                       ],
-
-                      _SocialBadgesStrip(snapshot: social.socialPlus),
-                      const SizedBox(height: 14),
-
-                      SizedBox(
-                        width: double.infinity,
-                        child: SegmentedButton<int>(
-                          segments: [
-                            ButtonSegment(
-                              value: 0,
-                              icon: const Icon(Icons.bolt_rounded, size: 18),
-                              label: Text(s.socialTabFeed),
-                            ),
-                            ButtonSegment(
-                              value: 1,
-                              icon: const Icon(
-                                Icons.leaderboard_rounded,
-                                size: 18,
-                              ),
-                              label: Text(s.socialTabRanking),
-                            ),
-                          ],
-                          selected: {_subTab},
-                          onSelectionChanged: (set) =>
-                              setState(() => _subTab = set.first),
-                          showSelectedIcon: false,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-
-                      if (_subTab == 0)
-                        ..._buildFeedWidgets(context, social)
-                      else
-                        ..._buildLeaderboardWidgets(context, social),
-                    ],
-                  ],
+                    ),
+                  ),
                 ),
-              ),
+              if (widget.onOpenSettings != null) ...[
+                IconButton(
+                  tooltip: s.navSettings,
+                  onPressed: widget.onOpenSettings,
+                  icon: const Icon(Icons.settings_outlined),
+                ),
+                const SizedBox(width: 4),
+              ],
             ],
           ),
+          body: social.isLoadingSocial && social.groups.isEmpty
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: TronoColors.terracotta,
+                  ),
+                )
+              : activeGroup == null
+                  ? ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                      children: [
+                        _NoGroupsCard(
+                          onCreate: _showCreateGroupDialog,
+                          onJoin: _showJoinGroupDialog,
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        // Pinned 3-way Sub-Tabs (matching Stats & Map pattern)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: SegmentedButton<int>(
+                              segments: [
+                                ButtonSegment(
+                                  value: 0,
+                                  label: Text(s.socialTabFeedShort),
+                                ),
+                                ButtonSegment(
+                                  value: 1,
+                                  label: Text(s.socialTabChallenges),
+                                ),
+                                ButtonSegment(
+                                  value: 2,
+                                  label: Text(s.socialTabRanking),
+                                ),
+                              ],
+                              selected: {_subTab},
+                              onSelectionChanged: (set) =>
+                                  setState(() => _subTab = set.first),
+                              showSelectedIcon: false,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: RefreshIndicator(
+                            color: TronoColors.terracotta,
+                            onRefresh: social.syncAndRefreshSocial,
+                            child: ListView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+                              children: switch (_subTab) {
+                                0 => _buildFeedWidgets(
+                                    context,
+                                    social,
+                                    activeGroup,
+                                  ),
+                                1 => _buildChallengesWidgets(context, social),
+                                _ => _buildLeaderboardWidgets(context, social),
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
         );
       },
     );
@@ -742,10 +778,50 @@ class _SocialScreenState extends State<SocialScreen> {
   List<Widget> _buildFeedWidgets(
     BuildContext context,
     SocialController social,
+    SocialGroup activeGroup,
   ) {
     final s = AppStrings.of(context);
+    final widgets = <Widget>[];
+
+    if (activeGroup.memberCount <= 1) {
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: ChunkyCard(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            onTap: () => _showGroupSwitcherSheet(context, social),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.person_add_alt_1_rounded,
+                  size: 19,
+                  color: TronoColors.terracotta,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    s.soloGroupInviteHint(activeGroup.inviteCode),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: TronoColors.ink(context),
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: TronoColors.muted(context),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     if (social.feed.isEmpty) {
-      return [
+      widgets.add(
         ChunkyCard(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -773,24 +849,41 @@ class _SocialScreenState extends State<SocialScreen> {
             ],
           ),
         ),
-      ];
+      );
+      return widgets;
     }
 
     final duoByLogId = social.socialPlus.duoByLogId;
-    return social.feed.map((item) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: _FeedItemCard(
-          item: item,
-          currentUserId: social.currentUserId,
-          syncedDuo: duoByLogId[item.logId],
-          onReact: (emoji) {
-            HapticFeedback.selectionClick();
-            social.toggleReaction(item.logId, emoji);
-          },
-        ),
-      );
-    }).toList();
+    widgets.addAll(
+      social.feed.map((item) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _FeedItemCard(
+            item: item,
+            currentUserId: social.currentUserId,
+            syncedDuo: duoByLogId[item.logId],
+            onReact: (emoji) {
+              HapticFeedback.selectionClick();
+              social.toggleReaction(item.logId, emoji);
+            },
+          ),
+        );
+      }),
+    );
+    return widgets;
+  }
+
+  List<Widget> _buildChallengesWidgets(
+    BuildContext context,
+    SocialController social,
+  ) {
+    return [
+      if (social.challenges.challenges.isNotEmpty) ...[
+        GroupChallengesCard(snapshot: social.challenges),
+        const SizedBox(height: 14),
+      ],
+      _SocialBadgesCard(snapshot: social.socialPlus),
+    ];
   }
 
   List<Widget> _buildLeaderboardWidgets(
@@ -982,24 +1075,32 @@ class _SocialScreenState extends State<SocialScreen> {
 }
 
 class _SignedOutView extends StatelessWidget {
-  const _SignedOutView({required this.social});
+  const _SignedOutView({required this.social, this.onOpenSettings});
 
   final SocialController social;
+  final VoidCallback? onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
 
-    return CustomScrollView(
-      slivers: [
-        SliverAppBar(
-          floating: true,
-          title: Text(s.socialTitle),
-        ),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 32),
-          sliver: SliverList.list(
-            children: [
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(s.socialTitle),
+        actions: [
+          if (onOpenSettings != null) ...[
+            IconButton(
+              tooltip: s.navSettings,
+              onPressed: onOpenSettings,
+              icon: const Icon(Icons.settings_outlined),
+            ),
+            const SizedBox(width: 4),
+          ],
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 32),
+        children: [
               ChunkyCard(
                 color: TronoColors.obsidian,
                 borderColor: const Color(0xFF343B4D),
@@ -1122,10 +1223,8 @@ class _SignedOutView extends StatelessWidget {
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1265,249 +1364,319 @@ class _NoGroupsCard extends StatelessWidget {
   }
 }
 
-class _ActiveGroupHeaderCard extends StatelessWidget {
-  const _ActiveGroupHeaderCard({
-    required this.group,
-    required this.currentUserId,
-    required this.onLeave,
+class _GroupSwitcherSheet extends StatelessWidget {
+  const _GroupSwitcherSheet({
+    required this.social,
+    required this.onSelectGroup,
+    required this.onCreateGroup,
+    required this.onJoinGroup,
+    required this.onLeaveGroup,
     required this.onOpenWrapped,
   });
 
-  final SocialGroup group;
-  final String? currentUserId;
-  final VoidCallback onLeave;
+  final SocialController social;
+  final ValueChanged<String> onSelectGroup;
+  final VoidCallback onCreateGroup;
+  final VoidCallback onJoinGroup;
+  final ValueChanged<SocialGroup> onLeaveGroup;
   final VoidCallback onOpenWrapped;
 
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
+    final activeGroup = social.selectedGroup;
 
-    return ChunkyCard(
-      color: TronoColors.obsidian,
-      borderColor: const Color(0xFF343B4D),
-      lipColor: TronoColors.obsidianLip,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: TronoColors.gold.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Text(group.emoji, style: const TextStyle(fontSize: 22)),
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              s.groupsSheetTitle,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: TronoColors.ink(context),
               ),
-              const SizedBox(width: 12),
-              Expanded(
+            ),
+            const SizedBox(height: 12),
+            ...social.groups.map((g) {
+              final selected = g.id == activeGroup?.id;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Material(
+                  color: selected
+                      ? TronoColors.terracotta.withValues(alpha: 0.12)
+                      : TronoColors.bg(context),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(
+                      color: selected
+                          ? TronoColors.terracotta
+                          : TronoColors.border(context),
+                      width: selected ? 2 : 1.5,
+                    ),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: ListTile(
+                    onTap: () => onSelectGroup(g.id),
+                    leading: Text(
+                      g.emoji,
+                      style: const TextStyle(fontSize: 22),
+                    ),
+                    title: Text(
+                      g.name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: TronoColors.ink(context),
+                      ),
+                    ),
+                    subtitle: Text(
+                      s.membersCountLabel(g.memberCount),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: TronoColors.muted(context),
+                      ),
+                    ),
+                    trailing: selected
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: TronoColors.terracotta,
+                          )
+                        : null,
+                  ),
+                ),
+              );
+            }),
+            if (activeGroup != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: TronoColors.obsidian,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFF343B4D), width: 1.5),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      group.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                s.inviteCodeLabel.toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.8,
+                                  color: Colors.white.withValues(alpha: 0.65),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                activeGroup.inviteCode,
+                                style: const TextStyle(
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 3,
+                                  color: TronoColors.gold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: s.copyCodeBtn,
+                          onPressed: () async {
+                            await Clipboard.setData(
+                              ClipboardData(text: activeGroup.inviteCode),
+                            );
+                            if (!context.mounted) return;
+                            showTronoToast(context, s.codeCopiedToast);
+                          },
+                          icon: const Icon(
+                            Icons.copy_rounded,
+                            color: Colors.white,
+                            size: 19,
+                          ),
+                        ),
+                        FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: TronoColors.terracotta,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                          ),
+                          onPressed: () {
+                            SharePlus.instance.share(
+                              ShareParams(
+                                text: s.inviteShareMessage(
+                                  activeGroup.name,
+                                  activeGroup.inviteCode,
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.share_rounded, size: 16),
+                          label: Text(
+                            s.shareCodeBtn,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      s.membersCountLabel(group.memberCount),
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white.withValues(alpha: 0.7),
+                    if (activeGroup.members.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: activeGroup.members.map((m) {
+                          final isMe = m.userId == social.currentUserId;
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isMe
+                                  ? TronoColors.gold.withValues(alpha: 0.2)
+                                  : Colors.white.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '${m.avatarEmoji} ${m.displayName}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: isMe ? TronoColors.gold : Colors.white,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                    if (FeatureFlags.showWrapped) ...[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ChunkyButton(
+                          color: TronoColors.gold,
+                          lipColor: TronoColors.goldLip,
+                          lipHeight: 4,
+                          borderRadius: 14,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          onPressed: onOpenWrapped,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.auto_awesome_rounded,
+                                size: 18,
+                                color: TronoColors.obsidian,
+                              ),
+                              const SizedBox(width: 7),
+                              Text(
+                                s.groupWrappedButton,
+                                style: const TextStyle(
+                                  color: TronoColors.obsidian,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 13.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => onLeaveGroup(activeGroup),
+                        style: TextButton.styleFrom(
+                          foregroundColor: TronoColors.coral,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        child: Text(
+                          s.leaveGroupBtn,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              PopupMenuButton<String>(
-                icon: Icon(
-                  Icons.more_horiz_rounded,
-                  color: Colors.white.withValues(alpha: 0.8),
-                ),
-                onSelected: (val) {
-                  if (val == 'leave') onLeave();
-                },
-                itemBuilder: (_) => [
-                  PopupMenuItem(
-                    value: 'leave',
-                    child: Text(
-                      s.leaveGroupBtn,
-                      style: const TextStyle(
-                        color: TronoColors.coral,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ],
-          ),
-          if (group.members.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: group.members.map((m) {
-                final isMe = m.userId == currentUserId;
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isMe
-                        ? TronoColors.gold.withValues(alpha: 0.2)
-                        : Colors.white.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${m.avatarEmoji} ${m.displayName}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: isMe ? TronoColors.gold : Colors.white,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.14),
-              ),
-            ),
-            child: Row(
+            const SizedBox(height: 14),
+            Row(
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        s.inviteCodeLabel.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.8,
-                          color: Colors.white.withValues(alpha: 0.6),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        group.inviteCode,
+                  child: ChunkyButton(
+                    color: TronoColors.terracotta,
+                    lipColor: TronoColors.terracottaLip,
+                    lipHeight: 4,
+                    borderRadius: 14,
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    onPressed: onCreateGroup,
+                    child: Center(
+                      child: Text(
+                        s.createGroupBtn,
                         style: const TextStyle(
-                          fontSize: 18,
+                          color: Colors.white,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.w900,
-                          letterSpacing: 3,
-                          color: TronoColors.gold,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: () async {
-                    await Clipboard.setData(
-                      ClipboardData(text: group.inviteCode),
-                    );
-                    if (!context.mounted) return;
-                    showTronoToast(context, s.codeCopiedToast);
-                  },
-                  icon: const Icon(
-                    Icons.copy_rounded,
-                    size: 16,
-                    color: Colors.white,
-                  ),
-                  label: Text(
-                    s.copyCodeBtn,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
-                const SizedBox(width: 4),
-                FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: TronoColors.terracotta,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                  ),
-                  onPressed: () {
-                    SharePlus.instance.share(
-                      ShareParams(
-                        text: s.inviteShareMessage(
-                          group.name,
-                          group.inviteCode,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ChunkyButton(
+                    color: TronoColors.bg(context),
+                    lipColor: TronoColors.lip(context),
+                    borderColor: TronoColors.border(context),
+                    lipHeight: 4,
+                    borderRadius: 14,
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    onPressed: onJoinGroup,
+                    child: Center(
+                      child: Text(
+                        s.joinGroupBtn,
+                        style: TextStyle(
+                          color: TronoColors.ink(context),
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.share_rounded, size: 16),
-                  label: Text(
-                    s.shareCodeBtn,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: ChunkyButton(
-              color: TronoColors.gold,
-              lipColor: TronoColors.goldLip,
-              lipHeight: 4,
-              borderRadius: 14,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              onPressed: onOpenWrapped,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.auto_awesome_rounded,
-                    size: 18,
-                    color: TronoColors.obsidian,
-                  ),
-                  const SizedBox(width: 7),
-                  Text(
-                    s.groupWrappedButton,
-                    style: const TextStyle(
-                      color: TronoColors.obsidian,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 13.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-class _SocialBadgesStrip extends StatelessWidget {
-  const _SocialBadgesStrip({required this.snapshot});
+class _SocialBadgesCard extends StatelessWidget {
+  const _SocialBadgesCard({required this.snapshot});
 
   final SocialPlusSnapshot snapshot;
 
@@ -1517,101 +1686,132 @@ class _SocialBadgesStrip extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     if (snapshot.badges.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-          child: Row(
+    return ChunkyCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Text(
-                s.socialBadgesTitle.toUpperCase(),
-                style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.8,
-                  color: TronoColors.muted(context),
+              const Icon(
+                Icons.workspace_premium_rounded,
+                color: TronoColors.gold,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  s.socialBadgesTitle.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
+                    color: TronoColors.muted(context),
+                  ),
                 ),
               ),
-              const Spacer(),
-              Text(
-                '${snapshot.unlockedCount}/${snapshot.badges.length}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  color: TronoColors.goldLip,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                decoration: BoxDecoration(
+                  color: TronoColors.bg(context),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: TronoColors.border(context),
+                    width: 1.5,
+                  ),
+                ),
+                child: Text(
+                  '${snapshot.unlockedCount}/${snapshot.badges.length}',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w900,
+                    color: TronoColors.ink(context),
+                  ),
                 ),
               ),
             ],
           ),
-        ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: snapshot.badges.map((badge) {
-              final unlocked = badge.isUnlocked;
-              final bg = unlocked
-                  ? (isDark ? const Color(0xFF2B2618) : const Color(0xFFFFF8E6))
-                  : TronoColors.surface(context);
-              final border =
-                  unlocked ? TronoColors.gold : TronoColors.border(context);
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: GestureDetector(
-                  onTap: () {
-                    final prog = unlocked
-                        ? '✓'
-                        : '${badge.current}/${badge.target}';
-                    showTronoToast(
-                      context,
-                      '${badge.emoji} ${s.socialBadgeTitle(badge.id)} ($prog) · ${s.socialBadgeDesc(badge.id)}',
-                      duration: const Duration(seconds: 3),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 11,
-                      vertical: 7,
-                    ),
-                    decoration: BoxDecoration(
-                      color: bg,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: border,
-                        width: unlocked ? 2 : 1.5,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Opacity(
-                          opacity: unlocked ? 1.0 : 0.45,
-                          child: Text(
-                            badge.emoji,
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          s.socialBadgeTitle(badge.id),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight:
-                                unlocked ? FontWeight.w900 : FontWeight.w700,
-                            color: unlocked
-                                ? TronoColors.ink(context)
-                                : TronoColors.muted(context),
-                          ),
-                        ),
-                      ],
-                    ),
+          const SizedBox(height: 12),
+          ...snapshot.badges.map((badge) {
+            final unlocked = badge.isUnlocked;
+            final bg = unlocked
+                ? (isDark ? const Color(0xFF2B2618) : const Color(0xFFFFF8E6))
+                : TronoColors.bg(context);
+            final border =
+                unlocked ? TronoColors.gold : TronoColors.border(context);
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: border,
+                    width: unlocked ? 2 : 1.5,
                   ),
                 ),
-              );
-            }).toList(),
-          ),
-        ),
-      ],
+                child: Row(
+                  children: [
+                    Opacity(
+                      opacity: unlocked ? 1.0 : 0.45,
+                      child: Text(
+                        badge.emoji,
+                        style: const TextStyle(fontSize: 22),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            s.socialBadgeTitle(badge.id),
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w900,
+                              color: unlocked
+                                  ? TronoColors.ink(context)
+                                  : TronoColors.muted(context),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            s.socialBadgeDesc(badge.id),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: TronoColors.muted(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    unlocked
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: TronoColors.sage,
+                            size: 20,
+                          )
+                        : Text(
+                            '${badge.current}/${badge.target}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: TronoColors.muted(context),
+                            ),
+                          ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
     );
   }
 }
@@ -1916,48 +2116,6 @@ class _MiniDetailPill extends StatelessWidget {
       child: Text(
         text,
         style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-}
-
-class _SmallActionPill extends StatelessWidget {
-  const _SmallActionPill({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
-        decoration: BoxDecoration(
-          color: TronoColors.surface(context),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: TronoColors.border(context), width: 2),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: TronoColors.terracotta),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w800,
-                color: TronoColors.ink(context),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

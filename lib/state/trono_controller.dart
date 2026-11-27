@@ -223,6 +223,10 @@ class TronoController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<AppReleaseInfo?> fetchInstalledReleaseNotes() {
+    return _updateChecker.fetchReleaseByTag(_installedVersion);
+  }
+
   Future<void> reloadLogs({bool suppressNotifications = false}) async {
     _logs = await _repo.getAllLogs();
     _recomputeDerived();
