@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -5,8 +6,12 @@ import 'package:trono/data/database_helper.dart';
 import 'package:trono/l10n/app_strings.dart';
 import 'package:trono/models/bathroom_log.dart';
 import 'package:trono/screens/home_screen.dart';
+import 'package:trono/screens/settings_screen.dart';
+import 'package:trono/services/push_notification_service.dart';
 import 'package:trono/services/settings_service.dart';
+import 'package:trono/services/supabase_sync_service.dart';
 import 'package:trono/services/update_checker_service.dart';
+import 'package:trono/state/social_controller.dart';
 import 'package:trono/state/trono_controller.dart';
 import 'package:trono/theme/app_theme.dart';
 import 'package:trono/widgets/log_detail_sheet.dart';
@@ -167,6 +172,200 @@ void main() {
         final titleRect = tester.getRect(titleFinder);
         final markRect = tester.getRect(markFinder);
         expect(markRect.left, greaterThan(titleRect.left));
+      },
+    );
+
+    test('formatQuickLogToast appends live earnings for work & WFH logs when hourlyRate is set', () {
+      final now = DateTime(2026, 11, 27, 14, 0);
+      final workLog = BathroomLog(
+        id: 'w1',
+        type: BathroomType.poop,
+        timestamp: now,
+        locationKind: LocationKind.work,
+        durationSeconds: 600, // 10 min @ €18/h = €3.00
+        createdAt: now,
+        updatedAt: now,
+      );
+      final wfhLog = BathroomLog(
+        id: 'w2',
+        type: BathroomType.poop,
+        timestamp: now,
+        locationKind: LocationKind.home,
+        tags: const [BathroomLog.wfhTag],
+        createdAt: now,
+        updatedAt: now,
+      );
+      final homeLog = BathroomLog(
+        id: 'h1',
+        type: BathroomType.poop,
+        timestamp: now,
+        locationKind: LocationKind.home,
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      final es = AppStrings(const Locale('es'));
+      final en = AppStrings(const Locale('en'));
+
+      expect(
+        formatQuickLogToast(
+          baseMessage: '💼 ${es.savedInstantToast}',
+          log: workLog,
+          hourlyRate: 18.0,
+          currencySymbol: '€',
+        ),
+        '💼 ¡Registrado! (+10 XP · 💰 +€3.00)',
+      );
+      expect(
+        formatQuickLogToast(
+          baseMessage: '💻 ${en.savedInstantToast}',
+          log: wfhLog,
+          hourlyRate: 18.0,
+          currencySymbol: '€',
+        ),
+        '💻 Logged! (+10 XP · 💰 ~€1.50)',
+      );
+      expect(
+        formatQuickLogToast(
+          baseMessage: '🏠 ${en.savedInstantToast}',
+          log: homeLog,
+          hourlyRate: 18.0,
+          currencySymbol: '€',
+        ),
+        '🏠 Logged! (+10 XP)',
+      );
+      expect(
+        formatQuickLogToast(
+          baseMessage: '💼 ${en.savedInstantToast}',
+          log: workLog,
+          hourlyRate: null,
+          currencySymbol: '€',
+        ),
+        '💼 Logged! (+10 XP)',
+      );
+    });
+
+    test('PushNotificationService handles sendTestNotification and onQuickReply events', () async {
+      const channel = MethodChannel('com.trono.trono/push_v281_test');
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            calls.add(call);
+            if (call.method == 'sendTestNotification') return true;
+            return null;
+          });
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, null);
+      });
+
+      final service = PushNotificationService(channel: channel);
+      final sent = await service.sendTestNotification(
+        locale: const Locale('es'),
+      );
+      expect(sent, isTrue);
+      expect(calls.last.method, 'sendTestNotification');
+      expect((calls.last.arguments as Map)['locale'], 'es');
+
+      final replies = <(String, String)>[];
+      service.startListening(
+        onQuickReply: (logId, body) => replies.add((logId, body)),
+      );
+
+      const codec = StandardMethodCodec();
+      await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .handlePlatformMessage(
+            channel.name,
+            codec.encodeMethodCall(
+              const MethodCall('onQuickReply', {
+                'logId': 'log-42',
+                'body': 'Jajaja brutal',
+              }),
+            ),
+            (_) {},
+          );
+
+      expect(replies, [('log-42', 'Jajaja brutal')]);
+      service.dispose();
+    });
+
+    testWidgets(
+      'SettingsScreen renders Test notification tile and triggers sendTestNotification',
+      (tester) async {
+        const channel = MethodChannel('com.trono.trono/push_v281_ui_test');
+        final calls = <MethodCall>[];
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (call) async {
+              calls.add(call);
+              if (call.method == 'sendTestNotification') return true;
+              return null;
+            });
+        addTearDown(() {
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .setMockMethodCallHandler(channel, null);
+        });
+
+        final bundle = (await tester.runAsync(() async {
+          SharedPreferences.setMockInitialValues({});
+          final settings = SettingsService();
+          await settings.init();
+          final repo = _MemoryRepo();
+          final trono = TronoController(
+            repository: repo,
+            settings: settings,
+            updateChecker: UpdateCheckerService(
+              settings: settings,
+              currentVersionProvider: () async => '2.8.1',
+              httpGet: (_) async => null,
+            ),
+            onTimerSynced: (_) async {},
+            readExternalTimerStart: () async => null,
+          );
+          await trono.init();
+          final social = SocialController(
+            tronoController: trono,
+            repository: repo,
+            settings: settings,
+            service: SupabaseSyncService.forTesting(),
+            pushService: PushNotificationService(channel: channel),
+          );
+          await social.init();
+          return (trono, social);
+        }))!;
+        final (trono, social) = bundle;
+        addTearDown(() {
+          social.dispose();
+          trono.dispose();
+        });
+
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('es'),
+            supportedLocales: const [Locale('en'), Locale('es')],
+            localizationsDelegates: const [
+              AppStrings.delegate,
+              ...GlobalMaterialLocalizations.delegates,
+            ],
+            theme: AppTheme.light(),
+            home: SettingsScreen(controller: trono, social: social),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final tile = find.byKey(const ValueKey('test_notification_tile'));
+        await tester.scrollUntilVisible(
+          tile,
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(tile);
+        await tester.pumpAndSettle();
+
+        expect(
+          calls.any((c) => c.method == 'sendTestNotification'),
+          isTrue,
+        );
       },
     );
   });

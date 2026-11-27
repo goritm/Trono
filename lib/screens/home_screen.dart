@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_strings.dart';
 import '../models/bathroom_log.dart';
+import '../models/insights.dart';
 import '../services/update_checker_service.dart';
 import '../state/trono_controller.dart';
 import '../theme/app_theme.dart';
@@ -12,6 +13,28 @@ import '../widgets/log_detail_sheet.dart';
 import '../widgets/log_tile.dart';
 import '../widgets/trono_toast.dart';
 import '../widgets/update_banner_card.dart';
+
+/// Formats the instant quick-log toast, appending live paid-on-the-throne
+/// earnings (`💰 +€X.XX` or `💰 ~€X.XX`) whenever the visit is at Work or WFH
+/// and the user has configured an hourly rate.
+String formatQuickLogToast({
+  required String baseMessage,
+  required BathroomLog log,
+  required double? hourlyRate,
+  required String currencySymbol,
+}) {
+  final earnings = InsightsEngine.calculateLogEarnings(
+    log,
+    hourlyRate: hourlyRate,
+  );
+  if (earnings == null || earnings.amount <= 0) return baseMessage;
+  final sign = earnings.isEstimated ? '~' : '+';
+  final formatted = '$sign$currencySymbol${earnings.amount.toStringAsFixed(2)}';
+  if (baseMessage.endsWith(')')) {
+    return '${baseMessage.substring(0, baseMessage.length - 1)} · 💰 $formatted)';
+  }
+  return '$baseMessage · 💰 $formatted';
+}
 
 enum _QuickLocationMode { auto, home, wfh, work, away }
 
@@ -107,9 +130,15 @@ class _HomeScreenState extends State<HomeScreen> {
         newRank: followUpUnlocks.newRank ?? initialUnlocks.newRank,
       );
       if (context.mounted) {
+        final finalLog = result.savedLog!;
         showTronoToastOnMessenger(
           messenger,
-          s.detailsSavedToast,
+          formatQuickLogToast(
+            baseMessage: s.detailsSavedToast,
+            log: finalLog,
+            hourlyRate: controller.hourlyRate,
+            currencySymbol: controller.currencySymbol,
+          ),
           duration: const Duration(seconds: 2),
         );
       }
@@ -117,7 +146,12 @@ class _HomeScreenState extends State<HomeScreen> {
       // User skipped/dismissed the detail sheet — show crisp toast with Undo!
       showTronoToastOnMessenger(
         messenger,
-        '$prefix${s.savedInstantToast}',
+        formatQuickLogToast(
+          baseMessage: '$prefix${s.savedInstantToast}',
+          log: savedLog,
+          hourlyRate: controller.hourlyRate,
+          currencySymbol: controller.currencySymbol,
+        ),
         actionLabel: s.undoAction,
         onAction: () async {
           await controller.deleteLog(savedLog.id);

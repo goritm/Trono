@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Pure white transparent-background Trono crown silhouette for Android status bar -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M4.5,16.5 L3.2,8.0 L8.2,11.6 L12.0,5.5 L15.8,11.6 L20.8,8.0 L19.5,16.5 Z M4.5,18.0 L19.5,18.0 L19.5,20.0 L4.5,20.0 Z" />
+</vector>

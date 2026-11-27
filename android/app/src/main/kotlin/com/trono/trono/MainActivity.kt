@@ -65,6 +65,20 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             }
         }
+
+        fun notifyQuickReply(logId: String, body: String): Boolean {
+            val channel = activePushChannel ?: return false
+            mainHandler.post {
+                try {
+                    channel.invokeMethod(
+                        "onQuickReply",
+                        mapOf("logId" to logId, "body" to body)
+                    )
+                } catch (_: Exception) {
+                }
+            }
+            return true
+        }
     }
 
     private var shortcutChannel: MethodChannel? = null
@@ -163,6 +177,33 @@ class MainActivity : FlutterFragmentActivity() {
                         val channelId = call.argument<String>("channelId")
                         val ok = TronoNotificationChannels.openSystemSettings(this, channelId)
                         result.success(ok)
+                    }
+                    "sendTestNotification" -> {
+                        val locale = call.argument<String>("locale")
+                        val ok = TronoNotificationChannels.sendTestNotification(this, locale)
+                        result.success(ok)
+                    }
+                    "syncAuthSession" -> {
+                        val url = call.argument<String>("url").orEmpty()
+                        val apiKey = call.argument<String>("apiKey").orEmpty()
+                        val accessToken = call.argument<String>("accessToken").orEmpty()
+                        val userId = call.argument<String>("userId").orEmpty()
+                        if (url.isNotEmpty() && apiKey.isNotEmpty() &&
+                            accessToken.isNotEmpty() && userId.isNotEmpty()
+                        ) {
+                            TronoNotificationChannels.saveAuthContext(
+                                this,
+                                url,
+                                apiKey,
+                                accessToken,
+                                userId
+                            )
+                        }
+                        result.success(null)
+                    }
+                    "clearAuthSession" -> {
+                        TronoNotificationChannels.clearAuthContext(this)
+                        result.success(null)
                     }
                     "getInitialOpenTab" -> {
                         val tab = pendingOpenTab

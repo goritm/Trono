@@ -1,16 +1,27 @@
 package com.trono.trono
 
+import android.Manifest
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationChannelGroup
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import java.util.Locale
 
 object TronoNotificationChannels {
+    data class AuthContext(
+        val supabaseUrl: String,
+        val apiKey: String,
+        val accessToken: String,
+        val userId: String
+    )
+
     const val GROUP_SOCIAL = "trono_social_group"
     const val GROUP_PERSONAL = "trono_personal_group"
 
@@ -26,6 +37,12 @@ object TronoNotificationChannels {
     private const val KEY_NOTIFY_COMMENTS = "notify_friend_comments"
     private const val KEY_NOTIFY_REACTIONS = "notify_friend_reactions"
     private const val KEY_FCM_TOKEN = "fcm_token"
+    private const val KEY_AUTH_URL = "auth_supabase_url"
+    private const val KEY_AUTH_KEY = "auth_api_key"
+    private const val KEY_AUTH_TOKEN = "auth_access_token"
+    private const val KEY_AUTH_UID = "auth_user_id"
+    private const val TEST_NOTIF_ID = 2810
+    private const val TRONO_TERRACOTTA = 0xFFE05A2B.toInt()
 
     fun savePreferences(
         context: Context,
@@ -55,6 +72,94 @@ object TronoNotificationChannels {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getString(KEY_FCM_TOKEN, null)
             ?.takeIf { it.isNotBlank() }
+    }
+
+    fun saveAuthContext(
+        context: Context,
+        supabaseUrl: String,
+        apiKey: String,
+        accessToken: String,
+        userId: String
+    ) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_AUTH_URL, supabaseUrl.trim())
+            .putString(KEY_AUTH_KEY, apiKey.trim())
+            .putString(KEY_AUTH_TOKEN, accessToken.trim())
+            .putString(KEY_AUTH_UID, userId.trim())
+            .apply()
+    }
+
+    fun clearAuthContext(context: Context) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .remove(KEY_AUTH_TOKEN)
+            .remove(KEY_AUTH_UID)
+            .apply()
+    }
+
+    fun readAuthContext(context: Context): AuthContext? {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val url = prefs.getString(KEY_AUTH_URL, null)?.trim().orEmpty()
+        val key = prefs.getString(KEY_AUTH_KEY, null)?.trim().orEmpty()
+        val token = prefs.getString(KEY_AUTH_TOKEN, null)?.trim().orEmpty()
+        val uid = prefs.getString(KEY_AUTH_UID, null)?.trim().orEmpty()
+        if (url.isEmpty() || key.isEmpty() || token.isEmpty() || uid.isEmpty()) {
+            return null
+        }
+        return AuthContext(url, key, token, uid)
+    }
+
+    fun sendTestNotification(context: Context, localeOverride: String? = null): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val granted = context.checkSelfPermission(
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!granted) return false
+        }
+        ensureAll(context, localeOverride)
+        val manager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                ?: return false
+
+        val es = isSpanish(context, localeOverride)
+        val title = if (es) "👑 ¡Notificaciones listas!" else "👑 Notifications ready!"
+        val body = if (es) {
+            "Así se verán los avisos de tus amigos en Trono."
+        } else {
+            "This is how friend alerts from Trono will look."
+        }
+
+        val launchIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(MainActivity.EXTRA_OPEN_TAB, "social")
+        }
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
+        val contentIntent = PendingIntent.getActivity(context, TEST_NOTIF_ID, launchIntent, flags)
+
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Notification.Builder(context, CHANNEL_FRIEND_COMMENTS)
+        } else {
+            @Suppress("DEPRECATION")
+            Notification.Builder(context)
+        }
+
+        val notification = builder
+            .setSmallIcon(R.drawable.ic_stat_trono)
+            .setColor(TRONO_TERRACOTTA)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(Notification.BigTextStyle().bigText(body))
+            .setAutoCancel(true)
+            .setContentIntent(contentIntent)
+            .build()
+
+        manager.notify(TEST_NOTIF_ID, notification)
+        return true
     }
 
     fun isSpanish(context: Context, localeOverride: String? = null): Boolean {

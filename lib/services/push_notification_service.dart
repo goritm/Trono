@@ -61,6 +61,49 @@ class PushNotificationService {
     }
   }
 
+  Future<bool> sendTestNotification({required Locale locale}) async {
+    try {
+      final sent = await _channel.invokeMethod<bool>('sendTestNotification', {
+        'locale': locale.languageCode == 'es' ? 'es' : 'en',
+      });
+      return sent ?? false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  Future<void> syncAuthSession({
+    required String url,
+    required String apiKey,
+    required String accessToken,
+    required String userId,
+  }) async {
+    try {
+      await _channel.invokeMethod<void>('syncAuthSession', {
+        'url': url,
+        'apiKey': apiKey,
+        'accessToken': accessToken,
+        'userId': userId,
+      });
+    } on MissingPluginException {
+      // Safe no-op on non-Android platforms or unmocked tests.
+    } on PlatformException {
+      // Safe no-op.
+    }
+  }
+
+  Future<void> clearAuthSession() async {
+    try {
+      await _channel.invokeMethod<void>('clearAuthSession');
+    } on MissingPluginException {
+      // Safe no-op.
+    } on PlatformException {
+      // Safe no-op.
+    }
+  }
+
   Future<String?> consumeInitialOpenTab() async {
     try {
       final tab = await _channel.invokeMethod<String>('getInitialOpenTab');
@@ -76,6 +119,7 @@ class PushNotificationService {
   void startListening({
     void Function(String token)? onTokenRefresh,
     void Function(String tab)? onOpenTab,
+    void Function(String logId, String body)? onQuickReply,
   }) {
     _listening = true;
     _channel.setMethodCallHandler((call) async {
@@ -85,6 +129,15 @@ class PushNotificationService {
       } else if (call.method == 'onOpenTab') {
         final tab = (call.arguments as String?)?.trim() ?? '';
         if (tab.isNotEmpty) onOpenTab?.call(tab);
+      } else if (call.method == 'onQuickReply') {
+        final raw = call.arguments;
+        if (raw is Map) {
+          final logId = (raw['logId'] as String?)?.trim() ?? '';
+          final body = (raw['body'] as String?)?.trim() ?? '';
+          if (logId.isNotEmpty && body.isNotEmpty) {
+            onQuickReply?.call(logId, body);
+          }
+        }
       }
     });
   }

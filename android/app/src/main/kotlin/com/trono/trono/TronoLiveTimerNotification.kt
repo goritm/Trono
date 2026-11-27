@@ -139,7 +139,7 @@ object TronoLiveTimerNotification {
         }
 
         builder
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_stat_trono)
             .setContentTitle(resolvedTitle)
             .setContentText(resolvedBody)
             .setWhen(startMillis)

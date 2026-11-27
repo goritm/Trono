@@ -70,7 +70,8 @@ class TronoReminderReceiver : BroadcastReceiver() {
         }
 
         val notification = builder
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_stat_trono)
+            .setColor(0xFFE05A2B.toInt())
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(Notification.BigTextStyle().bigText(body))

@@ -4,9 +4,11 @@ import android.Manifest
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.RemoteInput
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.drawable.Icon
 import android.os.Build
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -123,8 +125,8 @@ class TronoMessagingService : FirebaseMessagingService() {
             Notification.Builder(this)
         }
 
-        val notification = builder
-            .setSmallIcon(R.mipmap.ic_launcher)
+        builder
+            .setSmallIcon(R.drawable.ic_stat_trono)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(Notification.BigTextStyle().bigText(body))
@@ -138,8 +140,42 @@ class TronoMessagingService : FirebaseMessagingService() {
             )
             .setAutoCancel(true)
             .setContentIntent(contentIntent)
-            .build()
 
-        manager.notify(notificationId, notification)
+        // Add inline WhatsApp-style quick reply on friend comments (Android 7+)
+        if (event == "friend_comment" &&
+            logId.isNotEmpty() &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.N
+        ) {
+            val replyLabel = if (es) "Responder" else "Reply"
+            val remoteInput = RemoteInput.Builder(TronoReplyReceiver.KEY_REPLY_TEXT)
+                .setLabel(replyLabel)
+                .build()
+            val replyIntent = Intent(this, TronoReplyReceiver::class.java).apply {
+                action = TronoReplyReceiver.ACTION_QUICK_REPLY
+                putExtra(TronoReplyReceiver.EXTRA_LOG_ID, logId)
+                putExtra(TronoReplyReceiver.EXTRA_NOTIFICATION_ID, notificationId)
+            }
+            val replyFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+            } else {
+                PendingIntent.FLAG_UPDATE_CURRENT
+            }
+            val replyPending = PendingIntent.getBroadcast(
+                this,
+                notificationId + 10000,
+                replyIntent,
+                replyFlags
+            )
+            val replyAction = Notification.Action.Builder(
+                Icon.createWithResource(this, android.R.drawable.ic_menu_send),
+                replyLabel,
+                replyPending
+            )
+                .addRemoteInput(remoteInput)
+                .build()
+            builder.addAction(replyAction)
+        }
+
+        manager.notify(notificationId, builder.build())
     }
 }
