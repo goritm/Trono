@@ -223,6 +223,11 @@ class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
     setState(() => _tabIndex = 1);
   }
 
+  void _openInsights() {
+    _statsSubTab.value = 1;
+    setState(() => _tabIndex = 1);
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
@@ -276,6 +281,7 @@ class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
         controller: widget.controller,
         onOpenSettings: () => _openSettings(context),
         onOpenAwards: _openAwards,
+        onOpenInsights: _openInsights,
       ),
       CalendarStatsScreen(
         controller: widget.controller,

@@ -512,6 +512,7 @@ void main() {
         addTearDown(ctrl.dispose);
 
         var awardsOpened = false;
+        var insightsOpened = false;
         await tester.pumpWidget(
           MaterialApp(
             locale: const Locale('en'),
@@ -525,6 +526,7 @@ void main() {
               body: HomeScreen(
                 controller: ctrl,
                 onOpenAwards: () => awardsOpened = true,
+                onOpenInsights: () => insightsOpened = true,
                 onOpenSettings: () {},
               ),
             ),
@@ -538,16 +540,71 @@ void main() {
         await tester.tap(find.text('LVL.1'));
         expect(awardsOpened, isTrue);
 
-        // Top summary strip displays today's Paid on the Throne total
-        expect(
-          find.byKey(const ValueKey('home_today_paid_pill')),
-          findsOneWidget,
-        );
+        // Top summary strip displays today's Paid on the Throne total & jumps to Insights on tap
+        final paidPill = find.byKey(const ValueKey('home_today_paid_pill'));
+        expect(paidPill, findsOneWidget);
         expect(find.text('💰 €3.00'), findsOneWidget);
+        await tester.tap(paidPill);
+        expect(insightsOpened, isTrue);
 
-        // Hero button is clean: no redundant "1 tap logs instantly" subtitle
-        expect(find.text('CLAIM THRONE'), findsOneWidget);
+        // Hero-first layout: CLAIM THRONE sits above side-by-side [Location | Timer]
+        final heroFinder = find.text('CLAIM THRONE');
+        final locFinder = find.byKey(const ValueKey('home_location_picker_btn'));
+        final timerFinder = find.byKey(const ValueKey('home_start_timer_btn'));
+        expect(heroFinder, findsOneWidget);
         expect(find.textContaining('1 tap logs instantly'), findsNothing);
+        final heroRect = tester.getRect(heroFinder);
+        final locRect = tester.getRect(locFinder);
+        final timerRect = tester.getRect(timerFinder);
+        expect(heroRect.bottom, lessThan(locRect.top));
+        expect((locRect.top - timerRect.top).abs(), lessThan(8));
+        expect(locRect.right, lessThanOrEqualTo(timerRect.left));
+      },
+    );
+
+    testWidgets(
+      'HomeScreen shows discreet salary setup pill when hourlyRate is unset and opens dialog',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        late TronoController ctrl;
+        await tester.runAsync(() async {
+          final settings = SettingsService();
+          await settings.init();
+          ctrl = TronoController(
+            repository: _MemoryRepo(),
+            settings: settings,
+            updateChecker: UpdateCheckerService(
+              settings: settings,
+              currentVersionProvider: () async => '2.8.4',
+              httpGet: (_) async => null,
+            ),
+            onTimerSynced: (_) async {},
+            readExternalTimerStart: () async => null,
+          );
+          await ctrl.init();
+        });
+        addTearDown(ctrl.dispose);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('en'),
+            supportedLocales: const [Locale('en'), Locale('es')],
+            localizationsDelegates: const [
+              AppStrings.delegate,
+              ...GlobalMaterialLocalizations.delegates,
+            ],
+            theme: AppTheme.light(),
+            home: Scaffold(body: HomeScreen(controller: ctrl)),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final setupPill = find.byKey(const ValueKey('home_setup_salary_pill'));
+        expect(setupPill, findsOneWidget);
+        expect(find.byKey(const ValueKey('home_today_paid_pill')), findsNothing);
+        await tester.tap(setupPill);
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsOneWidget);
       },
     );
   });

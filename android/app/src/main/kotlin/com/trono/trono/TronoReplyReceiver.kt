@@ -48,6 +48,7 @@ class TronoReplyReceiver : BroadcastReceiver() {
             }
             val confirmed = builder
                 .setSmallIcon(R.drawable.ic_stat_trono)
+                .setLargeIcon(TronoNotificationChannels.buildLargeIcon(context))
                 .setColor(TRONO_TERRACOTTA)
                 .setContentTitle(if (es) "✓ Respuesta enviada" else "✓ Reply sent")
                 .setContentText(clamped)

@@ -1408,9 +1408,11 @@ class _GroupSwitcherSheet extends StatelessWidget {
     final s = AppStrings.of(context);
     final activeGroup = social.selectedGroup;
 
+    final navBarInset = MediaQuery.viewPaddingOf(context).bottom;
     return SafeArea(
+      top: false,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + navBarInset),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2271,6 +2273,9 @@ class _CommentsSheetState extends State<_CommentsSheet> {
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final navBarInset = bottomInset > 0
+        ? 0.0
+        : MediaQuery.viewPaddingOf(context).bottom;
     final maxHeight = MediaQuery.of(context).size.height * 0.78;
     final canSend =
         !_submitting && LogComment.validateBody(_inputCtrl.text) != null;
@@ -2282,7 +2287,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
         final currentUid = widget.social.currentUserId;
 
         return Padding(
-          padding: EdgeInsets.only(bottom: bottomInset),
+          padding: EdgeInsets.only(bottom: bottomInset + navBarInset),
           child: Container(
             constraints: BoxConstraints(maxHeight: maxHeight),
             decoration: BoxDecoration(
