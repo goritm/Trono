@@ -249,6 +249,11 @@ class AppStrings {
     'Enable GPS in Settings or tap "Pin current GPS" when logging to map your conquered spots.',
   );
   String get homePinLabel => _t('Tu Casa (Base)', 'Home Base');
+  String get myLocationTooltip => _t('Mi ubicación', 'My location');
+  String get locationUnavailableToast => _t(
+    'No se pudo obtener tu ubicación actual.',
+    'Couldn’t get your current location.',
+  );
 
   String get locationSettingsSection => _t('Ubicación y Casa', 'Location & Home');
   String get autoGpsLabel => _t('Guardar GPS automáticamente', 'Auto-save GPS pin');

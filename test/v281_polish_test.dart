@@ -7,7 +7,9 @@ import 'package:trono/l10n/app_strings.dart';
 import 'package:trono/models/bathroom_log.dart';
 import 'package:trono/models/insights.dart';
 import 'package:trono/screens/home_screen.dart';
+import 'package:trono/screens/map_screen.dart';
 import 'package:trono/screens/settings_screen.dart';
+import 'package:trono/services/location_service.dart';
 import 'package:trono/services/push_notification_service.dart';
 import 'package:trono/services/settings_service.dart';
 import 'package:trono/services/supabase_sync_service.dart';
@@ -605,6 +607,77 @@ void main() {
         await tester.tap(setupPill);
         await tester.pumpAndSettle();
         expect(find.byType(AlertDialog), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'MapScreen replaces Home header button with My Location button and renders live location dot',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        late TronoController ctrl;
+        await tester.runAsync(() async {
+          final settings = SettingsService();
+          await settings.init();
+          ctrl = TronoController(
+            repository: _MemoryRepo(),
+            settings: settings,
+            updateChecker: UpdateCheckerService(
+              settings: settings,
+              currentVersionProvider: () async => '2.8.4',
+              httpGet: (_) async => null,
+            ),
+            onTimerSynced: (_) async {},
+            readExternalTimerStart: () async => null,
+          );
+          await ctrl.init();
+        });
+        addTearDown(ctrl.dispose);
+
+        var requestedCurrent = false;
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('es'),
+            supportedLocales: const [Locale('en'), Locale('es')],
+            localizationsDelegates: const [
+              AppStrings.delegate,
+              ...GlobalMaterialLocalizations.delegates,
+            ],
+            theme: AppTheme.light(),
+            home: MapScreen(
+              controller: ctrl,
+              isRootTab: true,
+              silentPositionProvider: () async => null,
+              currentPositionProvider: () async {
+                requestedCurrent = true;
+                return const GeoPoint(40.4168, -3.7038);
+              },
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final locBtn = find.byKey(const ValueKey('map_my_location_btn'));
+        expect(locBtn, findsOneWidget);
+        expect(find.byIcon(Icons.my_location_rounded), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(AppBar),
+            matching: find.byIcon(Icons.home_rounded),
+          ),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const ValueKey('map_user_location_dot')),
+          findsNothing,
+        );
+
+        await tester.tap(locBtn);
+        await tester.pumpAndSettle();
+        expect(requestedCurrent, isTrue);
+        expect(
+          find.byKey(const ValueKey('map_user_location_dot')),
+          findsOneWidget,
+        );
       },
     );
   });
