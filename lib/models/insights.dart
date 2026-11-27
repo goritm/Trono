@@ -3,6 +3,18 @@ import 'package:material_ui/material_ui.dart';
 import 'bathroom_log.dart';
 import 'stats_summary.dart';
 
+class LogEarnings {
+  const LogEarnings({
+    required this.amount,
+    required this.isEstimated,
+    required this.secondsUsed,
+  });
+
+  final double amount;
+  final bool isEstimated;
+  final int secondsUsed;
+}
+
 class PaidOnThroneSummary {
   const PaidOnThroneSummary({
     required this.workVisitsTotal,
@@ -90,6 +102,24 @@ class InsightsEngine {
       return log.durationSeconds!;
     }
     return log.type == BathroomType.poop ? 300 : 120;
+  }
+
+  /// Calculates local-only Paid on the Throne earnings for a single log.
+  /// Returns `null` when the log is not a work/WFH visit or no pay rate is set.
+  static LogEarnings? calculateLogEarnings(
+    BathroomLog log, {
+    required double? hourlyRate,
+  }) {
+    if (!log.isWorkVisit || hourlyRate == null || hourlyRate <= 0) {
+      return null;
+    }
+    final hasExact = log.durationSeconds != null && log.durationSeconds! > 0;
+    final secs = hasExact ? log.durationSeconds! : _estimatedSeconds(log);
+    return LogEarnings(
+      amount: (secs / 3600.0) * hourlyRate,
+      isEstimated: !hasExact,
+      secondsUsed: secs,
+    );
   }
 
   static PaidOnThroneSummary calculatePaidOnThrone(

@@ -13,7 +13,7 @@ import '../widgets/log_tile.dart';
 import '../widgets/trono_toast.dart';
 import '../widgets/update_banner_card.dart';
 
-enum _QuickLocationMode { auto, home, work, away }
+enum _QuickLocationMode { auto, home, wfh, work, away }
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -39,14 +39,21 @@ class _HomeScreenState extends State<HomeScreen> {
   LocationKind? get _selectedLocationKind => switch (_locationMode) {
     _QuickLocationMode.auto => null,
     _QuickLocationMode.home => LocationKind.home,
+    _QuickLocationMode.wfh => LocationKind.home,
     _QuickLocationMode.work => LocationKind.work,
     _QuickLocationMode.away => LocationKind.away,
   };
+
+  List<String> get _selectedInitialTags =>
+      _locationMode == _QuickLocationMode.wfh
+          ? const [BathroomLog.wfhTag]
+          : const [];
 
   Future<void> _handleQuickTap(
     BuildContext context,
     BathroomType type, {
     LocationKind? locationKind,
+    List<String> tags = const [],
     Duration sheetDelay = Duration.zero,
   }) async {
     HapticFeedback.mediumImpact();
@@ -54,11 +61,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final (savedLog, initialUnlocks) = await controller.quickLog(
       type,
       locationKind: locationKind,
+      tags: tags,
     );
 
     if (!context.mounted) return;
-    final prefix =
-        locationKind != null ? '${locationKind.emoji} ' : '${type.emoji} ';
+    final prefix = tags.contains(BathroomLog.wfhTag)
+        ? '💻 '
+        : (locationKind != null ? '${locationKind.emoji} ' : '${type.emoji} ');
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
 
@@ -205,6 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final heroSub = switch (_locationMode) {
       _QuickLocationMode.auto => s.oneTapHint,
       _QuickLocationMode.home => '🏠 ${s.locationKindName(LocationKind.home)} · ${s.oneTapHint}',
+      _QuickLocationMode.wfh => '💻 ${s.wfhLocationName} · ${s.oneTapHint}',
       _QuickLocationMode.work => '💼 ${s.locationKindName(LocationKind.work)} · ${s.oneTapHint}',
       _QuickLocationMode.away => '🌍 ${s.locationKindName(LocationKind.away)} · ${s.oneTapHint}',
     };
@@ -390,12 +400,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Compact Location Mode Selector (Auto · Casa · Trabajo · Fuera)
+              // Compact Location Mode Selector (Auto · Home · WFH · Work · Away)
               _LocationModeSelector(
                 selected: _locationMode,
                 autoLabel: s.quickAutoChip,
                 homeLabel: s.quickHomeButton,
-                workLabel: s.quickWorkButton,
+                wfhLabel: s.quickWfhButton,
+                workLabel: s.quickWorkCompactButton,
                 awayLabel: s.quickAwayButton,
                 onChanged: (mode) {
                   HapticFeedback.selectionClick();
@@ -413,6 +424,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   BathroomType.poop,
                   locationKind: _selectedLocationKind,
+                  tags: _selectedInitialTags,
                   sheetDelay: const Duration(milliseconds: 360),
                 ),
               ),
@@ -517,6 +529,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               context,
                               BathroomType.falseAlarm,
                               locationKind: _selectedLocationKind,
+                              tags: _selectedInitialTags,
                             ),
                           ),
                         ),
@@ -601,6 +614,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       key: ValueKey(log.id),
                       log: log,
                       showDate: todayLogs.isEmpty,
+                      hourlyRate: controller.hourlyRate,
+                      currencySymbol: controller.currencySymbol,
                       onTap: () => _handleEditLog(context, log),
                       onDelete: () => _handleDeleteWithUndo(context, log),
                     ),
@@ -837,6 +852,7 @@ class _LocationModeSelector extends StatelessWidget {
     required this.selected,
     required this.autoLabel,
     required this.homeLabel,
+    required this.wfhLabel,
     required this.workLabel,
     required this.awayLabel,
     required this.onChanged,
@@ -845,6 +861,7 @@ class _LocationModeSelector extends StatelessWidget {
   final _QuickLocationMode selected;
   final String autoLabel;
   final String homeLabel;
+  final String wfhLabel;
   final String workLabel;
   final String awayLabel;
   final ValueChanged<_QuickLocationMode> onChanged;
@@ -861,12 +878,14 @@ class _LocationModeSelector extends StatelessWidget {
       child: Row(
         children: [
           _ModeTab(
+            key: const ValueKey('quick_loc_auto'),
             icon: Icons.my_location_rounded,
             label: autoLabel,
             active: selected == _QuickLocationMode.auto,
             onTap: () => onChanged(_QuickLocationMode.auto),
           ),
           _ModeTab(
+            key: const ValueKey('quick_loc_home'),
             icon: Icons.home_rounded,
             label: homeLabel,
             active: selected == _QuickLocationMode.home,
@@ -874,6 +893,15 @@ class _LocationModeSelector extends StatelessWidget {
             onTap: () => onChanged(_QuickLocationMode.home),
           ),
           _ModeTab(
+            key: const ValueKey('quick_loc_wfh'),
+            icon: Icons.laptop_mac_rounded,
+            label: wfhLabel,
+            active: selected == _QuickLocationMode.wfh,
+            activeColor: TronoColors.sage,
+            onTap: () => onChanged(_QuickLocationMode.wfh),
+          ),
+          _ModeTab(
+            key: const ValueKey('quick_loc_work'),
             icon: Icons.work_rounded,
             label: workLabel,
             active: selected == _QuickLocationMode.work,
@@ -881,6 +909,7 @@ class _LocationModeSelector extends StatelessWidget {
             onTap: () => onChanged(_QuickLocationMode.work),
           ),
           _ModeTab(
+            key: const ValueKey('quick_loc_away'),
             icon: Icons.public_rounded,
             label: awayLabel,
             active: selected == _QuickLocationMode.away,
@@ -895,6 +924,7 @@ class _LocationModeSelector extends StatelessWidget {
 
 class _ModeTab extends StatelessWidget {
   const _ModeTab({
+    super.key,
     required this.icon,
     required this.label,
     required this.active,
@@ -919,7 +949,7 @@ class _ModeTab extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
           decoration: BoxDecoration(
             color: active ? TronoColors.surface(context) : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
@@ -933,24 +963,26 @@ class _ModeTab extends StatelessWidget {
                   ]
                 : null,
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 14, color: fg),
-              const SizedBox(width: 3),
-              Flexible(
-                child: Text(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 13, color: fg),
+                const SizedBox(width: 2.5),
+                Text(
                   label,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 11,
                     fontWeight: active ? FontWeight.w900 : FontWeight.w700,
                     color: fg,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

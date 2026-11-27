@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_strings.dart';
 import '../models/bathroom_log.dart';
+import '../models/insights.dart';
 import '../theme/app_theme.dart';
 import 'chunky_widgets.dart';
 
@@ -14,12 +15,16 @@ class LogTile extends StatefulWidget {
     required this.onTap,
     this.onDelete,
     this.showDate = false,
+    this.hourlyRate,
+    this.currencySymbol = '€',
   });
 
   final BathroomLog log;
   final VoidCallback onTap;
   final VoidCallback? onDelete;
   final bool showDate;
+  final double? hourlyRate;
+  final String currencySymbol;
 
   @override
   State<LogTile> createState() => _LogTileState();
@@ -91,7 +96,10 @@ class _LogTileState extends State<LogTile> with SingleTickerProviderStateMixin {
     final chips = <String>[];
     final loc = log.effectiveLocationKind;
     if (log.placeLabel != null && log.placeLabel!.trim().isNotEmpty) {
-      chips.add('${loc?.emoji ?? '📍'} ${log.placeLabel!.trim()}');
+      final emoji = log.isWfh ? '💻' : (loc?.emoji ?? '📍');
+      chips.add('$emoji ${log.placeLabel!.trim()}');
+    } else if (log.isWfh) {
+      chips.add('💻 ${s.wfhLocationName}');
     } else if (loc != null) {
       chips.add('${loc.emoji} ${s.locationKindName(loc)}');
     } else if (log.hasCoordinates) {
@@ -109,9 +117,15 @@ class _LogTileState extends State<LogTile> with SingleTickerProviderStateMixin {
     if (log.durationSeconds != null && log.durationSeconds! > 0) {
       chips.add(s.formatDuration(log.durationSeconds!));
     }
-    for (final tag in log.tags.take(3)) {
+    for (final tag
+        in log.tags.where((t) => t != BathroomLog.wfhTag).take(3)) {
       chips.add(s.tagLabel(tag));
     }
+
+    final earnings = InsightsEngine.calculateLogEarnings(
+      log,
+      hourlyRate: widget.hourlyRate,
+    );
 
     final card = ChunkyCard(
       onTap: () {
@@ -178,12 +192,18 @@ class _LogTileState extends State<LogTile> with SingleTickerProviderStateMixin {
                     ),
                   ],
                 ),
-                if (chips.isNotEmpty || log.rating != null) ...[
+                if (chips.isNotEmpty || log.rating != null || earnings != null) ...[
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
                     children: [
+                      if (earnings != null)
+                        _EarningsPill(
+                          key: ValueKey('log_tile_earnings_${log.id}'),
+                          earnings: earnings,
+                          currencySymbol: widget.currencySymbol,
+                        ),
                       if (log.rating != null)
                         _RatingPill(rating: log.rating!),
                       ...chips.map(
@@ -356,6 +376,42 @@ class _RatingPill extends StatelessWidget {
       ),
       child: Text(
         '⭐ $rating',
+        style: TextStyle(
+          fontSize: 11.5,
+          color: isDark ? TronoColors.gold : const Color(0xFF694B05),
+          fontWeight: FontWeight.w800,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
+      ),
+    );
+  }
+}
+
+class _EarningsPill extends StatelessWidget {
+  const _EarningsPill({
+    super.key,
+    required this.earnings,
+    required this.currencySymbol,
+  });
+
+  final LogEarnings earnings;
+  final String currencySymbol;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final prefix = earnings.isEstimated ? '~' : '+';
+    final label =
+        '💰 $prefix$currencySymbol${earnings.amount.toStringAsFixed(2)}';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF2B2618) : const Color(0xFFFFF8E6),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: TronoColors.gold, width: 1.3),
+      ),
+      child: Text(
+        label,
         style: TextStyle(
           fontSize: 11.5,
           color: isDark ? TronoColors.gold : const Color(0xFF694B05),
