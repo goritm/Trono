@@ -701,6 +701,17 @@ class AppStrings {
   );
   String get createAccountBtn => _t('Crear cuenta gratis', 'Create free account');
   String get signInBtn => _t('Iniciar sesión', 'Sign in');
+  String get continueWithGoogleBtn =>
+      _t('Continuar con Google', 'Continue with Google');
+  String get orWithEmailDivider => _t('o con correo', 'or with email');
+  String get googleAuthBrowserNotice => _t(
+    'Completa el acceso con Google en el navegador para continuar.',
+    'Complete sign-in with Google in your browser to continue.',
+  );
+  String get googleAuthLaunchError => _t(
+    'No se pudo abrir Google en el navegador. Inténtalo de nuevo o usa tu correo.',
+    'Could not open Google sign-in in your browser. Try again or use email.',
+  );
   String get haveAccountSignIn => _t('Ya tengo cuenta · Iniciar sesión', 'I have an account · Sign in');
   String get signOutBtn => _t('Cerrar sesión', 'Sign out');
   String get signOutConfirmBody => _t(

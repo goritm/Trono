@@ -117,6 +117,39 @@ class SupabaseSyncService {
     );
   }
 
+  /// Launches Supabase Google OAuth (PKCE) in the system browser / Custom Tab
+  /// and returns back to `com.trono.trono://login-callback`.
+  Future<bool> signInWithGoogle() async {
+    final c = _requireClient();
+    return c.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: kIsWeb ? null : SupabaseConfig.oauthRedirectUrl,
+      authScreenLaunchMode: LaunchMode.externalApplication,
+    );
+  }
+
+  /// Resolves a clean display name (1..32 chars) from Supabase user metadata
+  /// (covering both custom signUp `display_name` and Google OAuth `full_name` /
+  /// `name` fields). Convenience fallback only; never used for authorization.
+  static String resolveDisplayNameFromMetadata(
+    Map<String, dynamic>? meta, {
+    String? email,
+  }) {
+    final candidates = <String?>[
+      meta?['display_name'] as String?,
+      meta?['full_name'] as String?,
+      meta?['name'] as String?,
+      if (email != null && email.contains('@')) email.split('@').first,
+    ];
+    for (final raw in candidates) {
+      final clean = raw?.trim() ?? '';
+      if (clean.isNotEmpty) {
+        return clean.length > 32 ? clean.substring(0, 32) : clean;
+      }
+    }
+    return 'Trono';
+  }
+
   Future<void> signOut() async {
     final c = client;
     if (c == null) return;
@@ -203,9 +236,10 @@ class SupabaseSyncService {
     if (existingProfile == null) {
       final meta = currentUser?.userMetadata ?? const {};
       await upsertMyProfile(
-        displayName: (meta['display_name'] as String?) ??
-            currentUser?.email?.split('@').first ??
-            'Trono',
+        displayName: resolveDisplayNameFromMetadata(
+          meta,
+          email: currentUser?.email,
+        ),
         avatarEmoji: (meta['avatar_emoji'] as String?) ?? '👑',
         totalXp: totalXp,
         rankLevel: rankLevel,

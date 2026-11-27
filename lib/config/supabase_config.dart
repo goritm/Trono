@@ -14,5 +14,8 @@ class SupabaseConfig {
     defaultValue: 'sb_publishable_OIH6txKAU7ZoaY2Tnu7qYg_L60cxWma',
   );
 
+  /// Mobile deep-link redirect URI for Supabase OAuth PKCE callbacks (Google).
+  static const String oauthRedirectUrl = 'com.trono.trono://login-callback';
+
   static bool get isConfigured => url.isNotEmpty && publishableKey.isNotEmpty;
 }
