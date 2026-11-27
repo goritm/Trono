@@ -420,8 +420,8 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: 7),
               _TronoBrandMark(
                 key: const ValueKey('home_brand_mark'),
-                size: 22,
-                strokeColor: TronoColors.ink(context).withValues(alpha: 0.22),
+                size: 26,
+                throneColor: TronoColors.ink(context),
               ),
             ],
           ),
@@ -1110,74 +1110,96 @@ class _TronoBrandMark extends StatelessWidget {
   const _TronoBrandMark({
     super.key,
     required this.size,
-    required this.strokeColor,
+    required this.throneColor,
   });
 
   final double size;
-  final Color strokeColor;
+  final Color throneColor;
 
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      size: Size(size * 1.12, size),
-      painter: _TronoBrandMarkPainter(strokeColor: strokeColor),
+      size: Size.square(size),
+      painter: _TronoBrandMarkPainter(throneColor: throneColor),
     );
   }
 }
 
-/// Transparent vector royal crown mark (Warm Gold + Terracotta accent, zero box).
+/// Transparent vector crowned-throne silhouette (no square background box):
+/// Warm Gold royal crown resting on a minimalist toilet silhouette with a
+/// subtle Terracotta flush accent.
 class _TronoBrandMarkPainter extends CustomPainter {
-  const _TronoBrandMarkPainter({required this.strokeColor});
+  const _TronoBrandMarkPainter({required this.throneColor});
 
-  final Color strokeColor;
+  final Color throneColor;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
+    final sx = size.width / 24.0;
+    final sy = size.height / 24.0;
+    canvas.save();
+    canvas.scale(sx, sy);
 
+    // 1. Royal crown resting cleanly above the throne tank
     final crownPath = Path()
-      ..moveTo(w * 0.10, h * 0.76)
-      ..lineTo(w * 0.06, h * 0.30)
-      ..lineTo(w * 0.30, h * 0.50)
-      ..lineTo(w * 0.50, h * 0.16)
-      ..lineTo(w * 0.70, h * 0.50)
-      ..lineTo(w * 0.94, h * 0.30)
-      ..lineTo(w * 0.90, h * 0.76)
+      ..moveTo(5.4, 6.7)
+      ..lineTo(4.6, 2.8)
+      ..lineTo(7.3, 4.8)
+      ..lineTo(9.0, 1.9)
+      ..lineTo(10.7, 4.8)
+      ..lineTo(13.4, 2.8)
+      ..lineTo(12.6, 6.7)
       ..close();
+    canvas.drawPath(crownPath, Paint()..color = TronoColors.gold);
 
-    final goldPaint = Paint()
-      ..color = TronoColors.gold
-      ..style = PaintingStyle.fill;
-    canvas.drawPath(crownPath, goldPaint);
-
-    final outlinePaint = Paint()
-      ..color = strokeColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2
-      ..strokeJoin = StrokeJoin.round;
-    canvas.drawPath(crownPath, outlinePaint);
-
-    // Terracotta royal base band
-    final bandRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.10, h * 0.76, w * 0.80, h * 0.16),
-      Radius.circular(h * 0.08),
-    );
+    // Subtle Terracotta crown band
     canvas.drawRRect(
-      bandRect,
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(5.2, 6.1, 7.6, 1.0),
+        const Radius.circular(0.5),
+      ),
       Paint()..color = TronoColors.terracotta,
     );
 
-    // Crown peak jewels
-    final jewelPaint = Paint()..color = TronoColors.terracotta;
-    canvas.drawCircle(Offset(w * 0.50, h * 0.14), w * 0.065, jewelPaint);
-    canvas.drawCircle(Offset(w * 0.06, h * 0.28), w * 0.055, jewelPaint);
-    canvas.drawCircle(Offset(w * 0.94, h * 0.28), w * 0.055, jewelPaint);
+    // 2. Minimalist toilet / throne silhouette
+    final thronePath = Path()
+      ..moveTo(5.2, 8.0)
+      ..lineTo(12.8, 8.0)
+      ..cubicTo(13.1, 8.0, 13.4, 8.3, 13.4, 8.6)
+      ..lineTo(13.4, 12.2)
+      ..lineTo(19.4, 12.2)
+      ..cubicTo(19.9, 12.2, 20.3, 12.6, 20.3, 13.1)
+      ..cubicTo(20.3, 16.1, 18.1, 18.2, 15.1, 18.4)
+      ..lineTo(15.6, 20.5)
+      ..lineTo(16.3, 20.5)
+      ..cubicTo(16.7, 20.5, 17.0, 20.8, 17.0, 21.2)
+      ..cubicTo(17.0, 21.6, 16.7, 21.9, 16.3, 21.9)
+      ..lineTo(6.9, 21.9)
+      ..cubicTo(6.5, 21.9, 6.2, 21.6, 6.2, 21.2)
+      ..cubicTo(6.2, 20.8, 6.5, 20.5, 6.9, 20.5)
+      ..lineTo(7.5, 20.5)
+      ..lineTo(8.1, 17.8)
+      ..cubicTo(6.1, 17.3, 4.6, 15.6, 4.6, 13.4)
+      ..lineTo(4.6, 8.6)
+      ..cubicTo(4.6, 8.3, 4.9, 8.0, 5.2, 8.0)
+      ..close();
+    canvas.drawPath(thronePath, Paint()..color = throneColor);
+
+    // Subtle Terracotta flush lever detail on the tank
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(6.3, 9.6, 2.3, 0.9),
+        const Radius.circular(0.45),
+      ),
+      Paint()..color = TronoColors.terracotta,
+    );
+
+    canvas.restore();
   }
 
   @override
   bool shouldRepaint(covariant _TronoBrandMarkPainter oldDelegate) =>
-      oldDelegate.strokeColor != strokeColor;
+      oldDelegate.throneColor != throneColor;
 }
 
 class _LiveTimerHeroButton extends StatelessWidget {
