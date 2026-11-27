@@ -162,7 +162,7 @@ class UpdateCheckerService {
       final info = await PackageInfo.fromPlatform();
       return info.version;
     } catch (_) {
-      return '2.8.2';
+      return '2.8.3';
     }
   }
 
