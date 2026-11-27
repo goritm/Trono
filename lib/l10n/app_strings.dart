@@ -796,6 +796,10 @@ class AppStrings {
   String get summaryOnlyBadge => _t('Solo resumen', 'Summary only');
   String get youBadge => _t('Tú', 'You');
   String get commentsSheetTitle => _t('Comentarios', 'Comments');
+  String get addCommentCta => _t('Añadir comentario...', 'Add a comment...');
+  String viewCommentsCta(int count) => count == 1
+      ? _t('Ver 1 comentario', 'View 1 comment')
+      : _t('Ver los $count comentarios', 'View all $count comments');
   String get noCommentsYet =>
       _t('Sin comentarios aún — ¡sé el primero!', 'No comments yet — be the first!');
   String get commentInputHint =>

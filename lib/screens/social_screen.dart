@@ -2106,47 +2106,94 @@ class _FeedItemCard extends StatelessWidget {
                   ),
                 );
               }),
-              GestureDetector(
-                key: ValueKey('feed_comment_btn_${item.logId}'),
-                onTap: onOpenComments,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 120),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: item.comments.isNotEmpty
-                        ? TronoColors.gold.withValues(alpha: 0.16)
-                        : TronoColors.bg(context),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: item.comments.isNotEmpty
-                          ? TronoColors.gold
-                          : TronoColors.border(context),
-                      width: item.comments.isNotEmpty ? 1.6 : 1.3,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('💬', style: TextStyle(fontSize: 14)),
-                      if (item.comments.isNotEmpty) ...[
-                        const SizedBox(width: 4),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Divider(
+            height: 1,
+            color: TronoColors.border(context).withValues(alpha: 0.75),
+          ),
+          const SizedBox(height: 6),
+          InkWell(
+            key: ValueKey('feed_comment_btn_${item.logId}'),
+            onTap: onOpenComments,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (item.comments.isNotEmpty) ...[
+                    Row(
+                      children: [
                         Text(
-                          '${item.comments.length}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900,
-                            color: TronoColors.ink(context),
+                          item.comments.last.avatarEmoji,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '${item.comments.last.displayName} ',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    color: TronoColors.ink(context),
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: item.comments.last.body,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: TronoColors.muted(context),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12.5),
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 5),
+                  ],
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.chat_bubble_outline_rounded,
+                        size: 15,
+                        color: item.comments.isNotEmpty
+                            ? TronoColors.terracotta
+                            : TronoColors.muted(context),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          item.comments.isNotEmpty
+                              ? s.viewCommentsCta(item.comments.length)
+                              : s.addCommentCta,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                            color: item.comments.isNotEmpty
+                                ? TronoColors.terracotta
+                                : TronoColors.muted(context),
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 18,
+                        color: TronoColors.muted(context),
+                      ),
                     ],
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ],
       ),

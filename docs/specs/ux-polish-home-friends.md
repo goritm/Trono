@@ -21,6 +21,7 @@
 - **Friends (`SocialScreen`):**
   - Pinned 3-way tab order: **`Feed` | `Ranking` | `Challenges`** (`Feed` | `Ranking` | `Retos`).
   - Remove the noisy `"Summary only"` badge from `_FeedItemCard`.
+  - Move comments out of the reaction emoji strip into a dedicated, unmistakable footer row below reactions (`Add a comment... ›` when empty, or 1-line latest comment preview + `View N comments ›` when populated).
 - **2-State Sharing (`SettingsScreen` & `LogDetailSheet`):**
   - Show only `ShareLevel.selectableValues`: **`👥 Share with friends`** (`👥 Compartir con amigos`) and **`🔒 Private`** (`🔒 Solo para mí`).
   - Legacy `summary_only` stored preference normalizes cleanly to `ShareLevel.full`; editing an older `summary_only` log displays as `Share with friends`.
