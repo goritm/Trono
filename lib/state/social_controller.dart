@@ -413,6 +413,113 @@ class SocialController extends ChangeNotifier {
     }
   }
 
+  Future<bool> addComment(String logId, String body) async {
+    final cleanBody = LogComment.validateBody(body);
+    if (cleanBody == null) return false;
+
+    final uid = currentUserId;
+    if (uid == null) return false;
+
+    final idx = _feed.indexWhere((item) => item.logId == logId);
+    if (idx < 0) return false;
+
+    final optimisticId =
+        'optimistic-comment-${DateTime.now().microsecondsSinceEpoch}';
+    final optimistic = LogComment(
+      id: optimisticId,
+      logId: logId,
+      userId: uid,
+      displayName: _myProfile?.displayName ?? 'Trono',
+      avatarEmoji: _myProfile?.avatarEmoji ?? '👑',
+      body: cleanBody,
+      createdAt: DateTime.now(),
+    );
+
+    final item = _feed[idx];
+    final nextFeed = List<SharedFeedItem>.from(_feed);
+    nextFeed[idx] = item.copyWith(comments: [...item.comments, optimistic]);
+    _feed = nextFeed;
+    _lastError = null;
+    notifyListeners();
+
+    try {
+      final saved = await _service.addComment(logId: logId, body: cleanBody);
+      final currentIdx = _feed.indexWhere((i) => i.logId == logId);
+      if (currentIdx >= 0) {
+        final currentItem = _feed[currentIdx];
+        final replaced = currentItem.comments
+            .map((c) => c.id == optimisticId ? saved : c)
+            .toList();
+        if (!replaced.any((c) => c.id == saved.id)) {
+          replaced.add(saved);
+        }
+        final reconciledFeed = List<SharedFeedItem>.from(_feed);
+        reconciledFeed[currentIdx] = currentItem.copyWith(comments: replaced);
+        _feed = reconciledFeed;
+        notifyListeners();
+      }
+      return true;
+    } catch (e) {
+      _lastError = e.toString();
+      final currentIdx = _feed.indexWhere((i) => i.logId == logId);
+      if (currentIdx >= 0) {
+        final currentItem = _feed[currentIdx];
+        final rolledBack = currentItem.comments
+            .where((c) => c.id != optimisticId)
+            .toList();
+        final revertedFeed = List<SharedFeedItem>.from(_feed);
+        revertedFeed[currentIdx] = currentItem.copyWith(comments: rolledBack);
+        _feed = revertedFeed;
+      }
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteComment(String logId, String commentId) async {
+    final uid = currentUserId;
+    if (uid == null) return false;
+
+    final idx = _feed.indexWhere((item) => item.logId == logId);
+    if (idx < 0) return false;
+
+    final item = _feed[idx];
+    final commentIdx = item.comments.indexWhere((c) => c.id == commentId);
+    if (commentIdx < 0) return false;
+
+    final target = item.comments[commentIdx];
+    if (target.userId != uid) return false;
+
+    final updatedComments = List<LogComment>.from(item.comments)
+      ..removeAt(commentIdx);
+    final nextFeed = List<SharedFeedItem>.from(_feed);
+    nextFeed[idx] = item.copyWith(comments: updatedComments);
+    _feed = nextFeed;
+    _lastError = null;
+    notifyListeners();
+
+    try {
+      await _service.deleteComment(commentId);
+      return true;
+    } catch (e) {
+      _lastError = e.toString();
+      final currentIdx = _feed.indexWhere((i) => i.logId == logId);
+      if (currentIdx >= 0) {
+        final currentItem = _feed[currentIdx];
+        if (!currentItem.comments.any((c) => c.id == target.id)) {
+          final restored = List<LogComment>.from(currentItem.comments);
+          final insertAt = commentIdx.clamp(0, restored.length);
+          restored.insert(insertAt, target);
+          final revertedFeed = List<SharedFeedItem>.from(_feed);
+          revertedFeed[currentIdx] = currentItem.copyWith(comments: restored);
+          _feed = revertedFeed;
+        }
+      }
+      notifyListeners();
+      return false;
+    }
+  }
+
   void _attachRealtime() {
     if (_realtimeChannel != null || !_service.isSignedIn) return;
     _realtimeChannel = _service.subscribeToSocialUpdates(
