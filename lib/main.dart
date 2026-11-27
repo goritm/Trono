@@ -116,7 +116,24 @@ class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
     _locked = widget.controller.lockEnabled;
     _shortcutService.startListening(_onShortcutAction);
     _liveTimerService.startListening(_onLiveTimerNotificationAction);
+    widget.socialController.setOnOpenSocialTab(_openSocialTab);
     unawaited(_initShortcuts());
+    unawaited(_initPushTab());
+  }
+
+  Future<void> _initPushTab() async {
+    final tab = await widget.socialController.consumeInitialOpenTab();
+    if (tab == 'social' && mounted) {
+      _openSocialTab();
+    }
+  }
+
+  void _openSocialTab() {
+    if (!mounted) return;
+    setState(() => _tabIndex = 3);
+    if (widget.socialController.isSignedIn) {
+      unawaited(widget.socialController.refreshSocial());
+    }
   }
 
   void _onLiveTimerNotificationAction(LiveTimerAction action) {
@@ -183,6 +200,7 @@ class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    widget.socialController.setOnOpenSocialTab(null);
     _shortcutService.dispose();
     _liveTimerService.dispose();
     _statsSubTab.dispose();

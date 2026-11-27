@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/bathroom_log.dart';
 import '../models/favorite_place.dart';
+import '../models/push_notification_config.dart';
 import '../models/reminder_schedule.dart';
 
 class SettingsService {
@@ -31,6 +32,9 @@ class SettingsService {
   static const _kStreakReminderEnabled = 'streak_reminder_enabled';
   static const _kStreakReminderHour = 'streak_reminder_hour';
   static const _kWeeklyRecapReminderEnabled = 'weekly_recap_reminder_enabled';
+  static const _kNotifyFriendThrones = 'notify_friend_thrones';
+  static const _kNotifyFriendComments = 'notify_friend_comments';
+  static const _kNotifyFriendReactions = 'notify_friend_reactions';
 
   late final SharedPreferences _prefs;
 
@@ -262,4 +266,19 @@ class SettingsService {
     streakHour: streakReminderHour,
     weeklyEnabled: weeklyRecapReminderEnabled,
   );
+
+  // V2.8 Social Push Notification toggles (independent per Android channel)
+  SocialNotificationPrefs get socialNotificationPrefs => SocialNotificationPrefs(
+    friendThrones: _prefs.getBool(_kNotifyFriendThrones) ?? true,
+    friendComments: _prefs.getBool(_kNotifyFriendComments) ?? true,
+    friendReactions: _prefs.getBool(_kNotifyFriendReactions) ?? true,
+  );
+
+  Future<void> setSocialNotificationPrefs(SocialNotificationPrefs prefs) async {
+    await Future.wait([
+      _prefs.setBool(_kNotifyFriendThrones, prefs.friendThrones),
+      _prefs.setBool(_kNotifyFriendComments, prefs.friendComments),
+      _prefs.setBool(_kNotifyFriendReactions, prefs.friendReactions),
+    ]);
+  }
 }

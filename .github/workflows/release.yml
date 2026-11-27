@@ -58,6 +58,17 @@ jobs:
           storeFile=trono-release.jks
           EOF
 
+      - name: Decode optional Firebase google-services.json
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON_BASE64" ]; then
+            echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
+            echo "Decoded android/app/google-services.json for FCM push notifications."
+          else
+            echo "GOOGLE_SERVICES_JSON_BASE64 not set; building without FCM config."
+          fi
+
       - name: Determine release version
         id: version
         run: |

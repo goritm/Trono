@@ -5,8 +5,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/database_helper.dart';
 import '../models/group_challenges.dart';
+import '../models/push_notification_config.dart';
 import '../models/social_models.dart';
 import '../models/social_plus.dart';
+import '../services/push_notification_service.dart';
 import '../services/settings_service.dart';
 import '../services/supabase_sync_service.dart';
 import 'trono_controller.dart';
@@ -17,19 +19,26 @@ class SocialController extends ChangeNotifier {
     required BathroomRepository repository,
     required this._settings,
     SupabaseSyncService? service,
+    PushNotificationService? pushService,
   }) : _trono = tronoController,
        _repo = repository,
-       _service = service ?? SupabaseSyncService.instance;
+       _service = service ?? SupabaseSyncService.instance,
+       _pushService = pushService ?? PushNotificationService();
 
   final TronoController _trono;
   final BathroomRepository _repo;
   final SettingsService _settings;
   final SupabaseSyncService _service;
+  final PushNotificationService _pushService;
 
   StreamSubscription<AuthState>? _authSub;
   RealtimeChannel? _realtimeChannel;
   Timer? _syncDebounce;
   Timer? _realtimeDebounce;
+  SocialNotificationPrefs _socialNotificationPrefs =
+      const SocialNotificationPrefs();
+  String? _lastFcmToken;
+  VoidCallback? _onOpenSocialTab;
 
   UserProfile? _myProfile;
   List<SocialGroup> _groups = const [];
@@ -102,10 +111,69 @@ class SocialController extends ChangeNotifier {
   DateTime? get lastSyncedAt => _lastSyncedAt;
   String? get lastError => _lastError;
   int get pendingSyncCount => _pendingSyncCount;
+  SocialNotificationPrefs get socialNotificationPrefs =>
+      _socialNotificationPrefs;
+
+  void setOnOpenSocialTab(VoidCallback? callback) {
+    _onOpenSocialTab = callback;
+  }
+
+  Future<String?> consumeInitialOpenTab() =>
+      _pushService.consumeInitialOpenTab();
+
+  Future<bool> openSystemNotificationSettings({String? channelId}) =>
+      _pushService.openSystemNotificationSettings(channelId: channelId);
+
+  Future<void> setSocialNotificationPrefs(SocialNotificationPrefs prefs) async {
+    _socialNotificationPrefs = prefs;
+    await _settings.setSocialNotificationPrefs(prefs);
+    notifyListeners();
+    await _pushService.ensureChannels(locale: _trono.locale, prefs: prefs);
+    if (_service.isSignedIn) {
+      await syncPushTokenNow();
+    }
+  }
+
+  Future<void> syncPushTokenNow({String? overrideToken}) async {
+    if (!_service.isSignedIn) return;
+    try {
+      final token =
+          (overrideToken ?? _lastFcmToken ?? await _pushService.getFcmToken())
+              ?.trim();
+      if (token == null || token.length < 20) return;
+      _lastFcmToken = token;
+      await _service.upsertMyPushToken(
+        token: token,
+        locale: _trono.locale.languageCode,
+        prefs: _socialNotificationPrefs,
+      );
+    } catch (_) {
+      // Non-blocking: offline or push token sync retries on next launch/login.
+    }
+  }
 
   Future<void> init() async {
     _selectedGroupId = _settings.selectedGroupId;
+    _socialNotificationPrefs = _settings.socialNotificationPrefs;
     await _refreshPendingCount();
+
+    await _pushService.ensureChannels(
+      locale: _trono.locale,
+      prefs: _socialNotificationPrefs,
+    );
+    _pushService.startListening(
+      onTokenRefresh: (token) {
+        _lastFcmToken = token;
+        if (_service.isSignedIn) {
+          unawaited(syncPushTokenNow(overrideToken: token));
+        }
+      },
+      onOpenTab: (tab) {
+        if (tab == 'social') {
+          _onOpenSocialTab?.call();
+        }
+      },
+    );
 
     _trono.setOnLogsMutated(() {
       unawaited(_refreshPendingCount());
@@ -122,6 +190,7 @@ class SocialController extends ChangeNotifier {
         if (_service.isSignedIn) {
           _attachRealtime();
           unawaited(syncAndRefreshSocial());
+          unawaited(syncPushTokenNow());
         }
       } else if (event == AuthChangeEvent.signedOut) {
         _handleSignedOutLocally();
@@ -132,6 +201,7 @@ class SocialController extends ChangeNotifier {
     if (_service.isSignedIn) {
       _attachRealtime();
       unawaited(syncAndRefreshSocial());
+      unawaited(syncPushTokenNow());
     }
   }
 
@@ -168,6 +238,7 @@ class SocialController extends ChangeNotifier {
     if (outcome.status == AuthOutcomeStatus.signedIn) {
       _attachRealtime();
       await syncAndRefreshSocial();
+      unawaited(syncPushTokenNow());
     }
     notifyListeners();
     return outcome;
@@ -182,6 +253,7 @@ class SocialController extends ChangeNotifier {
     final outcome = await _service.signIn(email: email, password: password);
     _attachRealtime();
     await syncAndRefreshSocial();
+    unawaited(syncPushTokenNow());
     notifyListeners();
     return outcome;
   }
@@ -193,6 +265,14 @@ class SocialController extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    try {
+      final token = _lastFcmToken ?? await _pushService.getFcmToken();
+      if (token != null && token.isNotEmpty) {
+        await _service.deletePushToken(token);
+      }
+    } catch (_) {
+      // Never block sign-out if offline.
+    }
     await _service.unsubscribeChannel(_realtimeChannel);
     _realtimeChannel = null;
     await _service.signOut();
@@ -543,6 +623,7 @@ class SocialController extends ChangeNotifier {
     _syncDebounce?.cancel();
     _realtimeDebounce?.cancel();
     _authSub?.cancel();
+    _pushService.dispose();
     unawaited(_service.unsubscribeChannel(_realtimeChannel));
     super.dispose();
   }
