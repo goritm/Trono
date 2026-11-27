@@ -2688,6 +2688,8 @@ class _AuthSheetState extends State<_AuthSheet> {
   final _nameCtrl = TextEditingController();
   String _selectedEmoji = '👑';
   bool _submitting = false;
+  bool _submittingGoogle = false;
+  bool _autoClosed = false;
   String? _error;
   String? _infoMessage;
 
@@ -2695,14 +2697,63 @@ class _AuthSheetState extends State<_AuthSheet> {
   void initState() {
     super.initState();
     _isSignUp = widget.initialSignUp;
+    widget.social.addListener(_onSocialChanged);
   }
 
   @override
   void dispose() {
+    widget.social.removeListener(_onSocialChanged);
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     _nameCtrl.dispose();
     super.dispose();
+  }
+
+  void _onSocialChanged() {
+    if (!mounted || _autoClosed) return;
+    if (widget.social.isSignedIn) {
+      _autoClosed = true;
+      Navigator.of(context).pop();
+    }
+  }
+
+  Future<void> _submitGoogle() async {
+    final s = AppStrings.of(context);
+    setState(() {
+      _submittingGoogle = true;
+      _error = null;
+      _infoMessage = null;
+    });
+
+    try {
+      final launched = await widget.social.signInWithGoogle();
+      if (!mounted) return;
+      if (widget.social.isSignedIn) {
+        _autoClosed = true;
+        Navigator.of(context).pop();
+        return;
+      }
+      setState(() {
+        _submittingGoogle = false;
+        if (launched) {
+          _infoMessage = s.googleAuthBrowserNotice;
+        } else {
+          _error = s.googleAuthLaunchError;
+        }
+      });
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submittingGoogle = false;
+        _error = e.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _submittingGoogle = false;
+        _error = s.googleAuthLaunchError;
+      });
+    }
   }
 
   Future<void> _submit() async {
@@ -2804,6 +2855,71 @@ class _AuthSheetState extends State<_AuthSheet> {
               ),
             ),
             const SizedBox(height: 18),
+
+            // 1-tap Google OAuth button (works for both sign-up and sign-in)
+            ChunkyButton(
+              width: double.infinity,
+              color: TronoColors.surface(context),
+              lipColor: TronoColors.lip(context),
+              borderColor: TronoColors.border(context),
+              onPressed: (_submitting || _submittingGoogle)
+                  ? null
+                  : _submitGoogle,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_submittingGoogle)
+                    SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.2,
+                        color: TronoColors.terracotta,
+                      ),
+                    )
+                  else
+                    const _GoogleGLogo(size: 18),
+                  const SizedBox(width: 10),
+                  Text(
+                    s.continueWithGoogleBtn,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: TronoColors.ink(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: Divider(
+                    color: TronoColors.border(context),
+                    thickness: 1.2,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    s.orWithEmailDivider,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: TronoColors.muted(context),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Divider(
+                    color: TronoColors.border(context),
+                    thickness: 1.2,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
 
             if (_isSignUp) ...[
               Text(
@@ -2916,7 +3032,7 @@ class _AuthSheetState extends State<_AuthSheet> {
               width: double.infinity,
               color: TronoColors.terracotta,
               lipColor: TronoColors.terracottaLip,
-              onPressed: _submitting ? null : _submit,
+              onPressed: (_submitting || _submittingGoogle) ? null : _submit,
               child: Center(
                 child: _submitting
                     ? const SizedBox(
@@ -2942,4 +3058,60 @@ class _AuthSheetState extends State<_AuthSheet> {
       ),
     );
   }
+}
+
+/// Crisp vector Google "G" emblem rendered cleanly without external assets.
+class _GoogleGLogo extends StatelessWidget {
+  const _GoogleGLogo({this.size = 18});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size.square(size),
+      painter: _GoogleGPainter(),
+    );
+  }
+}
+
+class _GoogleGPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final stroke = size.width * 0.2;
+    final radius = (size.width - stroke) / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.butt;
+
+    // Red top arc
+    paint.color = const Color(0xFFEA4335);
+    canvas.drawArc(rect, -2.55, 1.85, false, paint);
+    // Yellow left arc
+    paint.color = const Color(0xFFFBBC05);
+    canvas.drawArc(rect, 2.35, 1.38, false, paint);
+    // Green bottom arc
+    paint.color = const Color(0xFF34A853);
+    canvas.drawArc(rect, 0.72, 1.65, false, paint);
+    // Blue right arc + crossbar
+    paint.color = const Color(0xFF4285F4);
+    canvas.drawArc(rect, -0.05, 0.82, false, paint);
+
+    final barPaint = Paint()
+      ..color = const Color(0xFF4285F4)
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.butt;
+    canvas.drawLine(
+      Offset(center.dx, center.dy),
+      Offset(size.width, center.dy),
+      barPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

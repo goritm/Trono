@@ -186,6 +186,12 @@ class SocialController extends ChangeNotifier {
     return outcome;
   }
 
+  Future<bool> signInWithGoogle() async {
+    _lastError = null;
+    notifyListeners();
+    return _service.signInWithGoogle();
+  }
+
   Future<void> signOut() async {
     await _service.unsubscribeChannel(_realtimeChannel);
     _realtimeChannel = null;
