@@ -8,7 +8,7 @@
 
 ## ✨ Highlights
 
-- **⚡ 1-Tap Instant Logging (`Log`):** Tactile 3D hero button with animations, instant 0 ms local SQLite save, quick location selector (`Auto · Home · Work · Away`), live session timer, false alarm, past visits, and swipe-to-edit/delete with Undo.
+- **⚡ 1-Tap Instant Logging (`Log`):** Tactile 3D hero button with animations, instant 0 ms local SQLite save, quick location selector (`Auto · Home · WFH · Work · Away`), live session timer, **💰 per-log Paid on the Throne earnings pills** (supporting both Office and **💻 WFH / Teletrabajo**), false alarm, past visits, and swipe-to-edit/delete with Undo.
 - **📊 Deep Stats, Trends & Trigger Lab (`Stats`):**
   - **Calendar:** Interactive monthly heatmap, peak hours chart, and personal records.
   - **Insights:** Daily averages (7d / 30d / all-time), **Monthly Comparison** (*This Month vs Last Month*), **8-week trend chart**, **🧪 Trigger Lab** (correlating food & lifestyle tags against Bristol scale & effort), **Paid on the Throne** (100% local salary estimate), automatic pattern insights, and shareable **Trono Wrapped** PNG cards.
@@ -18,7 +18,8 @@
   - **Places ⭐:** Home vs Away survival ratio, saved GPS **Favorite Places** with 150 m auto-labeling, **1–5 ⭐ bathroom ratings**, and **Top Bathrooms** ranking.
 - **👥 Private Multiplayer Groups (`Friends` · Supabase):**
   - Offline-first cloud sync with strict Postgres Row-Level Security (RLS).
-  - Private 6-letter invite-code groups, live Realtime feed with **⚡ Synced Duo** detection (≤15 min apart) and emoji reactions (`👑`, `🔥`, `💀`, `👏`), **🏆 Weekly Group Challenges & Group Streak**, 7d/30d/All leaderboards, 6 group awards, and shareable **Group Weekly Wrapped** cards.
+  - Clean 3-tab layout (**Feed · Challenges · Ranking**) + header Group Switcher sheet.
+  - Private 6-letter invite-code groups, live Realtime feed with **⚡ Synced Duo** detection (≤15 min apart), emoji reactions (`👑`, `🔥`, `💀`, `👏`), and **💬 real-time comments**, **🏆 Weekly Group Challenges & Group Streak**, 7d/30d/All leaderboards, and 6 group awards.
 - **🔒 Privacy by Design:** Exact GPS coordinates (`latitude`, `longitude`), Favorite Places coordinates, work salary, and local reminder schedules **never leave your device**. Per-log share levels (`private`, `summary_only`, `full`) are enforced at the Postgres trigger level.
 - **📱 Android Extras:** Flicker-free 2×2 **Home Screen Widget** (`👑 +1 Trono` with silent GPS), native **Android App Shortcuts** (long-press icon → *Claim Throne* / *Start Timer*), optional **🔔 Local Smart Reminders** (evening Streak Guard + Sunday Weekly Recap), Biometric/PIN lock, 3-step welcome onboarding, JSON/CSV backup, EN (default) / ES bilingual UI, light/dark themes, and automatic **in-app GitHub Releases update checker** with *"What’s new"* changelog preview.
 

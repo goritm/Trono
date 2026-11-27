@@ -96,7 +96,7 @@ class TronoController extends ChangeNotifier {
   List<TopPlaceStat> _topPlaces = const [];
 
   // V2.4 In-App Update Checker mirrors
-  String _installedVersion = '2.5.0';
+  String _installedVersion = '2.6.0';
   AppReleaseInfo? _availableUpdate;
   bool _isCheckingUpdate = false;
   bool _disposed = false;
