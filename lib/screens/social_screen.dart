@@ -2818,7 +2818,10 @@ class _AuthSheetState extends State<_AuthSheet> {
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final bottomNav = bottomInset > 0
+        ? 0.0
+        : MediaQuery.viewPaddingOf(context).bottom;
 
     return Container(
       decoration: BoxDecoration(
@@ -2826,7 +2829,7 @@ class _AuthSheetState extends State<_AuthSheet> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         border: Border.all(color: TronoColors.border(context), width: 2),
       ),
-      padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + bottomInset),
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + bottomInset + bottomNav),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
