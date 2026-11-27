@@ -4,8 +4,17 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Android 13+ Material You themed icon silhouette centered in 66dp safe zone -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M31.5,67.5 L27.6,42.0 L42.6,52.8 L54.0,34.5 L65.4,52.8 L80.4,42.0 L76.5,67.5 Z M31.5,72.0 L76.5,72.0 L76.5,78.0 L31.5,78.0 Z" />
+    <!-- Android 13+ Material You themed icon: crowned throne silhouette in 66dp safe zone -->
+    <group
+        android:translateX="21"
+        android:translateY="21"
+        android:scaleX="2.75"
+        android:scaleY="2.75">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M5.4,6.7 L4.6,2.8 L7.3,4.8 L9.0,1.9 L10.7,4.8 L13.4,2.8 L12.6,6.7 Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M5.2,7.9 L12.8,7.9 C13.1,7.9 13.4,8.2 13.4,8.5 L13.4,12.2 L19.4,12.2 C19.9,12.2 20.3,12.6 20.3,13.1 C20.3,16.1 18.1,18.2 15.1,18.4 L15.6,20.5 L16.3,20.5 C16.7,20.5 17.0,20.8 17.0,21.2 C17.0,21.6 16.7,21.9 16.3,21.9 L6.9,21.9 C6.5,21.9 6.2,21.6 6.2,21.2 C6.2,20.8 6.5,20.5 6.9,20.5 L7.5,20.5 L8.1,17.8 C6.1,17.3 4.6,15.6 4.6,13.4 L4.6,8.5 C4.6,8.2 4.9,7.9 5.2,7.9 Z" />
+    </group>
 </vector>
