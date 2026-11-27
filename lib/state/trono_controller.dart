@@ -4,14 +4,17 @@ import 'package:material_ui/material_ui.dart';
 import 'package:uuid/uuid.dart';
 
 import '../data/database_helper.dart';
+import '../l10n/app_strings.dart';
 import '../models/achievement.dart';
 import '../models/app_update.dart';
 import '../models/bathroom_log.dart';
 import '../models/favorite_place.dart';
 import '../models/insights.dart';
 import '../models/monthly_comparison.dart';
+import '../models/reminder_schedule.dart';
 import '../models/stats_summary.dart';
 import '../models/trigger_lab.dart';
+import '../services/local_reminder_service.dart';
 import '../services/location_service.dart';
 import '../services/settings_service.dart';
 import '../services/update_checker_service.dart';
@@ -34,14 +37,17 @@ class TronoController extends ChangeNotifier {
     required BathroomRepository repository,
     required SettingsService settings,
     UpdateCheckerService? updateChecker,
+    LocalReminderService? reminderService,
   }) : _repo = repository,
        _settings = settings,
        _updateChecker =
-           updateChecker ?? UpdateCheckerService(settings: settings);
+           updateChecker ?? UpdateCheckerService(settings: settings),
+       _reminderService = reminderService ?? LocalReminderService();
 
   final BathroomRepository _repo;
   final SettingsService _settings;
   final UpdateCheckerService _updateChecker;
+  final LocalReminderService _reminderService;
   final _uuid = const Uuid();
   VoidCallback? _onLogsMutated;
 
@@ -95,6 +101,11 @@ class TronoController extends ChangeNotifier {
   bool _isCheckingUpdate = false;
   bool _disposed = false;
 
+  // V2.5 Local Smart Reminders mirrors
+  bool _streakReminderEnabled = false;
+  int _streakReminderHour = ReminderConfig.defaultStreakHour;
+  bool _weeklyRecapReminderEnabled = false;
+
   List<BathroomLog> get logs => _logs;
   StatsSummary get stats => _stats;
   GamificationSnapshot get gamification => _gamification;
@@ -132,6 +143,15 @@ class TronoController extends ChangeNotifier {
   bool get showHomeUpdateBanner =>
       _updateChecker.shouldShowHomeBanner(_availableUpdate);
 
+  bool get streakReminderEnabled => _streakReminderEnabled;
+  int get streakReminderHour => _streakReminderHour;
+  bool get weeklyRecapReminderEnabled => _weeklyRecapReminderEnabled;
+  ReminderConfig get reminderConfig => ReminderConfig(
+    streakEnabled: _streakReminderEnabled,
+    streakHour: _streakReminderHour,
+    weeklyEnabled: _weeklyRecapReminderEnabled,
+  );
+
   List<BathroomLog> get geotaggedLogs =>
       _logs.where((l) => l.hasCoordinates).toList();
 
@@ -148,6 +168,9 @@ class TronoController extends ChangeNotifier {
     _currencySymbol = _settings.currencySymbol;
     _onboardingCompleted = _settings.onboardingCompleted;
     _favoritePlaces = _settings.favoritePlaces;
+    _streakReminderEnabled = _settings.streakReminderEnabled;
+    _streakReminderHour = _settings.streakReminderHour;
+    _weeklyRecapReminderEnabled = _settings.weeklyRecapReminderEnabled;
 
     _activeTimerStart = _settings.activeTimerStart;
     if (_activeTimerStart != null) {
@@ -217,6 +240,7 @@ class TronoController extends ChangeNotifier {
       _stats,
       lastType: _logs.isNotEmpty ? _logs.first.type : null,
     );
+    await _syncReminders();
     notifyListeners();
   }
 
@@ -409,6 +433,7 @@ class TronoController extends ChangeNotifier {
       _stats,
       lastType: _logs.isNotEmpty ? _logs.first.type : null,
     );
+    await _syncReminders();
     notifyListeners();
 
     return UnlockEvent(newAchievements: newlyUnlocked, newRank: newRank);
@@ -521,6 +546,64 @@ class TronoController extends ChangeNotifier {
     _locale = locale;
     await _settings.setLocale(locale);
     notifyListeners();
+    if (_streakReminderEnabled || _weeklyRecapReminderEnabled) {
+      await _syncReminders();
+    }
+  }
+
+  // V2.5 Local Smart Reminders controls
+  Future<bool> setStreakReminderEnabled(bool enabled) async {
+    if (enabled) {
+      final granted = await _reminderService.requestPermission();
+      if (!granted) {
+        _streakReminderEnabled = false;
+        await _settings.setStreakReminderEnabled(false);
+        notifyListeners();
+        return false;
+      }
+    }
+    _streakReminderEnabled = enabled;
+    await _settings.setStreakReminderEnabled(enabled);
+    await _syncReminders();
+    notifyListeners();
+    return true;
+  }
+
+  Future<void> setStreakReminderHour(int hour) async {
+    _streakReminderHour = hour.clamp(0, 23);
+    await _settings.setStreakReminderHour(_streakReminderHour);
+    await _syncReminders();
+    notifyListeners();
+  }
+
+  Future<bool> setWeeklyRecapReminderEnabled(bool enabled) async {
+    if (enabled) {
+      final granted = await _reminderService.requestPermission();
+      if (!granted) {
+        _weeklyRecapReminderEnabled = false;
+        await _settings.setWeeklyRecapReminderEnabled(false);
+        notifyListeners();
+        return false;
+      }
+    }
+    _weeklyRecapReminderEnabled = enabled;
+    await _settings.setWeeklyRecapReminderEnabled(enabled);
+    await _syncReminders();
+    notifyListeners();
+    return true;
+  }
+
+  Future<void> _syncReminders() async {
+    final s = AppStrings(_locale);
+    await _reminderService.syncReminders(
+      config: reminderConfig,
+      loggedToday: _stats.todayPoop > 0,
+      currentStreak: _stats.currentStreak,
+      streakTitle: s.streakReminderNotifTitle,
+      streakBody: s.streakReminderNotifBody(_stats.currentStreak),
+      weeklyTitle: s.weeklyRecapNotifTitle,
+      weeklyBody: s.weeklyRecapNotifBody,
+    );
   }
 
   Future<void> setDefaultShareLevel(ShareLevel level) async {
