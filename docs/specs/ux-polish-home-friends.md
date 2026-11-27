@@ -25,6 +25,7 @@
   - Show only `ShareLevel.selectableValues`: **`👥 Share with friends`** (`👥 Compartir con amigos`) and **`🔒 Private`** (`🔒 Solo para mí`).
   - Legacy `summary_only` stored preference normalizes cleanly to `ShareLevel.full`; editing an older `summary_only` log displays as `Share with friends`.
 - **Home (`HomeScreen`):**
+  - **Location selector:** Replaces the cramped 5-segment strip with a single thumb-friendly tactile pill (`Location: Auto (GPS) ▾`, highlighted gold with `💰` when WFH/Work is active) that opens a clean bottom sheet showing full unabbreviated labels + subtitles (`Auto (GPS)`, `Home`, `WFH / Teletrabajo`, `Work / Trabajo`, `Away`).
   - **Idle state:**
     - Hero 3D button: `👑 CLAIM THRONE` (1-tap instant save).
     - Single clean secondary button below: **`⏱️ Start timer`** (`⏱️ Iniciar cronómetro`).

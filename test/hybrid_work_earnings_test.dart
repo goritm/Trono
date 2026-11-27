@@ -466,7 +466,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      // Verify Spanish narrow layout too (Auto · Casa · Teletr. · Ofi · Fuera)
+      // Verify Spanish narrow layout opens full unabbreviated location sheet (Teletrabajo, Trabajo)
       await tester.pumpWidget(
         _wrapApp(
           ListenableBuilder(
@@ -478,10 +478,14 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      expect(find.text('Teletr.'), findsOneWidget);
-      expect(find.text('Ofi'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('home_location_picker_btn')));
+      await tester.pumpAndSettle();
+      expect(find.text('Teletrabajo'), findsOneWidget);
+      expect(find.text('Trabajo'), findsOneWidget);
+      Navigator.of(tester.element(find.text('Teletrabajo'))).pop();
+      await tester.pumpAndSettle();
 
-      // Switch to EN and tap WFH + Hero button
+      // Switch to EN, pick WFH from location sheet & tap Hero button
       await tester.pumpWidget(
         _wrapApp(
           ListenableBuilder(
@@ -494,7 +498,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
 
-      await tester.tap(find.text('WFH'));
+      await tester.tap(find.byKey(const ValueKey('home_location_picker_btn')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('quick_loc_wfh')));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('CLAIM THRONE'));

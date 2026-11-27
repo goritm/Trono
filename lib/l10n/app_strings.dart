@@ -203,6 +203,21 @@ class AppStrings {
   String get quickWorkCompactButton => _t('Ofi', 'Work');
   String get quickAwayButton => _t('Fuera', 'Away');
   String get quickAutoChip => _t('Auto', 'Auto');
+  String get locationAutoTitle => _t('Auto (GPS)', 'Auto (GPS)');
+  String get locationAutoSub => _t(
+    'Detecta tu Casa o Lugares Favoritos',
+    'Auto-detects Home or Favorite Places',
+  );
+  String get locationHomeSub => _t('En casa (personal)', 'Personal time at home');
+  String get locationWfhSub => _t(
+    'En casa · cuenta como pagado 💰',
+    'At home · counts as Paid on the Throne 💰',
+  );
+  String get locationWorkSub => _t(
+    'En la oficina · cuenta como pagado 💰',
+    'At the office · counts as Paid on the Throne 💰',
+  );
+  String get locationAwaySub => _t('Fuera de casa', 'Outside home & office');
   String get locationField => _t('Ubicación', 'Location');
   String get placeNamePlaceholder =>
       _t('Ej. Oficina, Aeropuerto, Bar...', 'e.g. Office, Airport, Cafe...');

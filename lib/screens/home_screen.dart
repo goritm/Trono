@@ -194,6 +194,153 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _showLocationModeSheet(BuildContext context, AppStrings s) async {
+    final picked = await showModalBottomSheet<_QuickLocationMode>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: TronoColors.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (sheetCtx) {
+        final options = <({
+          _QuickLocationMode mode,
+          ValueKey<String> key,
+          IconData icon,
+          Color color,
+          String title,
+          String subtitle,
+        })>[
+          (
+            mode: _QuickLocationMode.auto,
+            key: const ValueKey('quick_loc_auto'),
+            icon: Icons.my_location_rounded,
+            color: TronoColors.terracotta,
+            title: s.locationAutoTitle,
+            subtitle: s.locationAutoSub,
+          ),
+          (
+            mode: _QuickLocationMode.home,
+            key: const ValueKey('quick_loc_home'),
+            icon: Icons.home_rounded,
+            color: TronoColors.goldLip,
+            title: s.quickHomeButton,
+            subtitle: s.locationHomeSub,
+          ),
+          (
+            mode: _QuickLocationMode.wfh,
+            key: const ValueKey('quick_loc_wfh'),
+            icon: Icons.laptop_mac_rounded,
+            color: TronoColors.sage,
+            title: s.wfhLocationName,
+            subtitle: s.locationWfhSub,
+          ),
+          (
+            mode: _QuickLocationMode.work,
+            key: const ValueKey('quick_loc_work'),
+            icon: Icons.work_rounded,
+            color: Theme.of(sheetCtx).brightness == Brightness.dark
+                ? TronoColors.darkInk
+                : TronoColors.obsidian,
+            title: s.quickWorkButton,
+            subtitle: s.locationWorkSub,
+          ),
+          (
+            mode: _QuickLocationMode.away,
+            key: const ValueKey('quick_loc_away'),
+            icon: Icons.public_rounded,
+            color: TronoColors.terracotta,
+            title: s.quickAwayButton,
+            subtitle: s.locationAwaySub,
+          ),
+        ];
+
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  s.locationField,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: TronoColors.ink(sheetCtx),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...options.map((opt) {
+                  final active = opt.mode == _locationMode;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Material(
+                      key: opt.key,
+                      color: active
+                          ? TronoColors.terracotta.withValues(alpha: 0.12)
+                          : TronoColors.bg(sheetCtx),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(
+                          color: active
+                              ? TronoColors.terracotta
+                              : TronoColors.border(sheetCtx),
+                          width: active ? 2 : 1.5,
+                        ),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: ListTile(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          Navigator.of(sheetCtx).pop(opt.mode);
+                        },
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: opt.color.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(opt.icon, color: opt.color, size: 21),
+                        ),
+                        title: Text(
+                          opt.title,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14.5,
+                            color: TronoColors.ink(sheetCtx),
+                          ),
+                        ),
+                        subtitle: Text(
+                          opt.subtitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: TronoColors.muted(sheetCtx),
+                          ),
+                        ),
+                        trailing: active
+                            ? const Icon(
+                                Icons.check_circle_rounded,
+                                color: TronoColors.terracotta,
+                              )
+                            : null,
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (picked != null && mounted) {
+      setState(() => _locationMode = picked);
+    }
+  }
+
   String _formatClock(int seconds) {
     final mins = (seconds ~/ 60).toString().padLeft(2, '0');
     final secs = (seconds % 60).toString().padLeft(2, '0');
@@ -400,18 +547,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Compact Location Mode Selector (Auto · Home · WFH · Work · Away)
-              _LocationModeSelector(
+              // Clean Single-Pill Location Selector (opens full-label bottom sheet)
+              _LocationPickerPill(
+                key: const ValueKey('home_location_picker_btn'),
                 selected: _locationMode,
-                autoLabel: s.quickAutoChip,
-                homeLabel: s.quickHomeButton,
-                wfhLabel: s.quickWfhButton,
-                workLabel: s.quickWorkCompactButton,
-                awayLabel: s.quickAwayButton,
-                onChanged: (mode) {
-                  HapticFeedback.selectionClick();
-                  setState(() => _locationMode = mode);
-                },
+                hasSalary: controller.hasHourlyRate,
+                onTap: () => _showLocationModeSheet(context, s),
               ),
               const SizedBox(height: 16),
 
@@ -830,142 +971,113 @@ class _AnimatedHeroLogButtonState extends State<_AnimatedHeroLogButton>
   }
 }
 
-class _LocationModeSelector extends StatelessWidget {
-  const _LocationModeSelector({
-    required this.selected,
-    required this.autoLabel,
-    required this.homeLabel,
-    required this.wfhLabel,
-    required this.workLabel,
-    required this.awayLabel,
-    required this.onChanged,
-  });
-
-  final _QuickLocationMode selected;
-  final String autoLabel;
-  final String homeLabel;
-  final String wfhLabel;
-  final String workLabel;
-  final String awayLabel;
-  final ValueChanged<_QuickLocationMode> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1E27) : const Color(0xFFECE6DA),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          _ModeTab(
-            key: const ValueKey('quick_loc_auto'),
-            icon: Icons.my_location_rounded,
-            label: autoLabel,
-            active: selected == _QuickLocationMode.auto,
-            onTap: () => onChanged(_QuickLocationMode.auto),
-          ),
-          _ModeTab(
-            key: const ValueKey('quick_loc_home'),
-            icon: Icons.home_rounded,
-            label: homeLabel,
-            active: selected == _QuickLocationMode.home,
-            activeColor: TronoColors.goldLip,
-            onTap: () => onChanged(_QuickLocationMode.home),
-          ),
-          _ModeTab(
-            key: const ValueKey('quick_loc_wfh'),
-            icon: Icons.laptop_mac_rounded,
-            label: wfhLabel,
-            active: selected == _QuickLocationMode.wfh,
-            activeColor: TronoColors.sage,
-            onTap: () => onChanged(_QuickLocationMode.wfh),
-          ),
-          _ModeTab(
-            key: const ValueKey('quick_loc_work'),
-            icon: Icons.work_rounded,
-            label: workLabel,
-            active: selected == _QuickLocationMode.work,
-            activeColor: isDark ? TronoColors.darkInk : TronoColors.obsidian,
-            onTap: () => onChanged(_QuickLocationMode.work),
-          ),
-          _ModeTab(
-            key: const ValueKey('quick_loc_away'),
-            icon: Icons.public_rounded,
-            label: awayLabel,
-            active: selected == _QuickLocationMode.away,
-            activeColor: TronoColors.terracotta,
-            onTap: () => onChanged(_QuickLocationMode.away),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ModeTab extends StatelessWidget {
-  const _ModeTab({
+class _LocationPickerPill extends StatelessWidget {
+  const _LocationPickerPill({
     super.key,
-    required this.icon,
-    required this.label,
-    required this.active,
-    this.activeColor,
+    required this.selected,
+    required this.hasSalary,
     required this.onTap,
   });
 
-  final IconData icon;
-  final String label;
-  final bool active;
-  final Color? activeColor;
+  final _QuickLocationMode selected;
+  final bool hasSalary;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final fg = active
-        ? (activeColor ?? TronoColors.ink(context))
-        : TronoColors.muted(context);
+    final s = AppStrings.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isPaid =
+        selected == _QuickLocationMode.wfh ||
+        selected == _QuickLocationMode.work;
 
-    return Expanded(
-      child: GestureDetector(
+    final (IconData icon, Color accent, String label) = switch (selected) {
+      _QuickLocationMode.auto => (
+        Icons.my_location_rounded,
+        TronoColors.terracotta,
+        s.locationAutoTitle,
+      ),
+      _QuickLocationMode.home => (
+        Icons.home_rounded,
+        TronoColors.goldLip,
+        s.quickHomeButton,
+      ),
+      _QuickLocationMode.wfh => (
+        Icons.laptop_mac_rounded,
+        TronoColors.sage,
+        s.wfhLocationName,
+      ),
+      _QuickLocationMode.work => (
+        Icons.work_rounded,
+        isDark ? TronoColors.darkInk : TronoColors.obsidian,
+        s.quickWorkButton,
+      ),
+      _QuickLocationMode.away => (
+        Icons.public_rounded,
+        TronoColors.terracotta,
+        s.quickAwayButton,
+      ),
+    };
+
+    return Material(
+      color: TronoColors.surface(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isPaid
+              ? TronoColors.gold
+              : TronoColors.border(context),
+          width: isPaid ? 2 : 1.6,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
         onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
-          decoration: BoxDecoration(
-            color: active ? TronoColors.surface(context) : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: active
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
-                    ),
-                  ]
-                : null,
-          ),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 13, color: fg),
-                const SizedBox(width: 2.5),
-                Text(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          child: Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 17, color: accent),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '${s.locationField}:',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: TronoColors.muted(context),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
                   label,
                   maxLines: 1,
-                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: active ? FontWeight.w900 : FontWeight.w700,
-                    color: fg,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w900,
+                    color: TronoColors.ink(context),
                   ),
                 ),
+              ),
+              if (isPaid && hasSalary) ...[
+                const Text('💰', style: TextStyle(fontSize: 14)),
+                const SizedBox(width: 4),
               ],
-            ),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 20,
+                color: TronoColors.muted(context),
+              ),
+            ],
           ),
         ),
       ),

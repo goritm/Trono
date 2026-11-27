@@ -393,8 +393,10 @@ void main() {
       expect(find.byKey(const ValueKey('home_add_past_btn')), findsOneWidget);
       expect(find.text('CLAIM THRONE'), findsOneWidget);
 
-      // Select WFH so live earnings pill appears while timer runs
-      await tester.tap(find.text('WFH'));
+      // Select WFH via clean single-pill Location picker sheet so live earnings pill appears
+      await tester.tap(find.byKey(const ValueKey('home_location_picker_btn')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('quick_loc_wfh')));
       await tester.pumpAndSettle();
 
       // 2. Tap Start timer -> Hero button transforms into live session timer + Cancel button
