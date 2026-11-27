@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Adaptive launcher foreground: pure white crowned throne + Warm Gold crown + Terracotta accents -->
+    <group
+        android:translateX="21"
+        android:translateY="21"
+        android:scaleX="2.75"
+        android:scaleY="2.75">
+        <!-- Royal crown in Warm Gold -->
+        <path
+            android:fillColor="#F5B82E"
+            android:pathData="M5.4,6.7 L4.6,2.8 L7.3,4.8 L9.0,1.9 L10.7,4.8 L13.4,2.8 L12.6,6.7 Z" />
+        <!-- Terracotta crown band -->
+        <path
+            android:fillColor="#E05A2B"
+            android:pathData="M5.7,6.1 L12.3,6.1 C12.6,6.1 12.8,6.3 12.8,6.6 C12.8,6.9 12.6,7.1 12.3,7.1 L5.7,7.1 C5.4,7.1 5.2,6.9 5.2,6.6 C5.2,6.3 5.4,6.1 5.7,6.1 Z" />
+        <!-- Pure white minimalist throne silhouette -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M5.2,8.0 L12.8,8.0 C13.1,8.0 13.4,8.3 13.4,8.6 L13.4,12.2 L19.4,12.2 C19.9,12.2 20.3,12.6 20.3,13.1 C20.3,16.1 18.1,18.2 15.1,18.4 L15.6,20.5 L16.3,20.5 C16.7,20.5 17.0,20.8 17.0,21.2 C17.0,21.6 16.7,21.9 16.3,21.9 L6.9,21.9 C6.5,21.9 6.2,21.6 6.2,21.2 C6.2,20.8 6.5,20.5 6.9,20.5 L7.5,20.5 L8.1,17.8 C6.1,17.3 4.6,15.6 4.6,13.4 L4.6,8.6 C4.6,8.3 4.9,8.0 5.2,8.0 Z" />
+        <!-- Terracotta flush lever accent -->
+        <path
+            android:fillColor="#E05A2B"
+            android:pathData="M6.75,9.6 L8.15,9.6 C8.4,9.6 8.6,9.8 8.6,10.05 C8.6,10.3 8.4,10.5 8.15,10.5 L6.75,10.5 C6.5,10.5 6.3,10.3 6.3,10.05 C6.3,9.8 6.5,9.6 6.75,9.6 Z" />
+    </group>
+</vector>

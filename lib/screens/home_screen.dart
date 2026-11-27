@@ -420,8 +420,8 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: 7),
               _TronoBrandMark(
                 key: const ValueKey('home_brand_mark'),
-                size: 26,
-                throneColor: TronoColors.ink(context),
+                size: 27,
+                isDark: Theme.of(context).brightness == Brightness.dark,
               ),
             ],
           ),
@@ -1110,28 +1110,29 @@ class _TronoBrandMark extends StatelessWidget {
   const _TronoBrandMark({
     super.key,
     required this.size,
-    required this.throneColor,
+    required this.isDark,
   });
 
   final double size;
-  final Color throneColor;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
       size: Size.square(size),
-      painter: _TronoBrandMarkPainter(throneColor: throneColor),
+      painter: _TronoBrandMarkPainter(isDark: isDark),
     );
   }
 }
 
-/// Transparent vector crowned-throne silhouette (no square background box):
-/// Warm Gold royal crown resting on a minimalist toilet silhouette with a
-/// subtle Terracotta flush accent.
+/// Always-white crowned-throne vector silhouette with Warm Gold crown and
+/// Terracotta accents. In light mode, adds a crisp Obsidian sticker outline +
+/// subtle tactile drop shadow so white pops cleanly on Warm Cream without any
+/// dark square box.
 class _TronoBrandMarkPainter extends CustomPainter {
-  const _TronoBrandMarkPainter({required this.throneColor});
+  const _TronoBrandMarkPainter({required this.isDark});
 
-  final Color throneColor;
+  final bool isDark;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1140,7 +1141,6 @@ class _TronoBrandMarkPainter extends CustomPainter {
     canvas.save();
     canvas.scale(sx, sy);
 
-    // 1. Royal crown resting cleanly above the throne tank
     final crownPath = Path()
       ..moveTo(5.4, 6.7)
       ..lineTo(4.6, 2.8)
@@ -1150,18 +1150,7 @@ class _TronoBrandMarkPainter extends CustomPainter {
       ..lineTo(13.4, 2.8)
       ..lineTo(12.6, 6.7)
       ..close();
-    canvas.drawPath(crownPath, Paint()..color = TronoColors.gold);
 
-    // Subtle Terracotta crown band
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(5.2, 6.1, 7.6, 1.0),
-        const Radius.circular(0.5),
-      ),
-      Paint()..color = TronoColors.terracotta,
-    );
-
-    // 2. Minimalist toilet / throne silhouette
     final thronePath = Path()
       ..moveTo(5.2, 8.0)
       ..lineTo(12.8, 8.0)
@@ -1183,7 +1172,28 @@ class _TronoBrandMarkPainter extends CustomPainter {
       ..lineTo(4.6, 8.6)
       ..cubicTo(4.6, 8.3, 4.9, 8.0, 5.2, 8.0)
       ..close();
-    canvas.drawPath(thronePath, Paint()..color = throneColor);
+
+    // Subtle chunky drop-lip in light mode so white throne pops off Warm Cream
+    if (!isDark) {
+      canvas.save();
+      canvas.translate(0.55, 0.75);
+      final lipPaint = Paint()..color = TronoColors.lightLip;
+      canvas.drawPath(thronePath, lipPaint);
+      canvas.restore();
+    }
+
+    // 1. Always-white throne fill + crisp Obsidian outline in light mode
+    canvas.drawPath(thronePath, Paint()..color = Colors.white);
+    if (!isDark) {
+      canvas.drawPath(
+        thronePath,
+        Paint()
+          ..color = TronoColors.obsidian
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.25
+          ..strokeJoin = StrokeJoin.round,
+      );
+    }
 
     // Subtle Terracotta flush lever detail on the tank
     canvas.drawRRect(
@@ -1194,12 +1204,34 @@ class _TronoBrandMarkPainter extends CustomPainter {
       Paint()..color = TronoColors.terracotta,
     );
 
+    // 2. Royal crown in Warm Gold + crisp outline in light mode
+    canvas.drawPath(crownPath, Paint()..color = TronoColors.gold);
+    if (!isDark) {
+      canvas.drawPath(
+        crownPath,
+        Paint()
+          ..color = TronoColors.obsidian
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0
+          ..strokeJoin = StrokeJoin.round,
+      );
+    }
+
+    // Terracotta crown band
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(5.2, 6.1, 7.6, 1.0),
+        const Radius.circular(0.5),
+      ),
+      Paint()..color = TronoColors.terracotta,
+    );
+
     canvas.restore();
   }
 
   @override
   bool shouldRepaint(covariant _TronoBrandMarkPainter oldDelegate) =>
-      oldDelegate.throneColor != throneColor;
+      oldDelegate.isDark != isDark;
 }
 
 class _LiveTimerHeroButton extends StatelessWidget {

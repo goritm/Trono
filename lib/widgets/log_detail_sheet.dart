@@ -761,71 +761,79 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
                   ],
                 ),
               ),
-              // Bottom action bar
-              Container(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  border: Border(
-                    top: BorderSide(
-                      color: scheme.outlineVariant.withValues(alpha: 0.4),
-                    ),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    if (widget.mode == LogSheetMode.editExisting) ...[
-                      OutlinedButton.icon(
-                        onPressed: () => Navigator.of(context).pop(
-                          const LogDetailSheetResult(deleted: true),
-                        ),
-                        icon: Icon(
-                          Icons.delete_outline_rounded,
-                          color: scheme.error,
-                          size: 18,
-                        ),
-                        label: Text(
-                          s.deleteButton,
-                          style: TextStyle(color: scheme.error),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 14,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+              // Bottom action bar (respects Android 3-button navigation bar when keyboard is closed)
+              Builder(
+                builder: (barCtx) {
+                  final keyboardInset = MediaQuery.viewInsetsOf(barCtx).bottom;
+                  final navBarInset = keyboardInset > 0
+                      ? 0.0
+                      : MediaQuery.viewPaddingOf(barCtx).bottom;
+                  return Container(
+                    padding: EdgeInsets.fromLTRB(20, 10, 20, 16 + navBarInset),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      border: Border(
+                        top: BorderSide(
+                          color: scheme.outlineVariant.withValues(alpha: 0.4),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                    ],
-                    Expanded(
-                      child: ChunkyButton(
-                        color: TronoColors.terracotta,
-                        lipColor: TronoColors.terracottaLip,
-                        lipHeight: 4,
-                        borderRadius: 16,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        onPressed: _saveAndClose,
-                        child: Center(
-                          child: Text(
-                            (widget.mode == LogSheetMode.quickFollowUp
-                                    ? s.doneButton
-                                    : s.saveButton)
-                                .toUpperCase(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 15,
-                              letterSpacing: 0.4,
+                    ),
+                    child: Row(
+                      children: [
+                        if (widget.mode == LogSheetMode.editExisting) ...[
+                          OutlinedButton.icon(
+                            onPressed: () => Navigator.of(context).pop(
+                              const LogDetailSheetResult(deleted: true),
+                            ),
+                            icon: Icon(
+                              Icons.delete_outline_rounded,
+                              color: scheme.error,
+                              size: 18,
+                            ),
+                            label: Text(
+                              s.deleteButton,
+                              style: TextStyle(color: scheme.error),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 14,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                        Expanded(
+                          child: ChunkyButton(
+                            color: TronoColors.terracotta,
+                            lipColor: TronoColors.terracottaLip,
+                            lipHeight: 4,
+                            borderRadius: 16,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            onPressed: _saveAndClose,
+                            child: Center(
+                              child: Text(
+                                (widget.mode == LogSheetMode.quickFollowUp
+                                        ? s.doneButton
+                                        : s.saveButton)
+                                    .toUpperCase(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
             ],
           );

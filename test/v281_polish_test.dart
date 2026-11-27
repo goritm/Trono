@@ -368,5 +368,61 @@ void main() {
         );
       },
     );
+
+    testWidgets(
+      'LogDetailSheet action bar clears Android 3-button navigation bar (48px bottom viewPadding)',
+      (tester) async {
+        final now = DateTime(2026, 11, 27, 15, 17);
+        final initial = BathroomLog(
+          id: 'edit-nav-1',
+          type: BathroomType.poop,
+          timestamp: now,
+          createdAt: now,
+          updatedAt: now,
+        );
+
+        await tester.pumpWidget(
+          MediaQuery(
+            data: const MediaQueryData(
+              size: Size(400, 800),
+              viewPadding: EdgeInsets.only(bottom: 48),
+              padding: EdgeInsets.only(bottom: 48),
+            ),
+            child: MaterialApp(
+              locale: const Locale('es'),
+              supportedLocales: const [Locale('en'), Locale('es')],
+              localizationsDelegates: const [
+                AppStrings.delegate,
+                ...GlobalMaterialLocalizations.delegates,
+              ],
+              theme: AppTheme.light(),
+              home: Scaffold(
+                body: Builder(
+                  builder: (ctx) => Center(
+                    child: ElevatedButton(
+                      onPressed: () => showLogDetailSheet(
+                        ctx,
+                        mode: LogSheetMode.editExisting,
+                        initialLog: initial,
+                        defaultShareLevel: ShareLevel.full,
+                      ),
+                      child: const Text('Open Edit'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Open Edit'));
+        await tester.pumpAndSettle();
+
+        final saveRect = tester.getRect(find.text('GUARDAR'));
+        // Must sit strictly above the 48px Android 3-button nav bar (y <= 752)
+        expect(saveRect.bottom, lessThanOrEqualTo(800 - 48));
+      },
+    );
   });
 }
