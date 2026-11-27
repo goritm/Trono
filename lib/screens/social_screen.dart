@@ -11,6 +11,7 @@ import '../services/supabase_sync_service.dart';
 import '../state/social_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/chunky_widgets.dart';
+import '../widgets/group_challenges_card.dart';
 import '../widgets/trono_toast.dart';
 import 'group_wrapped_screen.dart';
 
@@ -688,6 +689,11 @@ class _SocialScreenState extends State<SocialScreen> {
                         },
                       ),
                       const SizedBox(height: 12),
+
+                      if (social.challenges.challenges.isNotEmpty) ...[
+                        GroupChallengesCard(snapshot: social.challenges),
+                        const SizedBox(height: 12),
+                      ],
 
                       _SocialBadgesStrip(snapshot: social.socialPlus),
                       const SizedBox(height: 14),

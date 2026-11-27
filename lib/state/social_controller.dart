@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/database_helper.dart';
+import '../models/group_challenges.dart';
 import '../models/social_models.dart';
 import '../models/social_plus.dart';
 import '../services/settings_service.dart';
@@ -37,6 +38,7 @@ class SocialController extends ChangeNotifier {
   List<LeaderboardEntry> _leaderboard = const [];
   List<LeaderboardEntry> _weeklyLeaderboard = const [];
   SocialPlusSnapshot _socialPlus = const SocialPlusSnapshot();
+  GroupChallengesSnapshot _challenges = const GroupChallengesSnapshot();
   int _leaderboardDays = 7;
 
   bool _isSyncing = false;
@@ -65,6 +67,7 @@ class SocialController extends ChangeNotifier {
   List<LeaderboardEntry> get leaderboard => _leaderboard;
   List<LeaderboardEntry> get weeklyLeaderboard => _weeklyLeaderboard;
   SocialPlusSnapshot get socialPlus => _socialPlus;
+  GroupChallengesSnapshot get challenges => _challenges;
   int get leaderboardDays => _leaderboardDays;
 
   GroupWrappedSnapshot? buildGroupWeeklyWrapped() {
@@ -84,6 +87,14 @@ class SocialController extends ChangeNotifier {
       feed: _feed,
       weeklyLeaderboard: _weeklyLeaderboard,
     );
+    final active = selectedGroup;
+    _challenges = active == null
+        ? const GroupChallengesSnapshot()
+        : GroupChallengesEngine.compute(
+            feed: _feed,
+            weeklyLeaderboard: _weeklyLeaderboard,
+            memberCount: active.memberCount,
+          );
   }
 
   bool get isSyncing => _isSyncing;
@@ -190,6 +201,7 @@ class SocialController extends ChangeNotifier {
     _leaderboard = const [];
     _weeklyLeaderboard = const [];
     _socialPlus = const SocialPlusSnapshot();
+    _challenges = const GroupChallengesSnapshot();
     _lastError = null;
     unawaited(_service.unsubscribeChannel(_realtimeChannel));
     _realtimeChannel = null;
@@ -320,6 +332,10 @@ class SocialController extends ChangeNotifier {
         groupId: active.id,
         days: _leaderboardDays,
       );
+      if (_leaderboardDays == 7) {
+        _weeklyLeaderboard = _leaderboard;
+        _recomputeSocialPlus();
+      }
       notifyListeners();
     } catch (e) {
       _lastError = e.toString();
