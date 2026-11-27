@@ -1256,15 +1256,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('RANK LADDER'), findsOneWidget);
 
-      // Open Settings via top-right gear icon -> verify Awards & Ranks shortcut
+      // Open Settings via top-right gear icon -> verify Settings renders cleanly
       await tester.tap(find.byIcon(Icons.settings_outlined).first);
       await tester.pumpAndSettle();
       expect(find.text('Settings'), findsOneWidget);
-      expect(find.text('Awards & Ranks'), findsOneWidget);
-
-      await tester.tap(find.text('Awards & Ranks'));
-      await tester.pumpAndSettle();
-      expect(find.text('RANK LADDER'), findsOneWidget);
+      expect(find.byKey(const ValueKey('settings_anchor_account')), findsOneWidget);
 
       social.dispose();
       controller.dispose();

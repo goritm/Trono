@@ -14,7 +14,6 @@ import '../theme/app_theme.dart';
 import '../widgets/chunky_widgets.dart';
 import '../widgets/trono_toast.dart';
 import '../widgets/update_banner_card.dart';
-import 'achievements_screen.dart';
 import 'favorite_places_screen.dart';
 import 'social_screen.dart';
 
@@ -140,8 +139,36 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _localAuth = LocalAuthentication();
+  final _scrollController = ScrollController();
+  final _accountKey = GlobalKey();
+  final _appearanceKey = GlobalKey();
+  final _alertsKey = GlobalKey();
+  final _locationKey = GlobalKey();
+  final _securityKey = GlobalKey();
+  final _dataKey = GlobalKey();
+  int _activeAnchor = 0;
   bool _biometricsSupported = false;
   bool _capturingHome = false;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _jumpToSection(int index, GlobalKey key) {
+    HapticFeedback.selectionClick();
+    setState(() => _activeAnchor = index);
+    final ctx = key.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+        alignment: 0.02,
+      );
+    }
+  }
 
   Future<void> _handleSetHome() async {
     final s = AppStrings.of(context);
@@ -237,18 +264,84 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final s = AppStrings.of(context);
         final ctrl = widget.controller;
 
+        final anchors = <(String, String, GlobalKey)>[
+          ('account', s.settingsTabAccount, _accountKey),
+          ('appearance', s.settingsTabAppearance, _appearanceKey),
+          ('alerts', s.settingsTabAlerts, _alertsKey),
+          ('location', s.settingsTabLocation, _locationKey),
+          ('security', s.settingsTabSecurity, _securityKey),
+          ('data', s.settingsTabData, _dataKey),
+        ];
+        final navBarInset = MediaQuery.viewPaddingOf(context).bottom;
+
         return Scaffold(
-          body: CustomScrollView(
-            slivers: [
-              SliverAppBar(
-                floating: true,
-                title: Text(s.settingsTitle),
+          appBar: AppBar(
+            title: Text(s.settingsTitle),
+          ),
+          body: Column(
+            children: [
+              // Pinned horizontal anchor tabs for instant jump to any section
+              SizedBox(
+                height: 46,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  itemCount: anchors.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (context, i) {
+                    final (id, label, key) = anchors[i];
+                    final selected = _activeAnchor == i;
+                    return GestureDetector(
+                      key: ValueKey('settings_anchor_$id'),
+                      onTap: () => _jumpToSection(i, key),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 160),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 13,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? TronoColors.terracotta
+                              : TronoColors.surface(context),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: selected
+                                ? TronoColors.terracotta
+                                : TronoColors.border(context),
+                            width: 1.5,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                            color: selected
+                                ? Colors.white
+                                : TronoColors.ink(context),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 6, 16, 32),
-                sliver: SliverList.list(
-                  children: [
-              _SectionTitle(s.accountCloudSection),
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  padding: EdgeInsets.fromLTRB(16, 10, 16, 32 + navBarInset),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+              KeyedSubtree(
+                key: _accountKey,
+                child: _SectionTitle(s.accountCloudSection),
+              ),
               ListenableBuilder(
                 listenable: widget.social,
                 builder: (context, _) {
@@ -469,33 +562,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 18),
 
-              ChunkyCard(
-                padding: EdgeInsets.zero,
-                child: ListTile(
-                  leading: _ColorIcon(
-                    Icons.emoji_events_rounded,
-                    TronoColors.gold,
-                  ),
-                  title: Text(
-                    s.achievementsTitle,
-                    style: const TextStyle(fontWeight: FontWeight.w900),
-                  ),
-                  subtitle: Text(
-                    '${ctrl.gamification.currentRank.emoji} ${s.rankName(ctrl.gamification.currentRank.id)} · ${ctrl.gamification.totalXp} XP · ${ctrl.gamification.unlockedCount}/${ctrl.gamification.achievements.length}',
-                  ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => AchievementsScreen(controller: ctrl),
-                      ),
-                    );
-                  },
-                ),
+              KeyedSubtree(
+                key: _appearanceKey,
+                child: _SectionTitle(s.appearanceSection),
               ),
-              const SizedBox(height: 18),
-
-              _SectionTitle(s.appearanceSection),
               ChunkyCard(
                 padding: EdgeInsets.zero,
                 child: Column(
@@ -556,34 +626,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
                     ),
-                    const Divider(height: 1),
-                    Material(
-                      type: MaterialType.transparency,
-                      child: ListTile(
-                        leading: _ColorIcon(
-                          Icons.waving_hand_rounded,
-                          TronoColors.gold,
-                        ),
-                        title: Text(
-                          s.replayWelcomeLabel,
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                        subtitle: Text(s.replayWelcomeSub),
-                        trailing: const Icon(Icons.chevron_right_rounded),
-                        onTap: () async {
-                          await ctrl.resetOnboarding();
-                          if (context.mounted && Navigator.of(context).canPop()) {
-                            Navigator.of(context).pop();
-                          }
-                        },
-                      ),
-                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 18),
 
-              _SectionTitle(s.remindersSection),
+              KeyedSubtree(
+                key: _alertsKey,
+                child: _SectionTitle(s.remindersSection),
+              ),
               ChunkyCard(
                 padding: EdgeInsets.zero,
                 child: Column(
@@ -800,7 +851,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 18),
 
-              _SectionTitle(s.locationSettingsSection),
+              KeyedSubtree(
+                key: _locationKey,
+                child: _SectionTitle(s.locationSettingsSection),
+              ),
               ChunkyCard(
                 padding: EdgeInsets.zero,
                 child: Column(
@@ -915,12 +969,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 18),
 
-              _SectionTitle(s.securitySection),
+              KeyedSubtree(
+                key: _securityKey,
+                child: _SectionTitle(s.securitySection),
+              ),
               ChunkyCard(
                 padding: EdgeInsets.zero,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     SwitchListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 6,
+                      ),
                       title: Text(
                         s.appLockLabel,
                         style: const TextStyle(fontWeight: FontWeight.w800),
@@ -939,6 +1001,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Divider(height: 1),
                       if (_biometricsSupported)
                         SwitchListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
                           title: Text(s.biometricLabel),
                           value: ctrl.biometricEnabled,
                           onChanged: ctrl.setBiometricEnabled,
@@ -979,7 +1045,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                     const Divider(height: 1),
                     Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -987,7 +1053,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             s.defaultPrivacyLabel,
                             style: const TextStyle(fontWeight: FontWeight.w800),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 10),
                           Wrap(
                             spacing: 8,
                             runSpacing: 8,
@@ -1010,7 +1076,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 18),
 
-              _SectionTitle(s.backupSection),
+              KeyedSubtree(
+                key: _dataKey,
+                child: _SectionTitle(s.backupSection),
+              ),
               ChunkyCard(
                 padding: EdgeInsets.zero,
                 child: Column(
@@ -1234,10 +1303,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ],
                 ),
               ),
+                    ],
+                  ),
+                ),
+              ),
             ],
-          ),
-        ),
-      ],
           ),
         );
       },

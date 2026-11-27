@@ -525,11 +525,14 @@ void main() {
             ],
             theme: AppTheme.light(),
             home: Scaffold(
-              body: HomeScreen(
-                controller: ctrl,
-                onOpenAwards: () => awardsOpened = true,
-                onOpenInsights: () => insightsOpened = true,
-                onOpenSettings: () {},
+              body: ListenableBuilder(
+                listenable: ctrl,
+                builder: (_, _) => HomeScreen(
+                  controller: ctrl,
+                  onOpenAwards: () => awardsOpened = true,
+                  onOpenInsights: () => insightsOpened = true,
+                  onOpenSettings: () {},
+                ),
               ),
             ),
           ),
@@ -542,25 +545,39 @@ void main() {
         await tester.tap(find.text('LVL.1'));
         expect(awardsOpened, isTrue);
 
-        // Top summary strip displays today's Paid on the Throne total & jumps to Insights on tap
-        final paidPill = find.byKey(const ValueKey('home_today_paid_pill'));
-        expect(paidPill, findsOneWidget);
-        expect(find.text('💰 €3.00'), findsOneWidget);
-        await tester.tap(paidPill);
+        // Top summary strip displays today's Paid on the Throne column (matching Today | Avg/day)
+        final paidCol = find.byKey(const ValueKey('home_today_paid_pill'));
+        expect(paidCol, findsOneWidget);
+        expect(find.text('PAID'), findsOneWidget);
+        expect(find.text('€3.00'), findsOneWidget);
+        await tester.tap(paidCol);
         expect(insightsOpened, isTrue);
 
         // Hero-first layout: CLAIM THRONE sits above side-by-side [Location | Timer]
+        final claimBtn = find.byKey(const ValueKey('home_hero_claim_btn'));
         final heroFinder = find.text('CLAIM THRONE');
         final locFinder = find.byKey(const ValueKey('home_location_picker_btn'));
         final timerFinder = find.byKey(const ValueKey('home_start_timer_btn'));
+        expect(claimBtn, findsOneWidget);
         expect(heroFinder, findsOneWidget);
         expect(find.textContaining('1 tap logs instantly'), findsNothing);
-        final heroRect = tester.getRect(heroFinder);
+        final claimRect = tester.getRect(claimBtn);
         final locRect = tester.getRect(locFinder);
-        final timerRect = tester.getRect(timerFinder);
-        expect(heroRect.bottom, lessThan(locRect.top));
-        expect((locRect.top - timerRect.top).abs(), lessThan(8));
-        expect(locRect.right, lessThanOrEqualTo(timerRect.left));
+        final timerBtnRect = tester.getRect(timerFinder);
+        expect(claimRect.bottom, lessThan(locRect.top));
+        expect((locRect.top - timerBtnRect.top).abs(), lessThan(8));
+        expect(locRect.right, lessThanOrEqualTo(timerBtnRect.left));
+
+        // Tapping Timer transforms Hero into live timer with the EXACT same height
+        await tester.tap(timerFinder);
+        await tester.pump();
+        final liveHeroRect = tester.getRect(
+          find.byKey(const ValueKey('home_hero_timer_btn')),
+        );
+        expect(
+          (claimRect.height - liveHeroRect.height).abs(),
+          lessThanOrEqualTo(1.0),
+        );
       },
     );
 
@@ -678,6 +695,87 @@ void main() {
           find.byKey(const ValueKey('map_user_location_dot')),
           findsOneWidget,
         );
+      },
+    );
+
+    testWidgets(
+      'SettingsScreen renders anchor tabs, removes Awards & Replay Welcome, and aligns Default Privacy left',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        late TronoController ctrl;
+        late SocialController social;
+        await tester.runAsync(() async {
+          final repo = _MemoryRepo();
+          final settings = SettingsService();
+          await settings.init();
+          ctrl = TronoController(
+            repository: repo,
+            settings: settings,
+            updateChecker: UpdateCheckerService(
+              settings: settings,
+              currentVersionProvider: () async => '2.8.5',
+              httpGet: (_) async => null,
+            ),
+            onTimerSynced: (_) async {},
+            readExternalTimerStart: () async => null,
+          );
+          await ctrl.init();
+          social = SocialController(
+            tronoController: ctrl,
+            repository: repo,
+            settings: settings,
+            service: SupabaseSyncService.forTesting(),
+          );
+          await social.init();
+        });
+        addTearDown(() {
+          social.dispose();
+          ctrl.dispose();
+        });
+
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('en'),
+            supportedLocales: const [Locale('en'), Locale('es')],
+            localizationsDelegates: const [
+              AppStrings.delegate,
+              ...GlobalMaterialLocalizations.delegates,
+            ],
+            theme: AppTheme.light(),
+            home: SettingsScreen(controller: ctrl, social: social),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Pinned horizontal anchor tabs exist
+        expect(
+          find.byKey(const ValueKey('settings_anchor_account')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('settings_anchor_appearance')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('settings_anchor_security')),
+          findsOneWidget,
+        );
+
+        // Removed clutter items
+        expect(find.text('Awards & Ranks'), findsNothing);
+        expect(find.text('Replay welcome'), findsNothing);
+
+        // Tapping Security anchor smoothly brings Lock Trono & Default privacy into view
+        await tester.tap(
+          find.byKey(const ValueKey('settings_anchor_security')),
+        );
+        await tester.pumpAndSettle();
+        final lockRect = tester.getRect(find.text('Lock Trono on launch'));
+        final privacyRect = tester.getRect(
+          find.text('Default privacy in groups'),
+        );
+        // Both labels should be cleanly left-aligned inside their card
+        expect((lockRect.left - privacyRect.left).abs(), lessThan(4.0));
       },
     );
   });

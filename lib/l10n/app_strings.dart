@@ -38,7 +38,7 @@ class AppStrings {
   // Home screen
   String get homeSubtitle => _t('¿Listo para registrar?', 'Ready to log?');
   String get oneTapHint => _t('1 toque guarda al instante', '1 tap logs instantly');
-  String get heroLogTitle => _t('Registrar Trono', 'Claim Throne');
+  String get heroLogTitle => _t('Reclamar Trono', 'Claim Throne');
   String get heroLoggedFlash => _t('¡Registrado!', 'Logged!');
   String get heroLogSubtitle => _t(
     'Toca para guardar al instante · detalles opcionales después',
@@ -46,6 +46,7 @@ class AppStrings {
   );
   String get todayCountLabel => _t('Hoy', 'Today');
   String get dailyAvgLabel => _t('Prom/día', 'Avg/day');
+  String get todayPaidLabel => _t('Cobrado', 'Paid');
   String get streakLabel => _t('Racha', 'Streak');
   String levelBadge(int level) => _t('NV.$level', 'LVL.$level');
   String daysShort(int n) => _t('${n}d', '${n}d');
@@ -630,6 +631,12 @@ class AppStrings {
 
   // Settings & Lock
   String get settingsTitle => _t('Ajustes', 'Settings');
+  String get settingsTabAccount => _t('Cuenta', 'Account');
+  String get settingsTabAppearance => _t('Apariencia', 'Appearance');
+  String get settingsTabAlerts => _t('Avisos', 'Alerts');
+  String get settingsTabLocation => _t('Ubicación', 'Location');
+  String get settingsTabSecurity => _t('Seguridad', 'Security');
+  String get settingsTabData => _t('Datos', 'Data');
   String get appearanceSection => _t('Apariencia e Idioma', 'Appearance & Language');
   String get languageLabel => _t('Idioma', 'Language');
   String get themeLabel => _t('Tema', 'Theme');
