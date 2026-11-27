@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#44FFFFFF">
+    <item>
+        <layer-list>
+            <!-- Subtle dark lip -->
+            <item>
+                <shape android:shape="rectangle">
+                    <solid android:color="#11141B" />
+                    <corners android:radius="18dp" />
+                </shape>
+            </item>
+            <!-- Muted charcoal face -->
+            <item android:bottom="4dp">
+                <shape android:shape="rectangle">
+                    <solid android:color="#2B303D" />
+                    <corners android:radius="18dp" />
+                    <stroke
+                        android:width="1.5dp"
+                        android:color="#41485B" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+</ripple>

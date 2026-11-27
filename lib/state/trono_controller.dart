@@ -38,16 +38,23 @@ class TronoController extends ChangeNotifier {
     required SettingsService settings,
     UpdateCheckerService? updateChecker,
     LocalReminderService? reminderService,
+    Future<void> Function(DateTime? timerStart)? onTimerSynced,
+    Future<DateTime?> Function()? readExternalTimerStart,
   }) : _repo = repository,
        _settings = settings,
        _updateChecker =
            updateChecker ?? UpdateCheckerService(settings: settings),
-       _reminderService = reminderService ?? LocalReminderService();
+       _reminderService = reminderService ?? LocalReminderService(),
+       _onTimerSynced = onTimerSynced ?? WidgetSyncService.syncTimerState,
+       _readExternalTimerStart =
+           readExternalTimerStart ?? WidgetSyncService.readWidgetTimerStart;
 
   final BathroomRepository _repo;
   final SettingsService _settings;
   final UpdateCheckerService _updateChecker;
   final LocalReminderService _reminderService;
+  final Future<void> Function(DateTime? timerStart) _onTimerSynced;
+  final Future<DateTime?> Function() _readExternalTimerStart;
   final _uuid = const Uuid();
   VoidCallback? _onLogsMutated;
 
@@ -173,7 +180,10 @@ class TronoController extends ChangeNotifier {
     _weeklyRecapReminderEnabled = _settings.weeklyRecapReminderEnabled;
 
     _activeTimerStart = _settings.activeTimerStart;
-    if (_activeTimerStart != null) {
+    final widgetTimerStart = await _readExternalTimerStart();
+    if (widgetTimerStart != null) {
+      syncTimerFromExternal(widgetTimerStart);
+    } else if (_activeTimerStart != null) {
       _startTicker();
     }
 
@@ -305,7 +315,7 @@ class TronoController extends ChangeNotifier {
     int? durationSecs;
     if (_activeTimerStart != null) {
       final diff = DateTime.now().difference(_activeTimerStart!).inSeconds;
-      if (diff > 0) durationSecs = diff;
+      durationSecs = diff.clamp(1, WidgetLogPayload.maxDurationSeconds);
       await cancelTimer();
     }
 
@@ -508,13 +518,14 @@ class TronoController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Live timer controls
+  // Live timer controls (2-way synced with Android Home Screen Widget)
   Future<void> startTimer() async {
     _activeTimerStart = DateTime.now();
     _elapsedSeconds = 0;
     await _settings.setActiveTimerStart(_activeTimerStart);
     _startTicker();
     notifyListeners();
+    unawaited(_onTimerSynced(_activeTimerStart));
   }
 
   Future<void> cancelTimer() async {
@@ -524,6 +535,45 @@ class TronoController extends ChangeNotifier {
     _elapsedSeconds = 0;
     await _settings.setActiveTimerStart(null);
     notifyListeners();
+    unawaited(_onTimerSynced(null));
+  }
+
+  /// Reconciles in-app timer state with an external start timestamp (e.g. from
+  /// the Android Home Screen Widget). Ignores stale timestamps (> 12h old).
+  void syncTimerFromExternal(DateTime? externalStart) {
+    if (externalStart == null) {
+      if (_activeTimerStart != null) {
+        _ticker?.cancel();
+        _ticker = null;
+        _activeTimerStart = null;
+        _elapsedSeconds = 0;
+        unawaited(_settings.setActiveTimerStart(null));
+        notifyListeners();
+      }
+      return;
+    }
+
+    final age = DateTime.now().difference(externalStart);
+    if (age.isNegative && age.abs() > const Duration(seconds: 60)) return;
+    if (age > const Duration(hours: 12)) return;
+
+    if (_activeTimerStart?.millisecondsSinceEpoch ==
+        externalStart.millisecondsSinceEpoch) {
+      return;
+    }
+
+    _activeTimerStart = externalStart;
+    unawaited(_settings.setActiveTimerStart(externalStart));
+    _startTicker();
+    notifyListeners();
+  }
+
+  /// Checks the Android Home Screen Widget for a running or finished timer and
+  /// updates in-app state accordingly.
+  Future<void> refreshExternalTimer() async {
+    final externalStart = await _readExternalTimerStart();
+    if (_disposed) return;
+    syncTimerFromExternal(externalStart);
   }
 
   void _startTicker() {
