@@ -14,6 +14,7 @@ import '../models/monthly_comparison.dart';
 import '../models/reminder_schedule.dart';
 import '../models/stats_summary.dart';
 import '../models/trigger_lab.dart';
+import '../services/live_timer_notification_service.dart';
 import '../services/local_reminder_service.dart';
 import '../services/location_service.dart';
 import '../services/settings_service.dart';
@@ -38,6 +39,7 @@ class TronoController extends ChangeNotifier {
     required SettingsService settings,
     UpdateCheckerService? updateChecker,
     LocalReminderService? reminderService,
+    LiveTimerNotificationService? liveTimerNotificationService,
     Future<void> Function(DateTime? timerStart)? onTimerSynced,
     Future<DateTime?> Function()? readExternalTimerStart,
   }) : _repo = repository,
@@ -45,6 +47,8 @@ class TronoController extends ChangeNotifier {
        _updateChecker =
            updateChecker ?? UpdateCheckerService(settings: settings),
        _reminderService = reminderService ?? LocalReminderService(),
+       _liveTimerNotification =
+           liveTimerNotificationService ?? LiveTimerNotificationService(),
        _onTimerSynced = onTimerSynced ?? WidgetSyncService.syncTimerState,
        _readExternalTimerStart =
            readExternalTimerStart ?? WidgetSyncService.readWidgetTimerStart;
@@ -53,6 +57,7 @@ class TronoController extends ChangeNotifier {
   final SettingsService _settings;
   final UpdateCheckerService _updateChecker;
   final LocalReminderService _reminderService;
+  final LiveTimerNotificationService _liveTimerNotification;
   final Future<void> Function(DateTime? timerStart) _onTimerSynced;
   final Future<DateTime?> Function() _readExternalTimerStart;
   final _uuid = const Uuid();
@@ -185,6 +190,9 @@ class TronoController extends ChangeNotifier {
       syncTimerFromExternal(widgetTimerStart);
     } else if (_activeTimerStart != null) {
       _startTicker();
+      unawaited(
+        _liveTimerNotification.showTimer(_activeTimerStart!, locale: _locale),
+      );
     }
 
     await reloadLogs(suppressNotifications: true);
@@ -518,7 +526,7 @@ class TronoController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Live timer controls (2-way synced with Android Home Screen Widget)
+  // Live timer controls (2-way synced with Android Home Screen Widget + Status-Bar Notification)
   Future<void> startTimer() async {
     _activeTimerStart = DateTime.now();
     _elapsedSeconds = 0;
@@ -526,6 +534,9 @@ class TronoController extends ChangeNotifier {
     _startTicker();
     notifyListeners();
     unawaited(_onTimerSynced(_activeTimerStart));
+    unawaited(
+      _liveTimerNotification.showTimer(_activeTimerStart!, locale: _locale),
+    );
   }
 
   Future<void> cancelTimer() async {
@@ -536,10 +547,12 @@ class TronoController extends ChangeNotifier {
     await _settings.setActiveTimerStart(null);
     notifyListeners();
     unawaited(_onTimerSynced(null));
+    unawaited(_liveTimerNotification.dismissTimer());
   }
 
   /// Reconciles in-app timer state with an external start timestamp (e.g. from
-  /// the Android Home Screen Widget). Ignores stale timestamps (> 12h old).
+  /// the Android Home Screen Widget or Status-Bar Notification). Ignores stale
+  /// timestamps (> 12h old).
   void syncTimerFromExternal(DateTime? externalStart) {
     if (externalStart == null) {
       if (_activeTimerStart != null) {
@@ -548,6 +561,7 @@ class TronoController extends ChangeNotifier {
         _activeTimerStart = null;
         _elapsedSeconds = 0;
         unawaited(_settings.setActiveTimerStart(null));
+        unawaited(_liveTimerNotification.dismissTimer());
         notifyListeners();
       }
       return;
@@ -564,6 +578,7 @@ class TronoController extends ChangeNotifier {
 
     _activeTimerStart = externalStart;
     unawaited(_settings.setActiveTimerStart(externalStart));
+    unawaited(_liveTimerNotification.showTimer(externalStart, locale: _locale));
     _startTicker();
     notifyListeners();
   }
@@ -602,6 +617,11 @@ class TronoController extends ChangeNotifier {
     _locale = locale;
     await _settings.setLocale(locale);
     notifyListeners();
+    if (_activeTimerStart != null) {
+      unawaited(
+        _liveTimerNotification.showTimer(_activeTimerStart!, locale: _locale),
+      );
+    }
     if (_streakReminderEnabled || _weeklyRecapReminderEnabled) {
       await _syncReminders();
     }

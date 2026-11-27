@@ -13,6 +13,7 @@ import 'screens/onboarding_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/social_screen.dart';
 import 'services/app_shortcut_service.dart';
+import 'services/live_timer_notification_service.dart';
 import 'services/settings_service.dart';
 import 'services/supabase_sync_service.dart';
 import 'services/widget_sync_service.dart';
@@ -104,6 +105,7 @@ class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
   int _tabIndex = 0;
   final _statsSubTab = ValueNotifier<int>(0);
   final _shortcutService = AppShortcutService();
+  final _liveTimerService = LiveTimerNotificationService();
   AppShortcutAction? _pendingShortcut;
   late bool _locked;
 
@@ -113,7 +115,27 @@ class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _locked = widget.controller.lockEnabled;
     _shortcutService.startListening(_onShortcutAction);
+    _liveTimerService.startListening(_onLiveTimerNotificationAction);
     unawaited(_initShortcuts());
+  }
+
+  void _onLiveTimerNotificationAction(LiveTimerAction action) {
+    if (!mounted) return;
+    widget.controller.syncTimerFromExternal(null);
+    if (action == LiveTimerAction.finish) {
+      // Background worker persists SQLite immediately; reload now & shortly
+      // after so an open app reflects the new log without double-logging.
+      Future<void> refresh() async {
+        if (!mounted) return;
+        await widget.controller.reloadLogs(suppressNotifications: true);
+        if (widget.socialController.isSignedIn) {
+          unawaited(widget.socialController.syncNow(refreshFeedAfter: true));
+        }
+      }
+
+      unawaited(refresh());
+      unawaited(Future<void>.delayed(const Duration(milliseconds: 1200), refresh));
+    }
   }
 
   Future<void> _initShortcuts() async {
@@ -162,6 +184,7 @@ class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _shortcutService.dispose();
+    _liveTimerService.dispose();
     _statsSubTab.dispose();
     super.dispose();
   }
