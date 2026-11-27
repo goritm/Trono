@@ -2,6 +2,7 @@ package com.trono.trono
 
 import android.app.Activity
 import android.os.CancellationSignal
+import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.credentials.CredentialManager
 import androidx.credentials.CredentialManagerCallback
@@ -35,6 +36,8 @@ object TronoGoogleAuth {
         }
     }
 
+    private const val TAG = "TronoGoogleAuth"
+
     fun signIn(
         activity: Activity,
         explicitClientId: String?,
@@ -43,7 +46,8 @@ object TronoGoogleAuth {
     ) {
         val clientId = resolveWebClientId(activity, explicitClientId)
         if (clientId == null) {
-            onResult(mapOf("status" to "unavailable"))
+            Log.w(TAG, "No Google Web Client ID found (explicit or default_web_client_id)")
+            onResult(mapOf("status" to "unavailable", "error" to "missing_web_client_id"))
             return
         }
 
@@ -79,23 +83,31 @@ object TronoGoogleAuth {
                                     onResult(mapOf("status" to "ok", "idToken" to idToken))
                                     return
                                 }
-                            } catch (_: Exception) {
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Failed parsing GoogleIdTokenCredential", e)
+                                onResult(mapOf("status" to "unavailable", "error" to "parse_error: ${e.message}"))
+                                return
                             }
                         }
-                        onResult(mapOf("status" to "unavailable"))
+                        Log.w(TAG, "Unexpected credential type: ${cred.type}")
+                        onResult(mapOf("status" to "unavailable", "error" to "unexpected_credential: ${cred.type}"))
                     }
 
                     override fun onError(e: GetCredentialException) {
                         if (e is GetCredentialCancellationException) {
                             onResult(mapOf("status" to "cancelled"))
                         } else {
-                            onResult(mapOf("status" to "unavailable"))
+                            val detail = "${e.type}: ${e.errorMessage ?: e.message ?: "unknown"}"
+                            Log.w(TAG, "CredentialManager error: $detail", e)
+                            onResult(mapOf("status" to "unavailable", "error" to detail))
                         }
                     }
                 }
             )
-        } catch (_: Exception) {
-            onResult(mapOf("status" to "unavailable"))
+        } catch (e: Exception) {
+            val detail = "${e.javaClass.simpleName}: ${e.message ?: "unknown"}"
+            Log.w(TAG, "CredentialManager invocation failed: $detail", e)
+            onResult(mapOf("status" to "unavailable", "error" to detail))
         }
     }
 }

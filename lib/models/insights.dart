@@ -122,6 +122,21 @@ class InsightsEngine {
     );
   }
 
+  /// Sums local-only Paid on the Throne earnings across a day's logs.
+  /// Returns `0.0` when `hourlyRate` is unset or non-positive.
+  static double calculateTodayPaid(
+    List<BathroomLog> todayLogs, {
+    required double? hourlyRate,
+  }) {
+    if (hourlyRate == null || hourlyRate <= 0) return 0.0;
+    double sum = 0.0;
+    for (final log in todayLogs) {
+      final earned = calculateLogEarnings(log, hourlyRate: hourlyRate);
+      if (earned != null) sum += earned.amount;
+    }
+    return sum;
+  }
+
   static PaidOnThroneSummary calculatePaidOnThrone(
     List<BathroomLog> logs, {
     required double? hourlyRate,

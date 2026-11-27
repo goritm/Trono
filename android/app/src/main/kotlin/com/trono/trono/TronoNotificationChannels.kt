@@ -9,9 +9,13 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.core.content.ContextCompat
 import java.util.Locale
 
 object TronoNotificationChannels {
@@ -150,6 +154,7 @@ object TronoNotificationChannels {
 
         val notification = builder
             .setSmallIcon(R.drawable.ic_stat_trono)
+            .setLargeIcon(buildLargeIcon(context))
             .setColor(TRONO_TERRACOTTA)
             .setContentTitle(title)
             .setContentText(body)
@@ -160,6 +165,36 @@ object TronoNotificationChannels {
 
         manager.notify(TEST_NOTIF_ID, notification)
         return true
+    }
+
+    /// Renders the full-color crowned-throne vector (white throne + Warm Gold crown)
+    /// inside an Obsidian circular badge for expanded Android notification cards.
+    fun buildLargeIcon(context: Context): Bitmap? {
+        return try {
+            val sizePx = 128
+            val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = 0xFF1E222B.toInt()
+            }
+            val radius = sizePx / 2f
+            canvas.drawCircle(radius, radius, radius, bgPaint)
+
+            val drawable = ContextCompat.getDrawable(
+                context,
+                R.drawable.ic_launcher_foreground_trono
+            )
+            if (drawable != null) {
+                // Foreground vector uses adaptive-icon safe zone (108dp viewport);
+                // slightly expand bounds so the crowned throne fills the badge cleanly.
+                val overflow = (sizePx * 0.14f).toInt()
+                drawable.setBounds(-overflow, -overflow, sizePx + overflow, sizePx + overflow)
+                drawable.draw(canvas)
+            }
+            bitmap
+        } catch (_: Exception) {
+            null
+        }
     }
 
     fun isSpanish(context: Context, localeOverride: String? = null): Boolean {

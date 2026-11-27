@@ -127,6 +127,7 @@ class TronoMessagingService : FirebaseMessagingService() {
 
         builder
             .setSmallIcon(R.drawable.ic_stat_trono)
+            .setLargeIcon(TronoNotificationChannels.buildLargeIcon(this))
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(Notification.BigTextStyle().bigText(body))

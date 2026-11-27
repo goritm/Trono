@@ -140,6 +140,7 @@ object TronoLiveTimerNotification {
 
         builder
             .setSmallIcon(R.drawable.ic_stat_trono)
+            .setLargeIcon(TronoNotificationChannels.buildLargeIcon(context))
             .setContentTitle(resolvedTitle)
             .setContentText(resolvedBody)
             .setWhen(startMillis)

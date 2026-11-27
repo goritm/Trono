@@ -31,11 +31,15 @@ class MapScreen extends StatefulWidget {
     required this.controller,
     this.isRootTab = false,
     this.onOpenSettings,
+    this.currentPositionProvider,
+    this.silentPositionProvider,
   });
 
   final TronoController controller;
   final bool isRootTab;
   final VoidCallback? onOpenSettings;
+  final Future<GeoPoint?> Function()? currentPositionProvider;
+  final Future<GeoPoint?> Function()? silentPositionProvider;
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -46,6 +50,49 @@ class _MapScreenState extends State<MapScreen> {
   _MapFilter _filter = _MapFilter.all;
   _PinCluster? _selectedCluster;
   int _subTab = 0; // 0 = Interactive Map, 1 = Favorite Places & Top Bathrooms
+  LatLng? _userLocation;
+  bool _locating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSilentLocation();
+  }
+
+  Future<void> _loadSilentLocation() async {
+    final provider =
+        widget.silentPositionProvider ?? LocationService.tryGetPositionSilently;
+    final pos = await provider();
+    if (!mounted || pos == null) return;
+    setState(() => _userLocation = LatLng(pos.latitude, pos.longitude));
+  }
+
+  Future<void> _centerOnMyLocation() async {
+    if (_locating) return;
+    setState(() => _locating = true);
+    try {
+      final provider =
+          widget.currentPositionProvider ?? LocationService.requestAndGetPosition;
+      final pos = await provider();
+      if (!mounted) return;
+      if (pos == null) {
+        final s = AppStrings.of(context);
+        showTronoToast(context, s.locationUnavailableToast);
+        return;
+      }
+      final target = LatLng(pos.latitude, pos.longitude);
+      setState(() => _userLocation = target);
+      try {
+        _mapController.move(target, 15.0);
+      } catch (_) {
+        // MapController may not be ready yet in headless widget tests
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _locating = false);
+      }
+    }
+  }
 
   List<BathroomLog> _filteredLogs() {
     final now = DateTime.now();
@@ -227,24 +274,57 @@ class _MapScreenState extends State<MapScreen> {
           );
         }
 
+        if (_userLocation != null) {
+          markers.add(
+            Marker(
+              point: _userLocation!,
+              width: 34,
+              height: 34,
+              child: Container(
+                key: const ValueKey('map_user_location_dot'),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2563EB).withValues(alpha: 0.22),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2563EB),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 3),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.28),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
         return Scaffold(
           appBar: AppBar(
             automaticallyImplyLeading: !widget.isRootTab,
             title: Text(widget.isRootTab ? s.navMap : s.mapScreenTitle),
             actions: [
-              if (_subTab == 0 && hasHome)
+              if (_subTab == 0)
                 IconButton(
-                  tooltip: s.homePinLabel,
-                  onPressed: () {
-                    _mapController.move(
-                      LatLng(
-                        widget.controller.homeLat!,
-                        widget.controller.homeLng!,
-                      ),
-                      14.5,
-                    );
-                  },
-                  icon: const Icon(Icons.home_rounded),
+                  key: const ValueKey('map_my_location_btn'),
+                  tooltip: s.myLocationTooltip,
+                  onPressed: _locating ? null : _centerOnMyLocation,
+                  icon: _locating
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.my_location_rounded),
                 ),
               if (widget.onOpenSettings != null) ...[
                 IconButton(

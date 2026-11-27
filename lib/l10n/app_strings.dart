@@ -47,6 +47,7 @@ class AppStrings {
   String get todayCountLabel => _t('Hoy', 'Today');
   String get dailyAvgLabel => _t('Prom/día', 'Avg/day');
   String get streakLabel => _t('Racha', 'Streak');
+  String levelBadge(int level) => _t('NV.$level', 'LVL.$level');
   String daysShort(int n) => _t('${n}d', '${n}d');
   String get addPastVisit => _t('Registrar visita pasada', 'Log past visit');
   String get pastVisitShort => _t('Pasada', 'Past');
@@ -248,6 +249,11 @@ class AppStrings {
     'Enable GPS in Settings or tap "Pin current GPS" when logging to map your conquered spots.',
   );
   String get homePinLabel => _t('Tu Casa (Base)', 'Home Base');
+  String get myLocationTooltip => _t('Mi ubicación', 'My location');
+  String get locationUnavailableToast => _t(
+    'No se pudo obtener tu ubicación actual.',
+    'Couldn’t get your current location.',
+  );
 
   String get locationSettingsSection => _t('Ubicación y Casa', 'Location & Home');
   String get autoGpsLabel => _t('Guardar GPS automáticamente', 'Auto-save GPS pin');

@@ -17,12 +17,13 @@ class SupabaseConfig {
   /// Mobile deep-link redirect URI for Supabase OAuth PKCE callbacks (Google).
   static const String oauthRedirectUrl = 'com.trono.trono://login-callback';
 
-  /// Optional explicit Google Web OAuth Client ID for native Android One-Tap.
-  /// When empty, Android automatically reads `default_web_client_id` generated
-  /// from `google-services.json`.
+  /// Public Google Web OAuth Client ID for native Android Credential Manager.
+  /// Can be overridden via `--dart-define=GOOGLE_WEB_CLIENT_ID=...`; if empty,
+  /// Android falls back to `default_web_client_id` from `google-services.json`.
   static const String googleWebClientId = String.fromEnvironment(
     'GOOGLE_WEB_CLIENT_ID',
-    defaultValue: '',
+    defaultValue:
+        '579562019147-39pct1v4i1sdclftoc341vo5uvbsm4lu.apps.googleusercontent.com',
   );
 
   static bool get isConfigured => url.isNotEmpty && publishableKey.isNotEmpty;

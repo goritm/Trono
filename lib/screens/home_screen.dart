@@ -13,6 +13,7 @@ import '../widgets/log_detail_sheet.dart';
 import '../widgets/log_tile.dart';
 import '../widgets/trono_toast.dart';
 import '../widgets/update_banner_card.dart';
+import 'settings_screen.dart';
 
 /// Formats the instant quick-log toast, appending live paid-on-the-throne
 /// earnings (`💰 +€X.XX` or `💰 ~€X.XX`) whenever the visit is at Work or WFH
@@ -44,11 +45,13 @@ class HomeScreen extends StatefulWidget {
     required this.controller,
     this.onOpenSettings,
     this.onOpenAwards,
+    this.onOpenInsights,
   });
 
   final TronoController controller;
   final VoidCallback? onOpenSettings;
   final VoidCallback? onOpenAwards;
+  final VoidCallback? onOpenInsights;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -289,9 +292,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ];
 
+        final navBarInset = MediaQuery.viewPaddingOf(sheetCtx).bottom;
         return SafeArea(
+          top: false,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + navBarInset),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -391,39 +396,48 @@ class _HomeScreenState extends State<HomeScreen> {
         ? todayLogs
         : controller.logs.take(5).toList();
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final heroSub = switch (_locationMode) {
-      _QuickLocationMode.auto => s.oneTapHint,
-      _QuickLocationMode.home => '🏠 ${s.locationKindName(LocationKind.home)} · ${s.oneTapHint}',
-      _QuickLocationMode.wfh => '💻 ${s.wfhLocationName} · ${s.oneTapHint}',
-      _QuickLocationMode.work => '💼 ${s.locationKindName(LocationKind.work)} · ${s.oneTapHint}',
-      _QuickLocationMode.away => '🌍 ${s.locationKindName(LocationKind.away)} · ${s.oneTapHint}',
-    };
+    final todayPaid = InsightsEngine.calculateTodayPaid(
+      todayLogs,
+      hourlyRate: controller.hourlyRate,
+    );
+    final isWorkMode =
+        _locationMode == _QuickLocationMode.wfh ||
+        _locationMode == _QuickLocationMode.work;
+    final liveTimerPaid =
+        (controller.isTimerRunning && controller.hasHourlyRate && isWorkMode)
+            ? (controller.elapsedTimerSeconds / 3600.0) * controller.hourlyRate!
+            : 0.0;
+    final displayedTodayPaid = todayPaid + liveTimerPaid;
 
     return CustomScrollView(
       slivers: [
         SliverAppBar(
           pinned: true,
           toolbarHeight: 60,
-          title: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                s.appName,
-                style: TextStyle(
-                  fontSize: 25,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.8,
-                  color: TronoColors.ink(context),
+          titleSpacing: 14,
+          title: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  s.appName,
+                  style: TextStyle(
+                    fontSize: 25,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.8,
+                    color: TronoColors.ink(context),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 7),
-              _TronoBrandMark(
-                key: const ValueKey('home_brand_mark'),
-                size: 27,
-                isDark: Theme.of(context).brightness == Brightness.dark,
-              ),
-            ],
+                const SizedBox(width: 6),
+                _TronoBrandMark(
+                  key: const ValueKey('home_brand_mark'),
+                  size: 27,
+                  isDark: Theme.of(context).brightness == Brightness.dark,
+                ),
+              ],
+            ),
           ),
           actions: [
             ChunkyHudPill(
@@ -431,11 +445,11 @@ class _HomeScreenState extends State<HomeScreen> {
               iconColor: TronoColors.terracotta,
               label: '${stats.currentStreak}',
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             ChunkyHudPill(
               icon: Icons.bolt_rounded,
               iconColor: TronoColors.gold,
-              label: '${gam.totalXp}',
+              label: s.levelBadge(gam.currentRank.level),
               onTap: widget.onOpenAwards,
             ),
             if (widget.onOpenSettings != null) ...[
@@ -540,53 +554,86 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     ),
-                    GestureDetector(
-                      onTap: widget.onOpenAwards,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: TronoColors.gold.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          'NV.${gam.currentRank.level}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900,
+                    if (controller.hasHourlyRate)
+                      GestureDetector(
+                        key: const ValueKey('home_today_paid_pill'),
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          widget.onOpenInsights?.call();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
                             color: isDark
-                                ? TronoColors.gold
-                                : TronoColors.goldLip,
+                                ? const Color(0xFF2B2618)
+                                : const Color(0xFFFFF8E6),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: TronoColors.gold.withValues(alpha: 0.45),
+                              width: 1.2,
+                            ),
+                          ),
+                          child: Text(
+                            '💰 ${controller.currencySymbol}${displayedTodayPaid.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              color: isDark
+                                  ? TronoColors.gold
+                                  : TronoColors.goldLip,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      GestureDetector(
+                        key: const ValueKey('home_setup_salary_pill'),
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          showSalaryConfigDialog(context, controller);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: TronoColors.bg(context),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: TronoColors.border(context),
+                              width: 1.2,
+                            ),
+                          ),
+                          child: Text(
+                            '💰 +${controller.currencySymbol}',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w800,
+                              color: TronoColors.muted(context),
+                            ),
                           ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-              // Clean Single-Pill Location Selector (opens full-label bottom sheet)
-              _LocationPickerPill(
-                key: const ValueKey('home_location_picker_btn'),
-                selected: _locationMode,
-                hasSalary: controller.hasHourlyRate,
-                onTap: () => _showLocationModeSheet(context, s),
-              ),
-              const SizedBox(height: 16),
-
-              // THE DUAL-MODE 3D HERO BUTTON (Instant Claim OR Active Live Session Timer)
+              // THE DUAL-MODE 3D HERO BUTTON FIRST (Instant Claim OR Active Live Session Timer)
               if (controller.isTimerRunning) ...[
                 _LiveTimerHeroButton(
                   key: const ValueKey('home_hero_timer_btn'),
                   clockText: _formatClock(controller.elapsedTimerSeconds),
                   subtitle: s.timerFinishSubtitle,
-                  liveEarningsText: (controller.hasHourlyRate &&
-                          (_locationMode == _QuickLocationMode.wfh ||
-                              _locationMode == _QuickLocationMode.work))
-                      ? '💰 +${controller.currencySymbol}${((controller.elapsedTimerSeconds / 3600.0) * controller.hourlyRate!).toStringAsFixed(2)}'
+                  liveEarningsText: (controller.hasHourlyRate && isWorkMode)
+                      ? '💰 +${controller.currencySymbol}${liveTimerPaid.toStringAsFixed(2)}'
                       : null,
                   onFinishTap: () => _handleQuickTap(
                     context,
@@ -596,33 +643,53 @@ class _HomeScreenState extends State<HomeScreen> {
                     sheetDelay: const Duration(milliseconds: 200),
                   ),
                 ),
-                const SizedBox(height: 10),
-                Center(
-                  child: TextButton.icon(
-                    key: const ValueKey('home_cancel_timer_btn'),
-                    onPressed: controller.cancelTimer,
-                    style: TextButton.styleFrom(
-                      foregroundColor: TronoColors.muted(context),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _LocationPickerPill(
+                        key: const ValueKey('home_location_picker_btn'),
+                        selected: _locationMode,
+                        hasSalary: controller.hasHourlyRate,
+                        onTap: () => _showLocationModeSheet(context, s),
                       ),
                     ),
-                    icon: const Icon(Icons.close_rounded, size: 17),
-                    label: Text(
-                      s.cancelTimerFull,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: SizedBox(
+                        height: 50,
+                        child: OutlinedButton.icon(
+                          key: const ValueKey('home_cancel_timer_btn'),
+                          onPressed: controller.cancelTimer,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: TronoColors.muted(context),
+                            side: BorderSide(
+                              color: TronoColors.border(context),
+                              width: 1.6,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          icon: const Icon(Icons.close_rounded, size: 18),
+                          label: Text(
+                            s.cancelTimerFull,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ] else ...[
                 _AnimatedHeroLogButton(
                   title: s.heroLogTitle.toUpperCase(),
                   successTitle: s.heroLoggedFlash.toUpperCase(),
-                  subtitle: heroSub,
                   onConfirmedTap: () => _handleQuickTap(
                     context,
                     BathroomType.poop,
@@ -632,41 +699,60 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                ChunkyButton(
-                  key: const ValueKey('home_start_timer_btn'),
-                  width: double.infinity,
-                  color: TronoColors.surface(context),
-                  lipColor: TronoColors.lip(context),
-                  borderColor: TronoColors.border(context),
-                  lipHeight: 3,
-                  borderRadius: 18,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  onPressed: () {
-                    HapticFeedback.selectionClick();
-                    controller.startTimer();
-                  },
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.timer_outlined,
-                        size: 19,
-                        color: TronoColors.terracotta,
+                Row(
+                  children: [
+                    Expanded(
+                      child: _LocationPickerPill(
+                        key: const ValueKey('home_location_picker_btn'),
+                        selected: _locationMode,
+                        hasSalary: controller.hasHourlyRate,
+                        onTap: () => _showLocationModeSheet(context, s),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        s.startTimer,
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w800,
-                          color: TronoColors.ink(context),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ChunkyButton(
+                        key: const ValueKey('home_start_timer_btn'),
+                        width: double.infinity,
+                        color: TronoColors.surface(context),
+                        lipColor: TronoColors.lip(context),
+                        borderColor: TronoColors.border(context),
+                        lipHeight: 3,
+                        borderRadius: 16,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        onPressed: () {
+                          HapticFeedback.selectionClick();
+                          controller.startTimer();
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.timer_outlined,
+                              size: 18,
+                              color: TronoColors.terracotta,
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                s.timerShort,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: TronoColors.ink(context),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ],
               const SizedBox(height: 26),
@@ -778,13 +864,11 @@ class _AnimatedHeroLogButton extends StatefulWidget {
   const _AnimatedHeroLogButton({
     required this.title,
     required this.successTitle,
-    required this.subtitle,
     required this.onConfirmedTap,
   });
 
   final String title;
   final String successTitle;
-  final String subtitle;
   final Future<void> Function() onConfirmedTap;
 
   @override
@@ -930,37 +1014,21 @@ class _AnimatedHeroLogButtonState extends State<_AnimatedHeroLogButton>
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 150),
-                        child: Align(
-                          key: ValueKey(_celebrating),
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            _celebrating ? widget.successTitle : widget.title,
-                            style: TextStyle(
-                              color: fgColor,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        widget.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 150),
+                    child: Align(
+                      key: ValueKey(_celebrating),
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _celebrating ? widget.successTitle : widget.title,
                         style: TextStyle(
-                          color: fgColor.withValues(alpha: 0.86),
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
+                          color: fgColor,
+                          fontSize: 21,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.3,
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
                 AnimatedContainer(
@@ -1055,28 +1123,19 @@ class _LocationPickerPill extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
           child: Row(
             children: [
               Container(
-                width: 30,
-                height: 30,
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(9),
                 ),
-                child: Icon(icon, size: 17, color: accent),
+                child: Icon(icon, size: 16, color: accent),
               ),
-              const SizedBox(width: 10),
-              Text(
-                '${s.locationField}:',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: TronoColors.muted(context),
-                ),
-              ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   label,
@@ -1090,12 +1149,12 @@ class _LocationPickerPill extends StatelessWidget {
                 ),
               ),
               if (isPaid && hasSalary) ...[
-                const Text('💰', style: TextStyle(fontSize: 14)),
-                const SizedBox(width: 4),
+                const Text('💰', style: TextStyle(fontSize: 13)),
+                const SizedBox(width: 2),
               ],
               Icon(
                 Icons.keyboard_arrow_down_rounded,
-                size: 20,
+                size: 18,
                 color: TronoColors.muted(context),
               ),
             ],
