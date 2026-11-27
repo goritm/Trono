@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:trono/config/supabase_config.dart';
 import 'package:trono/services/google_native_auth_service.dart';
 
 void main() {
@@ -86,6 +88,40 @@ void main() {
         (await missingService.requestIdToken()).status,
         GoogleNativeAuthStatus.unavailable,
       );
+    });
+
+    test('surfaces native diagnostic errorMessage when unavailable', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            return {
+              'status': 'unavailable',
+              'error': 'GetCredentialProviderConfigurationException: missing',
+            };
+          });
+
+      final service = GoogleNativeAuthService(channel: channel);
+      final result = await service.requestIdToken();
+      expect(result.status, GoogleNativeAuthStatus.unavailable);
+      expect(
+        result.errorMessage,
+        'GetCredentialProviderConfigurationException: missing',
+      );
+    });
+
+    test('configures default public Google Web Client ID & Android R8 keep rules', () {
+      expect(
+        SupabaseConfig.googleWebClientId,
+        endsWith('.apps.googleusercontent.com'),
+      );
+      final proguard = File('android/app/proguard-rules.pro');
+      expect(proguard.existsSync(), isTrue);
+      final rules = proguard.readAsStringSync();
+      expect(rules, contains('androidx.credentials.playservices.**'));
+      expect(rules, contains('com.google.android.libraries.identity.googleid.**'));
+
+      final keepXml = File('android/app/src/main/res/raw/keep.xml');
+      expect(keepXml.existsSync(), isTrue);
+      expect(keepXml.readAsStringSync(), contains('default_web_client_id'));
     });
   });
 }

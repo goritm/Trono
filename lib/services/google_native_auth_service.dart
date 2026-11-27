@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 enum GoogleNativeAuthStatus { ok, cancelled, unavailable }
@@ -11,11 +12,13 @@ class GoogleNativeAuthResult {
     required this.status,
     this.idToken,
     this.rawNonce,
+    this.errorMessage,
   });
 
   final GoogleNativeAuthStatus status;
   final String? idToken;
   final String? rawNonce;
+  final String? errorMessage;
 }
 
 /// Thrown when the user explicitly dismisses the native Google One-Tap sheet.
@@ -60,6 +63,7 @@ class GoogleNativeAuthService {
       );
       final status = (res?['status'] as String?)?.trim() ?? 'unavailable';
       final idToken = (res?['idToken'] as String?)?.trim() ?? '';
+      final error = (res?['error'] as String?)?.trim();
       if (status == 'ok' && idToken.isNotEmpty) {
         return GoogleNativeAuthResult(
           status: GoogleNativeAuthStatus.ok,
@@ -72,16 +76,22 @@ class GoogleNativeAuthService {
           status: GoogleNativeAuthStatus.cancelled,
         );
       }
-      return const GoogleNativeAuthResult(
+      if (error != null && error.isNotEmpty) {
+        debugPrint('GoogleNativeAuth unavailable: $error');
+      }
+      return GoogleNativeAuthResult(
         status: GoogleNativeAuthStatus.unavailable,
+        errorMessage: error,
       );
     } on MissingPluginException {
       return const GoogleNativeAuthResult(
         status: GoogleNativeAuthStatus.unavailable,
       );
-    } on PlatformException {
-      return const GoogleNativeAuthResult(
+    } on PlatformException catch (e) {
+      debugPrint('GoogleNativeAuth PlatformException: ${e.code} ${e.message}');
+      return GoogleNativeAuthResult(
         status: GoogleNativeAuthStatus.unavailable,
+        errorMessage: e.message ?? e.code,
       );
     }
   }

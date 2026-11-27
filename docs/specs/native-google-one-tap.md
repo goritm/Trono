@@ -12,8 +12,9 @@
 - No client secrets in app code (only public `default_web_client_id` auto-generated from `google-services.json` or optional `GOOGLE_WEB_CLIENT_ID` dart-define).
 
 ## 3. Security & Privacy Contract
-- **Cryptographic Nonce:** Generates a 32-byte `Random.secure()` `rawNonce` in Dart, sends `sha256(rawNonce)` to Android `GetGoogleIdOption.setNonce(...)`, and passes `rawNonce` to `Supabase.auth.signInWithIdToken(provider: OAuthProvider.google, idToken: ..., nonce: rawNonce)` so Supabase verifies the ID token nonce server-side.
-- **Zero Secrets in Repo:** Client ID is read from `R.string.default_web_client_id` (generated from gitignored `google-services.json`) or optional `--dart-define=GOOGLE_WEB_CLIENT_ID=...`.
+- **Cryptographic Nonce:** Generates a 32-byte `Random.secure()` `rawNonce` in Dart, sends `sha256(rawNonce)` to Android `GetSignInWithGoogleOption.setNonce(...)`, and passes `rawNonce` to `Supabase.auth.signInWithIdToken(provider: OAuthProvider.google, idToken: ..., nonce: rawNonce)` so Supabase verifies the ID token nonce server-side.
+- **Zero Secrets in Repo:** Only the public Google OAuth Web Client ID is configured in `SupabaseConfig.googleWebClientId` (overridable via `--dart-define=GOOGLE_WEB_CLIENT_ID=...` or `R.string.default_web_client_id` kept via `res/raw/keep.xml`).
+- **Release R8 Invariant:** `android/app/proguard-rules.pro` explicitly preserves `androidx.credentials.playservices.**` and `com.google.android.libraries.identity.googleid.**` so R8 never strips `CredentialProviderPlayServicesImpl` in release APKs.
 
 ## 4. Acceptance Criteria (Given / When / Then)
 1. **Given** `GoogleNativeAuthService.generateNonce()`, **when** called twice, **then** it produces distinct 32+ char URL-safe strings and `hashNonce(raw)` returns its lowercase 64-char SHA-256 hex digest.
