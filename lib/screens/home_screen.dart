@@ -194,6 +194,153 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _showLocationModeSheet(BuildContext context, AppStrings s) async {
+    final picked = await showModalBottomSheet<_QuickLocationMode>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: TronoColors.surface(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (sheetCtx) {
+        final options = <({
+          _QuickLocationMode mode,
+          ValueKey<String> key,
+          IconData icon,
+          Color color,
+          String title,
+          String subtitle,
+        })>[
+          (
+            mode: _QuickLocationMode.auto,
+            key: const ValueKey('quick_loc_auto'),
+            icon: Icons.my_location_rounded,
+            color: TronoColors.terracotta,
+            title: s.locationAutoTitle,
+            subtitle: s.locationAutoSub,
+          ),
+          (
+            mode: _QuickLocationMode.home,
+            key: const ValueKey('quick_loc_home'),
+            icon: Icons.home_rounded,
+            color: TronoColors.goldLip,
+            title: s.quickHomeButton,
+            subtitle: s.locationHomeSub,
+          ),
+          (
+            mode: _QuickLocationMode.wfh,
+            key: const ValueKey('quick_loc_wfh'),
+            icon: Icons.laptop_mac_rounded,
+            color: TronoColors.sage,
+            title: s.wfhLocationName,
+            subtitle: s.locationWfhSub,
+          ),
+          (
+            mode: _QuickLocationMode.work,
+            key: const ValueKey('quick_loc_work'),
+            icon: Icons.work_rounded,
+            color: Theme.of(sheetCtx).brightness == Brightness.dark
+                ? TronoColors.darkInk
+                : TronoColors.obsidian,
+            title: s.quickWorkButton,
+            subtitle: s.locationWorkSub,
+          ),
+          (
+            mode: _QuickLocationMode.away,
+            key: const ValueKey('quick_loc_away'),
+            icon: Icons.public_rounded,
+            color: TronoColors.terracotta,
+            title: s.quickAwayButton,
+            subtitle: s.locationAwaySub,
+          ),
+        ];
+
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  s.locationField,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: TronoColors.ink(sheetCtx),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...options.map((opt) {
+                  final active = opt.mode == _locationMode;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Material(
+                      key: opt.key,
+                      color: active
+                          ? TronoColors.terracotta.withValues(alpha: 0.12)
+                          : TronoColors.bg(sheetCtx),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(
+                          color: active
+                              ? TronoColors.terracotta
+                              : TronoColors.border(sheetCtx),
+                          width: active ? 2 : 1.5,
+                        ),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: ListTile(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          Navigator.of(sheetCtx).pop(opt.mode);
+                        },
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: opt.color.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(opt.icon, color: opt.color, size: 21),
+                        ),
+                        title: Text(
+                          opt.title,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14.5,
+                            color: TronoColors.ink(sheetCtx),
+                          ),
+                        ),
+                        subtitle: Text(
+                          opt.subtitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: TronoColors.muted(sheetCtx),
+                          ),
+                        ),
+                        trailing: active
+                            ? const Icon(
+                                Icons.check_circle_rounded,
+                                color: TronoColors.terracotta,
+                              )
+                            : null,
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (picked != null && mounted) {
+      setState(() => _locationMode = picked);
+    }
+  }
+
   String _formatClock(int seconds) {
     final mins = (seconds ~/ 60).toString().padLeft(2, '0');
     final secs = (seconds % 60).toString().padLeft(2, '0');
@@ -400,169 +547,146 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Compact Location Mode Selector (Auto · Home · WFH · Work · Away)
-              _LocationModeSelector(
+              // Clean Single-Pill Location Selector (opens full-label bottom sheet)
+              _LocationPickerPill(
+                key: const ValueKey('home_location_picker_btn'),
                 selected: _locationMode,
-                autoLabel: s.quickAutoChip,
-                homeLabel: s.quickHomeButton,
-                wfhLabel: s.quickWfhButton,
-                workLabel: s.quickWorkCompactButton,
-                awayLabel: s.quickAwayButton,
-                onChanged: (mode) {
-                  HapticFeedback.selectionClick();
-                  setState(() => _locationMode = mode);
-                },
+                hasSalary: controller.hasHourlyRate,
+                onTap: () => _showLocationModeSheet(context, s),
               ),
               const SizedBox(height: 16),
 
-              // THE SINGLE ANIMATED 3D HERO BUTTON (with juicy click feedback + brief delay before sheet)
-              _AnimatedHeroLogButton(
-                title: s.heroLogTitle.toUpperCase(),
-                successTitle: s.heroLoggedFlash.toUpperCase(),
-                subtitle: heroSub,
-                onConfirmedTap: () => _handleQuickTap(
-                  context,
-                  BathroomType.poop,
-                  locationKind: _selectedLocationKind,
-                  tags: _selectedInitialTags,
-                  sheetDelay: const Duration(milliseconds: 360),
+              // THE DUAL-MODE 3D HERO BUTTON (Instant Claim OR Active Live Session Timer)
+              if (controller.isTimerRunning) ...[
+                _LiveTimerHeroButton(
+                  key: const ValueKey('home_hero_timer_btn'),
+                  clockText: _formatClock(controller.elapsedTimerSeconds),
+                  subtitle: s.timerFinishSubtitle,
+                  liveEarningsText: (controller.hasHourlyRate &&
+                          (_locationMode == _QuickLocationMode.wfh ||
+                              _locationMode == _QuickLocationMode.work))
+                      ? '💰 +${controller.currencySymbol}${((controller.elapsedTimerSeconds / 3600.0) * controller.hourlyRate!).toStringAsFixed(2)}'
+                      : null,
+                  onFinishTap: () => _handleQuickTap(
+                    context,
+                    BathroomType.poop,
+                    locationKind: _selectedLocationKind,
+                    tags: _selectedInitialTags,
+                    sheetDelay: const Duration(milliseconds: 200),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 18),
-
-              // Active Live Timer Pill OR Clean Subtle Utility Strip
-              if (controller.isTimerRunning)
-                ChunkyCard(
-                  color: TronoColors.obsidian,
-                  borderColor: TronoColors.gold.withValues(alpha: 0.6),
-                  lipColor: TronoColors.obsidianLip,
+                const SizedBox(height: 10),
+                Center(
+                  child: TextButton.icon(
+                    key: const ValueKey('home_cancel_timer_btn'),
+                    onPressed: controller.cancelTimer,
+                    style: TextButton.styleFrom(
+                      foregroundColor: TronoColors.muted(context),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                    ),
+                    icon: const Icon(Icons.close_rounded, size: 17),
+                    label: Text(
+                      s.cancelTimerFull,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ] else ...[
+                _AnimatedHeroLogButton(
+                  title: s.heroLogTitle.toUpperCase(),
+                  successTitle: s.heroLoggedFlash.toUpperCase(),
+                  subtitle: heroSub,
+                  onConfirmedTap: () => _handleQuickTap(
+                    context,
+                    BathroomType.poop,
+                    locationKind: _selectedLocationKind,
+                    tags: _selectedInitialTags,
+                    sheetDelay: const Duration(milliseconds: 360),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                ChunkyButton(
+                  key: const ValueKey('home_start_timer_btn'),
+                  width: double.infinity,
+                  color: TronoColors.surface(context),
+                  lipColor: TronoColors.lip(context),
+                  borderColor: TronoColors.border(context),
+                  lipHeight: 3,
+                  borderRadius: 18,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 12,
                   ),
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    controller.startTimer();
+                  },
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: TronoColors.gold.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.timer_rounded,
-                          color: TronoColors.gold,
-                          size: 20,
-                        ),
+                      const Icon(
+                        Icons.timer_outlined,
+                        size: 19,
+                        color: TronoColors.terracotta,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${s.timerRunning} ${_formatClock(controller.elapsedTimerSeconds)}',
-                              style: const TextStyle(
-                                fontSize: 15.5,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                                fontFeatures: [FontFeature.tabularFigures()],
-                              ),
-                            ),
-                            Text(
-                              s.timerHint,
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white.withValues(alpha: 0.72),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: controller.cancelTimer,
-                        tooltip: s.cancelTimer,
-                        icon: const Icon(
-                          Icons.close_rounded,
-                          color: Colors.white,
+                      const SizedBox(width: 8),
+                      Text(
+                        s.startTimer,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w800,
+                          color: TronoColors.ink(context),
                         ),
                       ),
                     ],
                   ),
-                )
-              else
-                Container(
-                  decoration: BoxDecoration(
-                    color: TronoColors.surface(context),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: TronoColors.border(context),
-                      width: 1.6,
-                    ),
-                  ),
-                  child: IntrinsicHeight(
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _UtilityAction(
-                            icon: Icons.timer_outlined,
-                            label: s.timerShort,
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              controller.startTimer();
-                            },
-                          ),
-                        ),
-                        VerticalDivider(
-                          width: 1,
-                          thickness: 1.4,
-                          indent: 10,
-                          endIndent: 10,
-                          color: TronoColors.border(context),
-                        ),
-                        Expanded(
-                          child: _UtilityAction(
-                            icon: Icons.air_rounded,
-                            label: s.typeName(BathroomType.falseAlarm),
-                            onTap: () => _handleQuickTap(
-                              context,
-                              BathroomType.falseAlarm,
-                              locationKind: _selectedLocationKind,
-                              tags: _selectedInitialTags,
-                            ),
-                          ),
-                        ),
-                        VerticalDivider(
-                          width: 1,
-                          thickness: 1.4,
-                          indent: 10,
-                          endIndent: 10,
-                          color: TronoColors.border(context),
-                        ),
-                        Expanded(
-                          child: _UtilityAction(
-                            icon: Icons.history_rounded,
-                            label: s.pastVisitShort,
-                            onTap: () => _handleAddPast(context),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
-              const SizedBox(height: 28),
+              ],
+              const SizedBox(height: 26),
 
-              // Today / Recent History Header
-              Text(
-                (todayLogs.isNotEmpty ? s.todayHistory : s.recentHistory)
-                    .toUpperCase(),
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.8,
-                  color: TronoColors.muted(context),
-                ),
+              // Today / Recent History Header + discreet "+ Past" shortcut
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      (todayLogs.isNotEmpty ? s.todayHistory : s.recentHistory)
+                          .toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.8,
+                        color: TronoColors.muted(context),
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    key: const ValueKey('home_add_past_btn'),
+                    onPressed: () => _handleAddPast(context),
+                    style: TextButton.styleFrom(
+                      foregroundColor: TronoColors.terracotta,
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      s.addPastShortBtn,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
 
@@ -847,187 +971,236 @@ class _AnimatedHeroLogButtonState extends State<_AnimatedHeroLogButton>
   }
 }
 
-class _LocationModeSelector extends StatelessWidget {
-  const _LocationModeSelector({
+class _LocationPickerPill extends StatelessWidget {
+  const _LocationPickerPill({
+    super.key,
     required this.selected,
-    required this.autoLabel,
-    required this.homeLabel,
-    required this.wfhLabel,
-    required this.workLabel,
-    required this.awayLabel,
-    required this.onChanged,
+    required this.hasSalary,
+    required this.onTap,
   });
 
   final _QuickLocationMode selected;
-  final String autoLabel;
-  final String homeLabel;
-  final String wfhLabel;
-  final String workLabel;
-  final String awayLabel;
-  final ValueChanged<_QuickLocationMode> onChanged;
+  final bool hasSalary;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1E27) : const Color(0xFFECE6DA),
-        borderRadius: BorderRadius.circular(16),
+    final isPaid =
+        selected == _QuickLocationMode.wfh ||
+        selected == _QuickLocationMode.work;
+
+    final (IconData icon, Color accent, String label) = switch (selected) {
+      _QuickLocationMode.auto => (
+        Icons.my_location_rounded,
+        TronoColors.terracotta,
+        s.locationAutoTitle,
       ),
-      child: Row(
-        children: [
-          _ModeTab(
-            key: const ValueKey('quick_loc_auto'),
-            icon: Icons.my_location_rounded,
-            label: autoLabel,
-            active: selected == _QuickLocationMode.auto,
-            onTap: () => onChanged(_QuickLocationMode.auto),
+      _QuickLocationMode.home => (
+        Icons.home_rounded,
+        TronoColors.goldLip,
+        s.quickHomeButton,
+      ),
+      _QuickLocationMode.wfh => (
+        Icons.laptop_mac_rounded,
+        TronoColors.sage,
+        s.wfhLocationName,
+      ),
+      _QuickLocationMode.work => (
+        Icons.work_rounded,
+        isDark ? TronoColors.darkInk : TronoColors.obsidian,
+        s.quickWorkButton,
+      ),
+      _QuickLocationMode.away => (
+        Icons.public_rounded,
+        TronoColors.terracotta,
+        s.quickAwayButton,
+      ),
+    };
+
+    return Material(
+      color: TronoColors.surface(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isPaid
+              ? TronoColors.gold
+              : TronoColors.border(context),
+          width: isPaid ? 2 : 1.6,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          child: Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 17, color: accent),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '${s.locationField}:',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: TronoColors.muted(context),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w900,
+                    color: TronoColors.ink(context),
+                  ),
+                ),
+              ),
+              if (isPaid && hasSalary) ...[
+                const Text('💰', style: TextStyle(fontSize: 14)),
+                const SizedBox(width: 4),
+              ],
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 20,
+                color: TronoColors.muted(context),
+              ),
+            ],
           ),
-          _ModeTab(
-            key: const ValueKey('quick_loc_home'),
-            icon: Icons.home_rounded,
-            label: homeLabel,
-            active: selected == _QuickLocationMode.home,
-            activeColor: TronoColors.goldLip,
-            onTap: () => onChanged(_QuickLocationMode.home),
-          ),
-          _ModeTab(
-            key: const ValueKey('quick_loc_wfh'),
-            icon: Icons.laptop_mac_rounded,
-            label: wfhLabel,
-            active: selected == _QuickLocationMode.wfh,
-            activeColor: TronoColors.sage,
-            onTap: () => onChanged(_QuickLocationMode.wfh),
-          ),
-          _ModeTab(
-            key: const ValueKey('quick_loc_work'),
-            icon: Icons.work_rounded,
-            label: workLabel,
-            active: selected == _QuickLocationMode.work,
-            activeColor: isDark ? TronoColors.darkInk : TronoColors.obsidian,
-            onTap: () => onChanged(_QuickLocationMode.work),
-          ),
-          _ModeTab(
-            key: const ValueKey('quick_loc_away'),
-            icon: Icons.public_rounded,
-            label: awayLabel,
-            active: selected == _QuickLocationMode.away,
-            activeColor: TronoColors.terracotta,
-            onTap: () => onChanged(_QuickLocationMode.away),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _ModeTab extends StatelessWidget {
-  const _ModeTab({
+class _LiveTimerHeroButton extends StatelessWidget {
+  const _LiveTimerHeroButton({
     super.key,
-    required this.icon,
-    required this.label,
-    required this.active,
-    this.activeColor,
-    required this.onTap,
+    required this.clockText,
+    required this.subtitle,
+    required this.onFinishTap,
+    this.liveEarningsText,
   });
 
-  final IconData icon;
-  final String label;
-  final bool active;
-  final Color? activeColor;
-  final VoidCallback onTap;
+  final String clockText;
+  final String subtitle;
+  final String? liveEarningsText;
+  final VoidCallback onFinishTap;
 
   @override
   Widget build(BuildContext context) {
-    final fg = active
-        ? (activeColor ?? TronoColors.ink(context))
-        : TronoColors.muted(context);
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
-          decoration: BoxDecoration(
-            color: active ? TronoColors.surface(context) : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: active
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
-                    ),
-                  ]
-                : null,
+    return ChunkyButton(
+      width: double.infinity,
+      color: TronoColors.obsidian,
+      lipColor: TronoColors.obsidianLip,
+      borderColor: TronoColors.gold,
+      lipHeight: 6,
+      borderRadius: 26,
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 22),
+      onPressed: onFinishTap,
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: TronoColors.gold.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.timer_rounded,
+              color: TronoColors.gold,
+              size: 32,
+            ),
           ),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(icon, size: 13, color: fg),
-                const SizedBox(width: 2.5),
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    Text(
+                      clockText,
+                      style: const TextStyle(
+                        color: TronoColors.gold,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.6,
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    if (liveEarningsText != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2B2618),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: TronoColors.gold.withValues(alpha: 0.6),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Text(
+                          liveEarningsText!,
+                          style: const TextStyle(
+                            color: TronoColors.gold,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            fontFeatures: [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 3),
                 Text(
-                  label,
+                  subtitle,
                   maxLines: 1,
-                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: active ? FontWeight.w900 : FontWeight.w700,
-                    color: fg,
+                    color: Colors.white.withValues(alpha: 0.86),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _UtilityAction extends StatelessWidget {
-  const _UtilityAction({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final muted = TronoColors.muted(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 17, color: muted),
-            const SizedBox(width: 5),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w800,
-                  color: TronoColors.ink(context),
-                ),
-              ),
+          const SizedBox(width: 8),
+          Container(
+            width: 46,
+            height: 46,
+            decoration: const BoxDecoration(
+              color: TronoColors.sage,
+              shape: BoxShape.circle,
             ),
-          ],
-        ),
+            child: const Icon(
+              Icons.check_rounded,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+        ],
       ),
     );
   }

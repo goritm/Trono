@@ -67,8 +67,12 @@ class AppStrings {
   // Live timer
   String get startTimer => _t('Iniciar cronómetro', 'Start timer');
   String get timerRunning => _t('En el baño...', 'On the seat...');
+  String get timerFinishSubtitle =>
+      _t('Toca para terminar y guardar 👑', 'Tap to finish & save 👑');
   String get stopTimer => _t('Detener', 'Stop');
   String get cancelTimer => _t('Cancelar', 'Cancel');
+  String get cancelTimerFull => _t('Cancelar cronómetro', 'Cancel timer');
+  String get addPastShortBtn => _t('+ Pasada', '+ Past');
   String get timerHint => _t(
     'Al tocar un botón se guarda este tiempo',
     'Next tap attaches this duration',
@@ -199,6 +203,21 @@ class AppStrings {
   String get quickWorkCompactButton => _t('Ofi', 'Work');
   String get quickAwayButton => _t('Fuera', 'Away');
   String get quickAutoChip => _t('Auto', 'Auto');
+  String get locationAutoTitle => _t('Auto (GPS)', 'Auto (GPS)');
+  String get locationAutoSub => _t(
+    'Detecta tu Casa o Lugares Favoritos',
+    'Auto-detects Home or Favorite Places',
+  );
+  String get locationHomeSub => _t('En casa (personal)', 'Personal time at home');
+  String get locationWfhSub => _t(
+    'En casa · cuenta como pagado 💰',
+    'At home · counts as Paid on the Throne 💰',
+  );
+  String get locationWorkSub => _t(
+    'En la oficina · cuenta como pagado 💰',
+    'At the office · counts as Paid on the Throne 💰',
+  );
+  String get locationAwaySub => _t('Fuera de casa', 'Outside home & office');
   String get locationField => _t('Ubicación', 'Location');
   String get placeNamePlaceholder =>
       _t('Ej. Oficina, Aeropuerto, Bar...', 'e.g. Office, Airport, Cafe...');
@@ -410,8 +429,8 @@ class AppStrings {
 
   String shareLevelName(ShareLevel level) => switch (level) {
     ShareLevel.private => _t('🔒 Privado', '🔒 Private'),
-    ShareLevel.summaryOnly => _t('👥 Solo resumen', '👥 Summary only'),
-    ShareLevel.full => _t('🌍 Completo', '🌍 Full detail'),
+    ShareLevel.summaryOnly => _t('👥 Compartir con amigos', '👥 Share with friends'),
+    ShareLevel.full => _t('👥 Compartir con amigos', '👥 Share with friends'),
   };
 
   String formatDuration(int seconds) {
@@ -766,8 +785,8 @@ class AppStrings {
       _t('Invita amigos · código $code', 'Invite friends · code $code');
   String get emptyFeedTitle => _t('El trono está tranquilo', 'All quiet on the throne');
   String get emptyFeedBody => _t(
-    'Cuando alguien del grupo registre un trono compartido (Solo resumen o Completo), aparecerá aquí al instante.',
-    'Whenever someone in the group logs a shared throne (Summary or Full), it appears here live.',
+    'Cuando alguien del grupo comparta un trono, aparecerá aquí al instante.',
+    'Whenever someone in the group shares a throne, it appears here live.',
   );
   String get rankingPeriodWeek => _t('7 días', '7 days');
   String get rankingPeriodMonth => _t('30 días', '30 days');
@@ -777,6 +796,10 @@ class AppStrings {
   String get summaryOnlyBadge => _t('Solo resumen', 'Summary only');
   String get youBadge => _t('Tú', 'You');
   String get commentsSheetTitle => _t('Comentarios', 'Comments');
+  String get addCommentCta => _t('Añadir comentario...', 'Add a comment...');
+  String viewCommentsCta(int count) => count == 1
+      ? _t('Ver 1 comentario', 'View 1 comment')
+      : _t('Ver los $count comentarios', 'View all $count comments');
   String get noCommentsYet =>
       _t('Sin comentarios aún — ¡sé el primero!', 'No comments yet — be the first!');
   String get commentInputHint =>

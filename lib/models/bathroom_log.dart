@@ -143,6 +143,15 @@ enum ShareLevel {
     ShareLevel.full => 'full',
   };
 
+  static const List<ShareLevel> selectableValues = [
+    ShareLevel.full,
+    ShareLevel.private,
+  ];
+
+  /// Normalizes legacy `summaryOnly` values to `full` for the 2-state UI picker.
+  ShareLevel get normalizedForUi =>
+      this == ShareLevel.private ? ShareLevel.private : ShareLevel.full;
+
   static ShareLevel fromDb(String? value) {
     return switch (value) {
       'private' => ShareLevel.private,

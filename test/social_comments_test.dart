@@ -486,20 +486,26 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Feed card 1 shows comment pill with count 1
+        // Feed card 1 shows clear comments footer with preview + "View 1 comment"
         final pill1 = find.byKey(const ValueKey('feed_comment_btn_l1'));
         expect(pill1, findsOneWidget);
         expect(
-          find.descendant(of: pill1, matching: find.text('1')),
+          find.descendant(
+            of: pill1,
+            matching: find.text('View 1 comment'),
+          ),
           findsOneWidget,
         );
 
-        // Feed card 2 shows comment pill without a 0 count
+        // Feed card 2 shows "Add a comment..." CTA when there are 0 comments
         final pill2 = find.byKey(const ValueKey('feed_comment_btn_l2'));
         expect(pill2, findsOneWidget);
         expect(
-          find.descendant(of: pill2, matching: find.text('0')),
-          findsNothing,
+          find.descendant(
+            of: pill2,
+            matching: find.text('Add a comment...'),
+          ),
+          findsOneWidget,
         );
 
         // Tap pill2 -> empty state
