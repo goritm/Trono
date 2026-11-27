@@ -374,25 +374,6 @@ class _HomeScreenState extends State<HomeScreen> {
           title: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: TronoColors.border(context),
-                    width: 1.5,
-                  ),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8.5),
-                  child: Image.asset(
-                    'assets/icon/trono_icon.png',
-                    width: 30,
-                    height: 30,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
               Text(
                 s.appName,
                 style: TextStyle(
@@ -401,6 +382,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   letterSpacing: -0.8,
                   color: TronoColors.ink(context),
                 ),
+              ),
+              const SizedBox(width: 7),
+              _TronoBrandMark(
+                key: const ValueKey('home_brand_mark'),
+                size: 22,
+                strokeColor: TronoColors.ink(context).withValues(alpha: 0.22),
               ),
             ],
           ),
@@ -1083,6 +1070,80 @@ class _LocationPickerPill extends StatelessWidget {
       ),
     );
   }
+}
+
+class _TronoBrandMark extends StatelessWidget {
+  const _TronoBrandMark({
+    super.key,
+    required this.size,
+    required this.strokeColor,
+  });
+
+  final double size;
+  final Color strokeColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size(size * 1.12, size),
+      painter: _TronoBrandMarkPainter(strokeColor: strokeColor),
+    );
+  }
+}
+
+/// Transparent vector royal crown mark (Warm Gold + Terracotta accent, zero box).
+class _TronoBrandMarkPainter extends CustomPainter {
+  const _TronoBrandMarkPainter({required this.strokeColor});
+
+  final Color strokeColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    final crownPath = Path()
+      ..moveTo(w * 0.10, h * 0.76)
+      ..lineTo(w * 0.06, h * 0.30)
+      ..lineTo(w * 0.30, h * 0.50)
+      ..lineTo(w * 0.50, h * 0.16)
+      ..lineTo(w * 0.70, h * 0.50)
+      ..lineTo(w * 0.94, h * 0.30)
+      ..lineTo(w * 0.90, h * 0.76)
+      ..close();
+
+    final goldPaint = Paint()
+      ..color = TronoColors.gold
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(crownPath, goldPaint);
+
+    final outlinePaint = Paint()
+      ..color = strokeColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(crownPath, outlinePaint);
+
+    // Terracotta royal base band
+    final bandRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(w * 0.10, h * 0.76, w * 0.80, h * 0.16),
+      Radius.circular(h * 0.08),
+    );
+    canvas.drawRRect(
+      bandRect,
+      Paint()..color = TronoColors.terracotta,
+    );
+
+    // Crown peak jewels
+    final jewelPaint = Paint()..color = TronoColors.terracotta;
+    canvas.drawCircle(Offset(w * 0.50, h * 0.14), w * 0.065, jewelPaint);
+    canvas.drawCircle(Offset(w * 0.06, h * 0.28), w * 0.055, jewelPaint);
+    canvas.drawCircle(Offset(w * 0.94, h * 0.28), w * 0.055, jewelPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _TronoBrandMarkPainter oldDelegate) =>
+      oldDelegate.strokeColor != strokeColor;
 }
 
 class _LiveTimerHeroButton extends StatelessWidget {
