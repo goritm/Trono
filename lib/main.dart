@@ -185,7 +185,8 @@ class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Refresh in case user logged directly from Android Home Widget
+      // Refresh in case user logged or started/stopped timer from Android Home Widget
+      unawaited(widget.controller.refreshExternalTimer());
       unawaited(
         widget.controller.reloadLogs(suppressNotifications: true).then((_) {
           if (widget.socialController.isSignedIn) {
