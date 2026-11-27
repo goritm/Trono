@@ -38,7 +38,7 @@ class AppStrings {
   // Home screen
   String get homeSubtitle => _t('¿Listo para registrar?', 'Ready to log?');
   String get oneTapHint => _t('1 toque guarda al instante', '1 tap logs instantly');
-  String get heroLogTitle => _t('Registrar Trono', 'Claim Throne');
+  String get heroLogTitle => _t('Reclamar Trono', 'Claim Throne');
   String get heroLoggedFlash => _t('¡Registrado!', 'Logged!');
   String get heroLogSubtitle => _t(
     'Toca para guardar al instante · detalles opcionales después',
