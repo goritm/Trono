@@ -96,6 +96,17 @@ void main() {
         isNull,
       );
     });
+
+    test('formats YYYY-MM-DD date key for midnight widget auto-reset', () {
+      expect(
+        WidgetSyncService.formatDateKey(DateTime(2026, 3, 5, 23, 59)),
+        '2026-03-05',
+      );
+      expect(
+        WidgetSyncService.formatDateKey(DateTime(2026, 11, 27, 0, 1)),
+        '2026-11-27',
+      );
+    });
   });
 
   group('TronoController 2-Way Widget Timer Sync (V2.7)', () {

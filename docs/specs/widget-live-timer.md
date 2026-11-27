@@ -18,6 +18,9 @@
 - **SQLite / Supabase migrations required:** None.
 
 ## 4. User Experience & Copy
+- **Responsive Layout (`onAppWidgetOptionsChanged`):** Automatically switches between compact 2×2 (`trono_widget.xml`: `👑 +1 | ⏱`) and wide 4×2+ (`trono_widget_wide.xml`: `Trono` title + streak + `👑 +1 Trono | ⏱ Timer`) when resized ≥ 220dp wide.
+- **Widget Header:** Shows app icon, today's count (auto-resetting at midnight via `today_date` without waking Flutter), live streak badge (`🔥Nd` when `streak > 0`), and daily average.
+- **Performance:** `TronoWidgetProvider.onReceive` updates `RemoteViews` + triggers subtle click haptics on the main thread in <10 ms and offloads `FlutterInjector` + `HomeWidgetBackgroundWorker.enqueueWork` to a background executor via `goAsync()`. `tronoWidgetBackgroundCallback` writes to SQLite FIRST (0 ms) before attempting optional silent GPS enrichment.
 - **Widget Idle State (ViewFlipper child 0):**
   - Left primary button (`👑 +1`): 1-tap instant throne log (unchanged speed).
   - Right compact button (`⏱`): 1-tap starts live widget `<Chronometer>` (Obsidian + Warm Gold).

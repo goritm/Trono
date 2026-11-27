@@ -8,14 +8,23 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.view.View
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetBackgroundWorker
 import es.antonborri.home_widget.HomeWidgetPlugin
 import es.antonborri.home_widget.HomeWidgetProvider
 import io.flutter.FlutterInjector
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.Executors
 
 class TronoWidgetProvider : HomeWidgetProvider() {
 
@@ -26,6 +35,7 @@ class TronoWidgetProvider : HomeWidgetProvider() {
         const val ACTION_CANCEL_TIMER = "com.trono.trono.ACTION_CANCEL_TIMER"
 
         private const val TIMER_START_MS_KEY = "timer_start_ms"
+        private const val TODAY_DATE_KEY = "today_date"
         private const val FLASH_UNTIL_KEY = "widget_flash_until"
         private const val FLASH_DURATION_MS = 1400L
         private const val MAX_DURATION_SECONDS = 14400L
@@ -34,9 +44,68 @@ class TronoWidgetProvider : HomeWidgetProvider() {
         private const val CHILD_IDLE = 0
         private const val CHILD_SUCCESS = 1
         private const val CHILD_TIMER = 2
+        private const val WIDE_THRESHOLD_DP = 220
 
         private val mainHandler = Handler(Looper.getMainLooper())
+        private val backgroundExecutor = Executors.newSingleThreadExecutor()
         private var pendingResetRunnable: Runnable? = null
+    }
+
+    private fun layoutResForWidget(
+        manager: AppWidgetManager,
+        appWidgetId: Int,
+        optionsOverride: Bundle? = null
+    ): Int {
+        val opts = optionsOverride ?: manager.getAppWidgetOptions(appWidgetId)
+        val minWidth = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
+        return if (minWidth >= WIDE_THRESHOLD_DP) {
+            R.layout.trono_widget_wide
+        } else {
+            R.layout.trono_widget
+        }
+    }
+
+    private fun currentDateKey(): String {
+        return SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+    }
+
+    /// Auto-resets the widget's today counter to 0 after midnight without needing
+    /// to wake Flutter.
+    private fun readTodayPoop(prefs: SharedPreferences): Int {
+        val savedDate = prefs.getString(TODAY_DATE_KEY, null)
+        val today = currentDateKey()
+        if (savedDate != null && savedDate != today) {
+            return 0
+        }
+        return prefs.getInt("today_poop", 0)
+    }
+
+    private fun applyStreakView(views: RemoteViews, streak: Int) {
+        if (streak > 0) {
+            views.setViewVisibility(R.id.widget_streak_text, View.VISIBLE)
+            views.setTextViewText(R.id.widget_streak_text, "🔥${streak}d")
+        } else {
+            views.setViewVisibility(R.id.widget_streak_text, View.GONE)
+        }
+    }
+
+    private fun performClickHaptic(context: Context) {
+        try {
+            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vm = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+                vm?.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            } ?: return
+            if (!vibrator.hasVibrator()) return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(18L, VibrationEffect.DEFAULT_AMPLITUDE))
+            }
+        } catch (_: Exception) {
+        }
     }
 
     private fun broadcastPendingIntent(
@@ -87,16 +156,24 @@ class TronoWidgetProvider : HomeWidgetProvider() {
         )
     }
 
-    private fun enqueueBackgroundLog(context: Context, uriString: String) {
-        try {
-            val flutterLoader = FlutterInjector.instance().flutterLoader()
-            flutterLoader.startInitialization(context)
-            flutterLoader.ensureInitializationComplete(context, null)
-            val bgIntent = Intent().apply {
-                data = Uri.parse(uriString)
+    /// Runs Flutter loader + WorkManager enqueue off the main thread via goAsync()
+    /// so the widget UI responds in <10ms even on cold boot.
+    private fun enqueueBackgroundLogAsync(context: Context, uriString: String) {
+        val pendingResult = goAsync()
+        val appCtx = context.applicationContext
+        backgroundExecutor.execute {
+            try {
+                val flutterLoader = FlutterInjector.instance().flutterLoader()
+                flutterLoader.startInitialization(appCtx)
+                flutterLoader.ensureInitializationComplete(appCtx, null)
+                val bgIntent = Intent().apply {
+                    data = Uri.parse(uriString)
+                }
+                HomeWidgetBackgroundWorker.enqueueWork(appCtx, bgIntent)
+            } catch (_: Exception) {
+            } finally {
+                pendingResult.finish()
             }
-            HomeWidgetBackgroundWorker.enqueueWork(context, bgIntent)
-        } catch (_: Exception) {
         }
     }
 
@@ -113,18 +190,24 @@ class TronoWidgetProvider : HomeWidgetProvider() {
             if (widgetIds.isNotEmpty()) {
                 val timerStartMs = readActiveTimerStartMs(prefs)
                 val targetChild = if (timerStartMs > 0L) CHILD_TIMER else CHILD_IDLE
-                val backPartial = RemoteViews(appCtx.packageName, R.layout.trono_widget).apply {
-                    setTextViewText(
-                        R.id.widget_today_count,
-                        prefs.getInt("today_poop", 0).toString()
-                    )
-                    setTextViewText(
-                        R.id.widget_avg_text,
-                        "${prefs.getString("avg_daily", "0.0") ?: "0.0"}/d"
-                    )
-                    setDisplayedChild(R.id.widget_button_flipper, targetChild)
+                for (id in widgetIds) {
+                    val backPartial = RemoteViews(
+                        appCtx.packageName,
+                        layoutResForWidget(mgr, id)
+                    ).apply {
+                        setTextViewText(
+                            R.id.widget_today_count,
+                            readTodayPoop(prefs).toString()
+                        )
+                        applyStreakView(this, prefs.getInt("streak", 0))
+                        setTextViewText(
+                            R.id.widget_avg_text,
+                            "${prefs.getString("avg_daily", "0.0") ?: "0.0"}/d"
+                        )
+                        setDisplayedChild(R.id.widget_button_flipper, targetChild)
+                    }
+                    mgr.partiallyUpdateAppWidget(id, backPartial)
                 }
-                mgr.partiallyUpdateAppWidget(widgetIds, backPartial)
             }
         }
         pendingResetRunnable = reset
@@ -154,10 +237,12 @@ class TronoWidgetProvider : HomeWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             ACTION_QUICK_LOG_POOP -> {
+                performClickHaptic(context)
                 handleLogAndFlash(context, durationSeconds = null)
                 return
             }
             ACTION_START_TIMER -> {
+                performClickHaptic(context)
                 val nowMs = System.currentTimeMillis()
                 val prefs = HomeWidgetPlugin.getData(context)
                 prefs.edit()
@@ -167,8 +252,11 @@ class TronoWidgetProvider : HomeWidgetProvider() {
 
                 pendingResetRunnable?.let { mainHandler.removeCallbacks(it) }
                 val (manager, ids) = getWidgetIds(context)
-                if (ids.isNotEmpty()) {
-                    val partial = RemoteViews(context.packageName, R.layout.trono_widget).apply {
+                for (id in ids) {
+                    val partial = RemoteViews(
+                        context.packageName,
+                        layoutResForWidget(manager, id)
+                    ).apply {
                         setChronometer(
                             R.id.widget_chronometer,
                             SystemClock.elapsedRealtime(),
@@ -178,11 +266,12 @@ class TronoWidgetProvider : HomeWidgetProvider() {
                         setDisplayedChild(R.id.widget_button_flipper, CHILD_TIMER)
                         bindClickIntents(context, this)
                     }
-                    manager.partiallyUpdateAppWidget(ids, partial)
+                    manager.partiallyUpdateAppWidget(id, partial)
                 }
                 return
             }
             ACTION_FINISH_TIMER -> {
+                performClickHaptic(context)
                 val prefs = HomeWidgetPlugin.getData(context)
                 val startMs = readActiveTimerStartMs(prefs)
                 val durationSecs = if (startMs > 0L) {
@@ -196,6 +285,7 @@ class TronoWidgetProvider : HomeWidgetProvider() {
                 return
             }
             ACTION_CANCEL_TIMER -> {
+                performClickHaptic(context)
                 val prefs = HomeWidgetPlugin.getData(context)
                 prefs.edit()
                     .putLong(TIMER_START_MS_KEY, 0L)
@@ -203,8 +293,11 @@ class TronoWidgetProvider : HomeWidgetProvider() {
                     .apply()
 
                 val (manager, ids) = getWidgetIds(context)
-                if (ids.isNotEmpty()) {
-                    val partial = RemoteViews(context.packageName, R.layout.trono_widget).apply {
+                for (id in ids) {
+                    val partial = RemoteViews(
+                        context.packageName,
+                        layoutResForWidget(manager, id)
+                    ).apply {
                         setChronometer(
                             R.id.widget_chronometer,
                             SystemClock.elapsedRealtime(),
@@ -214,7 +307,7 @@ class TronoWidgetProvider : HomeWidgetProvider() {
                         setDisplayedChild(R.id.widget_button_flipper, CHILD_IDLE)
                         bindClickIntents(context, this)
                     }
-                    manager.partiallyUpdateAppWidget(ids, partial)
+                    manager.partiallyUpdateAppWidget(id, partial)
                 }
                 return
             }
@@ -224,19 +317,23 @@ class TronoWidgetProvider : HomeWidgetProvider() {
 
     private fun handleLogAndFlash(context: Context, durationSeconds: Long?) {
         val widgetData = HomeWidgetPlugin.getData(context)
-        val currentToday = widgetData.getInt("today_poop", 0)
+        val currentToday = readTodayPoop(widgetData)
         val newToday = currentToday + 1
         val flashUntil = System.currentTimeMillis() + FLASH_DURATION_MS
 
         widgetData.edit()
             .putInt("today_poop", newToday)
+            .putString(TODAY_DATE_KEY, currentDateKey())
             .putLong(FLASH_UNTIL_KEY, flashUntil)
             .putLong(TIMER_START_MS_KEY, 0L)
             .apply()
 
         val (manager, ids) = getWidgetIds(context)
-        if (ids.isNotEmpty()) {
-            val partial = RemoteViews(context.packageName, R.layout.trono_widget).apply {
+        for (id in ids) {
+            val partial = RemoteViews(
+                context.packageName,
+                layoutResForWidget(manager, id)
+            ).apply {
                 setChronometer(
                     R.id.widget_chronometer,
                     SystemClock.elapsedRealtime(),
@@ -246,7 +343,7 @@ class TronoWidgetProvider : HomeWidgetProvider() {
                 setTextViewText(R.id.widget_today_count, newToday.toString())
                 setDisplayedChild(R.id.widget_button_flipper, CHILD_SUCCESS)
             }
-            manager.partiallyUpdateAppWidget(ids, partial)
+            manager.partiallyUpdateAppWidget(id, partial)
         }
 
         val uriString = if (durationSeconds != null && durationSeconds > 0L) {
@@ -254,8 +351,59 @@ class TronoWidgetProvider : HomeWidgetProvider() {
         } else {
             "trono://log?type=poop"
         }
-        enqueueBackgroundLog(context, uriString)
+        enqueueBackgroundLogAsync(context, uriString)
         scheduleFlashReset(context)
+    }
+
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle
+    ) {
+        super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
+        val widgetData = HomeWidgetPlugin.getData(context)
+        renderFullWidget(context, appWidgetManager, appWidgetId, widgetData, newOptions)
+    }
+
+    private fun renderFullWidget(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        widgetData: SharedPreferences,
+        optionsOverride: Bundle? = null
+    ) {
+        val todayPoop = readTodayPoop(widgetData)
+        val streak = widgetData.getInt("streak", 0)
+        val avgDaily = widgetData.getString("avg_daily", "0.0") ?: "0.0"
+        val timerStartMs = readActiveTimerStartMs(widgetData)
+        val layoutRes = layoutResForWidget(appWidgetManager, appWidgetId, optionsOverride)
+
+        val views = RemoteViews(context.packageName, layoutRes).apply {
+            setTextViewText(R.id.widget_today_count, todayPoop.toString())
+            applyStreakView(this, streak)
+            setTextViewText(R.id.widget_avg_text, "$avgDaily/d")
+            if (timerStartMs > 0L) {
+                val elapsedMs = (System.currentTimeMillis() - timerStartMs).coerceAtLeast(0L)
+                setChronometer(
+                    R.id.widget_chronometer,
+                    SystemClock.elapsedRealtime() - elapsedMs,
+                    null,
+                    true
+                )
+                setDisplayedChild(R.id.widget_button_flipper, CHILD_TIMER)
+            } else {
+                setChronometer(
+                    R.id.widget_chronometer,
+                    SystemClock.elapsedRealtime(),
+                    null,
+                    false
+                )
+                setDisplayedChild(R.id.widget_button_flipper, CHILD_IDLE)
+            }
+            bindClickIntents(context, this)
+        }
+        appWidgetManager.updateAppWidget(appWidgetId, views)
     }
 
     override fun onUpdate(
@@ -264,43 +412,24 @@ class TronoWidgetProvider : HomeWidgetProvider() {
         appWidgetIds: IntArray,
         widgetData: SharedPreferences
     ) {
-        val todayPoop = widgetData.getInt("today_poop", 0)
+        val todayPoop = readTodayPoop(widgetData)
+        val streak = widgetData.getInt("streak", 0)
         val avgDaily = widgetData.getString("avg_daily", "0.0") ?: "0.0"
         val isFlashing = System.currentTimeMillis() < widgetData.getLong(FLASH_UNTIL_KEY, 0L)
-        val timerStartMs = readActiveTimerStartMs(widgetData)
 
         for (appWidgetId in appWidgetIds) {
             if (isFlashing) {
-                val partial = RemoteViews(context.packageName, R.layout.trono_widget).apply {
+                val partial = RemoteViews(
+                    context.packageName,
+                    layoutResForWidget(appWidgetManager, appWidgetId)
+                ).apply {
                     setTextViewText(R.id.widget_today_count, todayPoop.toString())
+                    applyStreakView(this, streak)
                     setTextViewText(R.id.widget_avg_text, "$avgDaily/d")
                 }
                 appWidgetManager.partiallyUpdateAppWidget(appWidgetId, partial)
             } else {
-                val views = RemoteViews(context.packageName, R.layout.trono_widget).apply {
-                    setTextViewText(R.id.widget_today_count, todayPoop.toString())
-                    setTextViewText(R.id.widget_avg_text, "$avgDaily/d")
-                    if (timerStartMs > 0L) {
-                        val elapsedMs = (System.currentTimeMillis() - timerStartMs).coerceAtLeast(0L)
-                        setChronometer(
-                            R.id.widget_chronometer,
-                            SystemClock.elapsedRealtime() - elapsedMs,
-                            null,
-                            true
-                        )
-                        setDisplayedChild(R.id.widget_button_flipper, CHILD_TIMER)
-                    } else {
-                        setChronometer(
-                            R.id.widget_chronometer,
-                            SystemClock.elapsedRealtime(),
-                            null,
-                            false
-                        )
-                        setDisplayedChild(R.id.widget_button_flipper, CHILD_IDLE)
-                    }
-                    bindClickIntents(context, this)
-                }
-                appWidgetManager.updateAppWidget(appWidgetId, views)
+                renderFullWidget(context, appWidgetManager, appWidgetId, widgetData)
             }
         }
     }

@@ -33,6 +33,18 @@
             android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/widget_streak_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:maxLines="1"
+            android:text=""
+            android:textColor="#E05A2B"
+            android:textSize="11.5sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <TextView
             android:id="@+id/widget_avg_text"
             android:layout_width="0dp"
             android:layout_height="wrap_content"

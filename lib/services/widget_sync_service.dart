@@ -11,6 +11,7 @@ import 'settings_service.dart';
 
 const String kAndroidWidgetProvider = 'TronoWidgetProvider';
 const String kWidgetTimerStartKey = 'timer_start_ms';
+const String kWidgetTodayDateKey = 'today_date';
 
 /// Parsed payload from Android Home Screen Widget background callback URIs,
 /// e.g. `trono://log?type=poop` or `trono://log?type=poop&duration=245`.
@@ -48,8 +49,12 @@ class WidgetLogPayload {
 }
 
 /// Background entrypoint invoked when the user taps "+1" or finishes the live
-/// timer directly on the Android Home Screen Widget. Also captures GPS silently
-/// and matches Favorite Places / Home if enabled.
+/// timer directly on the Android Home Screen Widget.
+///
+/// Performance-first order:
+/// 1. Writes the BathroomLog to SQLite immediately (0ms) so it is never lost.
+/// 2. Syncs updated widget stats right away.
+/// 3. Enriches the saved row with silent GPS + Favorite Place match afterwards.
 @pragma('vm:entry-point')
 Future<void> tronoWidgetBackgroundCallback(Uri? uri) async {
   final payload = WidgetLogPayload.tryParseUri(uri);
@@ -59,52 +64,22 @@ Future<void> tronoWidgetBackgroundCallback(Uri? uri) async {
   final settings = SettingsService();
   await settings.init();
 
-  double? lat;
-  double? lng;
-  LocationKind? locKind;
-  String? placeLabel;
-
-  if (settings.autoGpsEnabled) {
-    final pos = await LocationService.tryGetPositionSilently();
-    if (pos != null) {
-      lat = pos.latitude;
-      lng = pos.longitude;
-      final matched = FavoritePlacesEngine.matchPlace(
-        lat,
-        lng,
-        settings.favoritePlaces,
-      );
-      if (matched != null) {
-        locKind = matched.locationKind;
-        placeLabel = matched.name;
-      } else {
-        locKind = LocationService.classifyAgainstHome(
-          lat,
-          lng,
-          homeLat: settings.homeLat,
-          homeLng: settings.homeLng,
-        );
-      }
-    }
-  }
-
   final now = DateTime.now();
   final log = BathroomLog(
     id: const Uuid().v4(),
     type: payload.type,
     timestamp: now,
     durationSeconds: payload.durationSeconds,
-    locationKind: locKind,
-    latitude: lat,
-    longitude: lng,
-    placeLabel: placeLabel,
     shareLevel: settings.defaultShareLevel,
     createdAt: now,
     updatedAt: now,
   );
 
+  // 1. Persist immediately to SQLite before any slow GPS work
   final repo = LocalBathroomRepository.instance;
   await repo.upsertLog(log);
+
+  // 2. Sync accurate stats + today_date back to the widget immediately
   final allLogs = await repo.getAllLogs();
   final stats = StatsCalculator.calculate(
     allLogs,
@@ -112,9 +87,45 @@ Future<void> tronoWidgetBackgroundCallback(Uri? uri) async {
     homeLng: settings.homeLng,
   );
   await WidgetSyncService.syncStats(stats, lastType: payload.type);
+
+  // 3. Optional non-blocking silent GPS + Favorite Place enrichment
+  if (settings.autoGpsEnabled) {
+    final pos = await LocationService.tryGetPositionSilently();
+    if (pos != null) {
+      final matched = FavoritePlacesEngine.matchPlace(
+        pos.latitude,
+        pos.longitude,
+        settings.favoritePlaces,
+      );
+      final locKind = matched?.locationKind ??
+          LocationService.classifyAgainstHome(
+            pos.latitude,
+            pos.longitude,
+            homeLat: settings.homeLat,
+            homeLng: settings.homeLng,
+          );
+      final enriched = log.copyWith(
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        locationKind: locKind,
+        placeLabel: matched?.name,
+        updatedAt: DateTime.now(),
+      );
+      await repo.upsertLog(enriched);
+    }
+  }
 }
 
 class WidgetSyncService {
+  static String? _lastStatsSignature;
+
+  static String formatDateKey(DateTime dt) {
+    final y = dt.year.toString().padLeft(4, '0');
+    final m = dt.month.toString().padLeft(2, '0');
+    final d = dt.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+
   static Future<void> initialize() async {
     try {
       await HomeWidget.registerInteractivityCallback(
@@ -128,15 +139,20 @@ class WidgetSyncService {
   static Future<void> syncStats(
     StatsSummary stats, {
     BathroomType? lastType,
+    DateTime? now,
   }) async {
+    final dateKey = formatDateKey(now ?? DateTime.now());
+    final avgStr = stats.weeklyAvg.avgPoopPerDay.toStringAsFixed(1);
+    final signature =
+        '$dateKey|${stats.todayTotal}|${stats.todayPoop}|$avgStr|${stats.currentStreak}|${lastType?.dbValue}';
+    if (_lastStatsSignature == signature) return;
+
     try {
       await Future.wait([
+        HomeWidget.saveWidgetData<String>(kWidgetTodayDateKey, dateKey),
         HomeWidget.saveWidgetData<int>('today_count', stats.todayTotal),
         HomeWidget.saveWidgetData<int>('today_poop', stats.todayPoop),
-        HomeWidget.saveWidgetData<String>(
-          'avg_daily',
-          stats.weeklyAvg.avgPoopPerDay.toStringAsFixed(1),
-        ),
+        HomeWidget.saveWidgetData<String>('avg_daily', avgStr),
         HomeWidget.saveWidgetData<int>('streak', stats.currentStreak),
         if (lastType != null)
           HomeWidget.saveWidgetData<String>('last_emoji', lastType.emoji),
@@ -145,6 +161,7 @@ class WidgetSyncService {
         androidName: kAndroidWidgetProvider,
         qualifiedAndroidName: 'com.trono.trono.$kAndroidWidgetProvider',
       );
+      _lastStatsSignature = signature;
     } catch (e) {
       debugPrint('HomeWidget sync skipped: $e');
     }
