@@ -204,6 +204,9 @@ class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
                                   return LogTile(
                                     key: ValueKey(log.id),
                                     log: log,
+                                    hourlyRate: widget.controller.hourlyRate,
+                                    currencySymbol:
+                                        widget.controller.currencySymbol,
                                     onTap: () => _editLog(context, log),
                                     onDelete: () =>
                                         _deleteWithUndo(context, log),

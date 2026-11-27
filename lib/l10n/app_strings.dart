@@ -174,9 +174,10 @@ class AppStrings {
     'fiber' => _t('🥗 Fibra', '🥗 Fiber'),
     'sweets' => _t('🍫 Dulces', '🍫 Sweets'),
     'stress' => _t('😰 Estrés', '😰 Stress'),
-    // Legacy fallbacks for previously saved logs
+    // Legacy & internal fallbacks for previously saved logs
     'home' => _t('🏠 Casa', '🏠 Home'),
     'work' => _t('💼 Trabajo', '💼 Work'),
+    BathroomLog.wfhTag => _t('💻 Teletrabajo', '💻 WFH'),
     'travel' => _t('✈️ Viaje', '✈️ Travel'),
     'restaurant' => _t('🍽️ Restaurante', '🍽️ Restaurant'),
     'morning' => _t('🌅 Mañana', '🌅 Morning'),
@@ -191,8 +192,11 @@ class AppStrings {
     LocationKind.away => _t('Fuera de casa', 'Away'),
   };
 
+  String get wfhLocationName => _t('Teletrabajo', 'WFH');
   String get quickHomeButton => _t('Casa', 'Home');
+  String get quickWfhButton => _t('Teletr.', 'WFH');
   String get quickWorkButton => _t('Trabajo', 'Work');
+  String get quickWorkCompactButton => _t('Ofi', 'Work');
   String get quickAwayButton => _t('Fuera', 'Away');
   String get quickAutoChip => _t('Auto', 'Auto');
   String get locationField => _t('Ubicación', 'Location');
@@ -315,8 +319,8 @@ class AppStrings {
   String get paidThisMonthLabel => _t('Este mes', 'This month');
   String get paidAllTimeLabel => _t('Total acumulado', 'All-time earned');
   String get paidSetupHint => _t(
-    'Configura tu sueldo aproximado en Ajustes (100% local) y elige 💼 Trabajo al registrar para ver cuánto ganas en el trono.',
-    'Set your approximate pay in Settings (100% local) and pick 💼 Work when logging to see how much you earn on the throne.',
+    'Configura tu sueldo aproximado en Ajustes (100% local) y elige 💼 Trabajo o 💻 Teletrabajo al registrar para ver cuánto ganas en el trono.',
+    'Set your approximate pay in Settings (100% local) and pick 💼 Work or 💻 WFH when logging to see how much you earn on the throne.',
   );
   String get configureSalaryButton => _t('Configurar sueldo', 'Set pay rate');
   String get salarySettingsSection => _t('Pagado en el Trono', 'Paid on the Throne');

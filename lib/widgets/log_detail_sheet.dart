@@ -84,6 +84,7 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
   late TextEditingController _noteController;
   late TextEditingController _placeController;
   LocationKind? _locationKind;
+  bool _isWfh = false;
   double? _latitude;
   double? _longitude;
   int? _rating;
@@ -119,7 +120,8 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
     _tags = {...?log?.tags};
     _noteController = TextEditingController(text: log?.note ?? '');
     _placeController = TextEditingController(text: log?.placeLabel ?? '');
-    _locationKind = log?.locationKind;
+    _isWfh = log?.isWfh ?? false;
+    _locationKind = log?.locationKind ?? (_isWfh ? LocationKind.home : null);
     _latitude = log?.latitude;
     _longitude = log?.longitude;
     _rating = log?.rating;
@@ -187,6 +189,13 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
   void _saveAndClose() {
     final now = DateTime.now();
     final base = widget.initialLog;
+    final finalTags = Set<String>.from(_tags);
+    if (_isWfh) {
+      finalTags.add(BathroomLog.wfhTag);
+    } else {
+      finalTags.remove(BathroomLog.wfhTag);
+    }
+    final finalLocationKind = _isWfh ? LocationKind.home : _locationKind;
     final result = BathroomLog(
       id: base?.id ?? const Uuid().v4(),
       type: _type,
@@ -196,11 +205,11 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
       effort: _effort,
       durationSeconds: _durationSeconds,
       color: _type.includesPoop ? _color : null,
-      tags: _tags.toList(),
+      tags: finalTags.toList(),
       note: _noteController.text.trim().isEmpty
           ? null
           : _noteController.text.trim(),
-      locationKind: _locationKind,
+      locationKind: finalLocationKind,
       latitude: _latitude,
       longitude: _longitude,
       placeLabel: _placeController.text.trim().isEmpty
@@ -429,23 +438,65 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
                     ),
                     const SizedBox(height: 18),
 
-                    // 3. Location: Home / Work / Away + GPS Pin + Place Label
+                    // 3. Location: Home / WFH / Work / Away + GPS Pin + Place Label
                     _SectionLabel(s.locationField),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        ...LocationKind.values.map((kind) {
-                          final selected = _locationKind == kind;
-                          return ChoiceChip(
-                            label: Text('${kind.emoji} ${s.locationKindName(kind)}'),
-                            selected: selected,
-                            onSelected: (_) => setState(() {
-                              _locationKind = selected ? null : kind;
-                            }),
-                          );
-                        }),
+                        ChoiceChip(
+                          label: Text('🏠 ${s.quickHomeButton}'),
+                          selected:
+                              _locationKind == LocationKind.home && !_isWfh,
+                          onSelected: (_) => setState(() {
+                            final wasHome =
+                                _locationKind == LocationKind.home && !_isWfh;
+                            _isWfh = false;
+                            _tags.remove(BathroomLog.wfhTag);
+                            _locationKind = wasHome ? null : LocationKind.home;
+                          }),
+                        ),
+                        ChoiceChip(
+                          key: const ValueKey('location_chip_wfh'),
+                          label: Text('💻 ${s.wfhLocationName}'),
+                          selected: _isWfh,
+                          onSelected: (_) => setState(() {
+                            if (_isWfh) {
+                              _isWfh = false;
+                              _locationKind = null;
+                              _tags.remove(BathroomLog.wfhTag);
+                            } else {
+                              _isWfh = true;
+                              _locationKind = LocationKind.home;
+                              _tags.add(BathroomLog.wfhTag);
+                            }
+                          }),
+                        ),
+                        ChoiceChip(
+                          label: Text('💼 ${s.quickWorkButton}'),
+                          selected:
+                              _locationKind == LocationKind.work && !_isWfh,
+                          onSelected: (_) => setState(() {
+                            final wasWork =
+                                _locationKind == LocationKind.work && !_isWfh;
+                            _isWfh = false;
+                            _tags.remove(BathroomLog.wfhTag);
+                            _locationKind = wasWork ? null : LocationKind.work;
+                          }),
+                        ),
+                        ChoiceChip(
+                          label: Text('🌍 ${s.quickAwayButton}'),
+                          selected:
+                              _locationKind == LocationKind.away && !_isWfh,
+                          onSelected: (_) => setState(() {
+                            final wasAway =
+                                _locationKind == LocationKind.away && !_isWfh;
+                            _isWfh = false;
+                            _tags.remove(BathroomLog.wfhTag);
+                            _locationKind = wasAway ? null : LocationKind.away;
+                          }),
+                        ),
                         if (_latitude != null && _longitude != null)
                           InputChip(
                             avatar: const Icon(
@@ -493,6 +544,10 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
                               setState(() {
                                 _placeController.text = place.name;
                                 _locationKind = place.locationKind;
+                                if (place.locationKind != LocationKind.home) {
+                                  _isWfh = false;
+                                  _tags.remove(BathroomLog.wfhTag);
+                                }
                                 _latitude = place.latitude;
                                 _longitude = place.longitude;
                               });

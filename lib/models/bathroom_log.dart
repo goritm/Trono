@@ -185,6 +185,12 @@ const List<String> kDefaultQuickTags = [
 ];
 
 class BathroomLog {
+  /// Reserved internal tag representing Work From Home (WFH / Teletrabajo).
+  /// Paired with [LocationKind.home] so Territory Map / Home-vs-Away treat it
+  /// as Home while Paid on the Throne & work badges count it as Work — with
+  /// zero SQLite or Supabase migrations.
+  static const String wfhTag = 'wfh';
+
   const BathroomLog({
     required this.id,
     required this.type,
@@ -237,10 +243,15 @@ class BathroomLog {
 
   bool get hasCoordinates => latitude != null && longitude != null;
 
+  /// True when logged while working from home (WFH / Teletrabajo).
+  bool get isWfh => tags.contains(wfhTag);
+
   /// Effective Home / Work / Away classification (falls back cleanly to legacy tags).
   LocationKind? get effectiveLocationKind {
     if (locationKind != null) return locationKind;
-    if (tags.contains('home')) return LocationKind.home;
+    if (tags.contains('home') || tags.contains(wfhTag)) {
+      return LocationKind.home;
+    }
     if (tags.contains('work')) return LocationKind.work;
     if (tags.contains('travel') || tags.contains('restaurant')) {
       return LocationKind.away;
@@ -249,7 +260,9 @@ class BathroomLog {
   }
 
   bool get isWorkVisit =>
-      effectiveLocationKind == LocationKind.work || tags.contains('work');
+      effectiveLocationKind == LocationKind.work ||
+      tags.contains('work') ||
+      isWfh;
 
   bool get hasDetails =>
       bristolType != null ||

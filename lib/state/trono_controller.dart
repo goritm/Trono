@@ -296,6 +296,7 @@ class TronoController extends ChangeNotifier {
   Future<(BathroomLog, UnlockEvent)> quickLog(
     BathroomType type, {
     LocationKind? locationKind,
+    List<String> tags = const [],
   }) async {
     int? durationSecs;
     if (_activeTimerStart != null) {
@@ -305,7 +306,7 @@ class TronoController extends ChangeNotifier {
     }
 
     final now = DateTime.now();
-    // If user explicitly tapped "Home" shortcut and has saved Home coords, attach them immediately!
+    // If user explicitly tapped "Home" or "WFH" shortcut and has saved Home coords, attach them immediately!
     final initialLat =
         (locationKind == LocationKind.home && _homeLat != null) ? _homeLat : null;
     final initialLng =
@@ -316,6 +317,7 @@ class TronoController extends ChangeNotifier {
       type: type,
       timestamp: now,
       durationSeconds: durationSecs,
+      tags: List<String>.unmodifiable(tags),
       locationKind: locationKind,
       latitude: initialLat,
       longitude: initialLng,
