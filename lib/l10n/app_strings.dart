@@ -772,6 +772,18 @@ class AppStrings {
   String awayPctShort(int pct) => _t('$pct% fuera', '$pct% away');
   String get summaryOnlyBadge => _t('Solo resumen', 'Summary only');
   String get youBadge => _t('Tú', 'You');
+  String get commentsSheetTitle => _t('Comentarios', 'Comments');
+  String get noCommentsYet =>
+      _t('Sin comentarios aún — ¡sé el primero!', 'No comments yet — be the first!');
+  String get commentInputHint =>
+      _t('Añade un comentario...', 'Add a comment...');
+  String get commentSendTooltip => _t('Enviar comentario', 'Send comment');
+  String get deleteCommentTooltip =>
+      _t('Eliminar comentario', 'Delete comment');
+  String get commentFailedToast =>
+      _t('No se pudo enviar el comentario', 'Could not send comment');
+  String get commentDeleteFailedToast =>
+      _t('No se pudo eliminar el comentario', 'Could not delete comment');
   String get groupNotFoundError => _t('No existe ningún grupo con ese código', 'No group found with that code');
   String get authGenericError => _t('No se pudo completar. Revisa tus datos o conexión.', 'Could not complete. Check your details or connection.');
 

@@ -544,6 +544,23 @@ class _SocialScreenState extends State<SocialScreen> {
     );
   }
 
+  Future<void> _showCommentsSheet(
+    BuildContext context,
+    SocialController social,
+    SharedFeedItem item,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _CommentsSheet(
+        social: social,
+        initialItem: item,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -865,6 +882,10 @@ class _SocialScreenState extends State<SocialScreen> {
             onReact: (emoji) {
               HapticFeedback.selectionClick();
               social.toggleReaction(item.logId, emoji);
+            },
+            onOpenComments: () {
+              HapticFeedback.selectionClick();
+              _showCommentsSheet(context, social, item);
             },
           ),
         );
@@ -1821,12 +1842,14 @@ class _FeedItemCard extends StatelessWidget {
     required this.item,
     required this.currentUserId,
     required this.onReact,
+    required this.onOpenComments,
     this.syncedDuo,
   });
 
   final SharedFeedItem item;
   final String? currentUserId;
   final ValueChanged<String> onReact;
+  final VoidCallback onOpenComments;
   final SyncedDuoPair? syncedDuo;
 
   @override
@@ -2047,11 +2070,55 @@ class _FeedItemCard extends StatelessWidget {
           Wrap(
             spacing: 7,
             runSpacing: 6,
-            children: kReactionEmojis.map((emoji) {
-              final count = item.countForEmoji(emoji);
-              final mine = item.hasReacted(emoji, currentUserId);
-              return GestureDetector(
-                onTap: () => onReact(emoji),
+            children: [
+              ...kReactionEmojis.map((emoji) {
+                final count = item.countForEmoji(emoji);
+                final mine = item.hasReacted(emoji, currentUserId);
+                return GestureDetector(
+                  onTap: () => onReact(emoji),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 120),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: mine
+                          ? TronoColors.terracotta.withValues(alpha: 0.16)
+                          : TronoColors.bg(context),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: mine
+                            ? TronoColors.terracotta
+                            : TronoColors.border(context),
+                        width: mine ? 1.8 : 1.3,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(emoji, style: const TextStyle(fontSize: 14)),
+                        if (count > 0) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            '$count',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w900,
+                              color: mine
+                                  ? TronoColors.terracotta
+                                  : TronoColors.ink(context),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              }),
+              GestureDetector(
+                key: ValueKey('feed_comment_btn_${item.logId}'),
+                onTap: onOpenComments,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 120),
                   padding: const EdgeInsets.symmetric(
@@ -2059,42 +2126,464 @@ class _FeedItemCard extends StatelessWidget {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: mine
-                        ? TronoColors.terracotta.withValues(alpha: 0.16)
+                    color: item.comments.isNotEmpty
+                        ? TronoColors.gold.withValues(alpha: 0.16)
                         : TronoColors.bg(context),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: mine
-                          ? TronoColors.terracotta
+                      color: item.comments.isNotEmpty
+                          ? TronoColors.gold
                           : TronoColors.border(context),
-                      width: mine ? 1.8 : 1.3,
+                      width: item.comments.isNotEmpty ? 1.6 : 1.3,
                     ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(emoji, style: const TextStyle(fontSize: 14)),
-                      if (count > 0) ...[
+                      const Text('💬', style: TextStyle(fontSize: 14)),
+                      if (item.comments.isNotEmpty) ...[
                         const SizedBox(width: 4),
                         Text(
-                          '$count',
+                          '${item.comments.length}',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w900,
-                            color: mine
-                                ? TronoColors.terracotta
-                                : TronoColors.ink(context),
+                            color: TronoColors.ink(context),
                           ),
                         ),
                       ],
                     ],
                   ),
                 ),
-              );
-            }).toList(),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class _CommentsSheet extends StatefulWidget {
+  const _CommentsSheet({
+    required this.social,
+    required this.initialItem,
+  });
+
+  final SocialController social;
+  final SharedFeedItem initialItem;
+
+  @override
+  State<_CommentsSheet> createState() => _CommentsSheetState();
+}
+
+class _CommentsSheetState extends State<_CommentsSheet> {
+  final TextEditingController _inputCtrl = TextEditingController();
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _inputCtrl.dispose();
+    super.dispose();
+  }
+
+  SharedFeedItem _resolveItem() {
+    for (final entry in widget.social.feed) {
+      if (entry.logId == widget.initialItem.logId) {
+        return entry;
+      }
+    }
+    return widget.initialItem;
+  }
+
+  Future<void> _submit() async {
+    if (_submitting) return;
+    final raw = _inputCtrl.text;
+    final clean = LogComment.validateBody(raw);
+    if (clean == null) return;
+
+    final s = AppStrings.of(context);
+    setState(() => _submitting = true);
+    _inputCtrl.clear();
+
+    final ok = await widget.social.addComment(widget.initialItem.logId, clean);
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (!ok) {
+      _inputCtrl.text = raw;
+      _inputCtrl.selection = TextSelection.collapsed(offset: raw.length);
+      showTronoToast(context, s.commentFailedToast);
+    }
+  }
+
+  Future<void> _deleteComment(LogComment comment) async {
+    final s = AppStrings.of(context);
+    HapticFeedback.selectionClick();
+    final ok = await widget.social.deleteComment(
+      widget.initialItem.logId,
+      comment.id,
+    );
+    if (!mounted) return;
+    if (!ok) {
+      showTronoToast(context, s.commentDeleteFailedToast);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final maxHeight = MediaQuery.of(context).size.height * 0.78;
+    final canSend =
+        !_submitting && LogComment.validateBody(_inputCtrl.text) != null;
+
+    return ListenableBuilder(
+      listenable: widget.social,
+      builder: (context, _) {
+        final item = _resolveItem();
+        final currentUid = widget.social.currentUserId;
+
+        return Padding(
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: Container(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            decoration: BoxDecoration(
+              color: TronoColors.bg(context),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
+              border: Border.all(
+                color: TronoColors.border(context),
+                width: 2,
+              ),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 10),
+                  Container(
+                    width: 42,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: TronoColors.border(context),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 38,
+                          height: 38,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: TronoColors.terracotta.withValues(
+                              alpha: 0.14,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            item.avatarEmoji,
+                            style: const TextStyle(fontSize: 19),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.displayName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                  color: TronoColors.ink(context),
+                                ),
+                              ),
+                              const SizedBox(height: 1),
+                              Text(
+                                '${item.type.emoji} ${s.typeName(item.type)} · ${s.relativeTime(item.timestamp)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: TronoColors.muted(context),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: TronoColors.surface(context),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: TronoColors.border(context),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Text(
+                            '💬 ${item.comments.length}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w900,
+                              color: TronoColors.ink(context),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(
+                    height: 1,
+                    thickness: 1.5,
+                    color: TronoColors.border(context),
+                  ),
+                  if (item.comments.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 34,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('💬', style: TextStyle(fontSize: 32)),
+                          const SizedBox(height: 8),
+                          Text(
+                            s.noCommentsYet,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: TronoColors.muted(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                        itemCount: item.comments.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final comment = item.comments[index];
+                          final isMine =
+                              currentUid != null &&
+                              comment.userId == currentUid;
+
+                          return Container(
+                            padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+                            decoration: BoxDecoration(
+                              color: TronoColors.surface(context),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: TronoColors.border(context),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 32,
+                                  height: 32,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: TronoColors.terracotta.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    comment.avatarEmoji,
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              comment.displayName,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w900,
+                                                color: TronoColors.ink(context),
+                                              ),
+                                            ),
+                                          ),
+                                          if (isMine) ...[
+                                            const SizedBox(width: 5),
+                                            Text(
+                                              '(${s.youBadge})',
+                                              style: TextStyle(
+                                                fontSize: 11.5,
+                                                fontWeight: FontWeight.w700,
+                                                color: TronoColors.muted(
+                                                  context,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            s.relativeTime(comment.createdAt),
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: TronoColors.muted(context),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        comment.body,
+                                        style: TextStyle(
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: TronoColors.ink(context),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (isMine)
+                                  IconButton(
+                                    key: ValueKey(
+                                      'comment_delete_btn_${comment.id}',
+                                    ),
+                                    tooltip: s.deleteCommentTooltip,
+                                    visualDensity: VisualDensity.compact,
+                                    constraints: const BoxConstraints(
+                                      minWidth: 32,
+                                      minHeight: 32,
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    onPressed: () => _deleteComment(comment),
+                                    icon: Icon(
+                                      Icons.delete_outline_rounded,
+                                      size: 18,
+                                      color: TronoColors.muted(context),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  Divider(
+                    height: 1,
+                    thickness: 1.5,
+                    color: TronoColors.border(context),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            key: const ValueKey('comment_input_field'),
+                            controller: _inputCtrl,
+                            maxLength: LogComment.maxBodyLength,
+                            minLines: 1,
+                            maxLines: 3,
+                            textCapitalization: TextCapitalization.sentences,
+                            textInputAction: TextInputAction.send,
+                            onChanged: (_) => setState(() {}),
+                            onSubmitted: (_) => _submit(),
+                            decoration: InputDecoration(
+                              hintText: s.commentInputHint,
+                              counterText: '',
+                              isDense: true,
+                              filled: true,
+                              fillColor: TronoColors.surface(context),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide(
+                                  color: TronoColors.border(context),
+                                  width: 1.5,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide(
+                                  color: TronoColors.border(context),
+                                  width: 1.5,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: const BorderSide(
+                                  color: TronoColors.terracotta,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton.filled(
+                          key: const ValueKey('comment_send_btn'),
+                          tooltip: s.commentSendTooltip,
+                          style: IconButton.styleFrom(
+                            backgroundColor: TronoColors.terracotta,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: TronoColors.border(
+                              context,
+                            ),
+                            disabledForegroundColor: TronoColors.muted(context),
+                            minimumSize: const Size(44, 44),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          onPressed: canSend ? _submit : null,
+                          icon: _submitting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.send_rounded, size: 19),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

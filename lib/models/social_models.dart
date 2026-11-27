@@ -177,6 +177,58 @@ class LogReaction {
   }
 }
 
+class LogComment {
+  const LogComment({
+    required this.id,
+    required this.logId,
+    required this.userId,
+    required this.displayName,
+    required this.avatarEmoji,
+    required this.body,
+    required this.createdAt,
+  });
+
+  static const int maxBodyLength = 280;
+
+  final String id;
+  final String logId;
+  final String userId;
+  final String displayName;
+  final String avatarEmoji;
+  final String body;
+  final DateTime createdAt;
+
+  /// Returns trimmed comment text if valid (1..280 characters), or `null`
+  /// when empty/whitespace-only or over the character limit.
+  static String? validateBody(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty || trimmed.length > maxBodyLength) {
+      return null;
+    }
+    return trimmed;
+  }
+
+  factory LogComment.fromMap(Map<String, dynamic> map) {
+    final profileMap = map['profiles'] as Map<String, dynamic>?;
+    final rawName =
+        (profileMap?['display_name'] ?? map['display_name'])?.toString().trim();
+    final rawEmoji =
+        (profileMap?['avatar_emoji'] ?? map['avatar_emoji'])?.toString().trim();
+    return LogComment(
+      id: map['id']?.toString() ?? '',
+      logId: map['log_id']?.toString() ?? '',
+      userId: map['user_id']?.toString() ?? '',
+      displayName: (rawName != null && rawName.isNotEmpty) ? rawName : 'Trono',
+      avatarEmoji: (rawEmoji != null && rawEmoji.isNotEmpty) ? rawEmoji : '👑',
+      body: map['body']?.toString() ?? '',
+      createdAt:
+          (DateTime.tryParse(map['created_at']?.toString() ?? '') ??
+                  DateTime.now())
+              .toLocal(),
+    );
+  }
+}
+
 class SharedFeedItem {
   const SharedFeedItem({
     required this.logId,
@@ -197,6 +249,7 @@ class SharedFeedItem {
     this.note,
     this.placeLabel,
     this.reactions = const [],
+    this.comments = const [],
   });
 
   final String logId;
@@ -217,6 +270,7 @@ class SharedFeedItem {
   final String? note;
   final String? placeLabel;
   final List<LogReaction> reactions;
+  final List<LogComment> comments;
 
   int countForEmoji(String emoji) =>
       reactions.where((r) => r.emoji == emoji).length;
@@ -228,7 +282,10 @@ class SharedFeedItem {
     );
   }
 
-  SharedFeedItem copyWith({List<LogReaction>? reactions}) {
+  SharedFeedItem copyWith({
+    List<LogReaction>? reactions,
+    List<LogComment>? comments,
+  }) {
     return SharedFeedItem(
       logId: logId,
       userId: userId,
@@ -248,6 +305,7 @@ class SharedFeedItem {
       note: note,
       placeLabel: placeLabel,
       reactions: reactions ?? this.reactions,
+      comments: comments ?? this.comments,
     );
   }
 
@@ -255,6 +313,7 @@ class SharedFeedItem {
     Map<String, dynamic> map, {
     required UserProfile author,
     List<LogReaction> reactions = const [],
+    List<LogComment> comments = const [],
   }) {
     final rawTags = map['tags'];
     final tags = rawTags is List
@@ -286,6 +345,7 @@ class SharedFeedItem {
       note: isFull ? map['note']?.toString() : null,
       placeLabel: isFull ? map['place_label']?.toString() : null,
       reactions: reactions,
+      comments: comments,
     );
   }
 }
