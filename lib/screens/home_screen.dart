@@ -391,39 +391,40 @@ class _HomeScreenState extends State<HomeScreen> {
         ? todayLogs
         : controller.logs.take(5).toList();
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final heroSub = switch (_locationMode) {
-      _QuickLocationMode.auto => s.oneTapHint,
-      _QuickLocationMode.home => '🏠 ${s.locationKindName(LocationKind.home)} · ${s.oneTapHint}',
-      _QuickLocationMode.wfh => '💻 ${s.wfhLocationName} · ${s.oneTapHint}',
-      _QuickLocationMode.work => '💼 ${s.locationKindName(LocationKind.work)} · ${s.oneTapHint}',
-      _QuickLocationMode.away => '🌍 ${s.locationKindName(LocationKind.away)} · ${s.oneTapHint}',
-    };
+    final todayPaid = InsightsEngine.calculateTodayPaid(
+      todayLogs,
+      hourlyRate: controller.hourlyRate,
+    );
 
     return CustomScrollView(
       slivers: [
         SliverAppBar(
           pinned: true,
           toolbarHeight: 60,
-          title: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                s.appName,
-                style: TextStyle(
-                  fontSize: 25,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.8,
-                  color: TronoColors.ink(context),
+          titleSpacing: 14,
+          title: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  s.appName,
+                  style: TextStyle(
+                    fontSize: 25,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.8,
+                    color: TronoColors.ink(context),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 7),
-              _TronoBrandMark(
-                key: const ValueKey('home_brand_mark'),
-                size: 27,
-                isDark: Theme.of(context).brightness == Brightness.dark,
-              ),
-            ],
+                const SizedBox(width: 6),
+                _TronoBrandMark(
+                  key: const ValueKey('home_brand_mark'),
+                  size: 27,
+                  isDark: Theme.of(context).brightness == Brightness.dark,
+                ),
+              ],
+            ),
           ),
           actions: [
             ChunkyHudPill(
@@ -431,11 +432,11 @@ class _HomeScreenState extends State<HomeScreen> {
               iconColor: TronoColors.terracotta,
               label: '${stats.currentStreak}',
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             ChunkyHudPill(
               icon: Icons.bolt_rounded,
               iconColor: TronoColors.gold,
-              label: '${gam.totalXp}',
+              label: s.levelBadge(gam.currentRank.level),
               onTap: widget.onOpenAwards,
             ),
             if (widget.onOpenSettings != null) ...[
@@ -540,29 +541,37 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     ),
-                    GestureDetector(
-                      onTap: widget.onOpenAwards,
-                      child: Container(
+                    if (controller.hasHourlyRate)
+                      Container(
+                        key: const ValueKey('home_today_paid_pill'),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: TronoColors.gold.withValues(alpha: 0.18),
+                          color: isDark
+                              ? const Color(0xFF2B2618)
+                              : const Color(0xFFFFF8E6),
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: TronoColors.gold.withValues(alpha: 0.45),
+                            width: 1.2,
+                          ),
                         ),
                         child: Text(
-                          'NV.${gam.currentRank.level}',
+                          '💰 ${controller.currencySymbol}${todayPaid.toStringAsFixed(2)}',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: FontWeight.w900,
                             color: isDark
                                 ? TronoColors.gold
                                 : TronoColors.goldLip,
+                            fontFeatures: const [
+                              FontFeature.tabularFigures(),
+                            ],
                           ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -622,7 +631,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 _AnimatedHeroLogButton(
                   title: s.heroLogTitle.toUpperCase(),
                   successTitle: s.heroLoggedFlash.toUpperCase(),
-                  subtitle: heroSub,
                   onConfirmedTap: () => _handleQuickTap(
                     context,
                     BathroomType.poop,
@@ -778,13 +786,11 @@ class _AnimatedHeroLogButton extends StatefulWidget {
   const _AnimatedHeroLogButton({
     required this.title,
     required this.successTitle,
-    required this.subtitle,
     required this.onConfirmedTap,
   });
 
   final String title;
   final String successTitle;
-  final String subtitle;
   final Future<void> Function() onConfirmedTap;
 
   @override
@@ -930,37 +936,21 @@ class _AnimatedHeroLogButtonState extends State<_AnimatedHeroLogButton>
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 150),
-                        child: Align(
-                          key: ValueKey(_celebrating),
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            _celebrating ? widget.successTitle : widget.title,
-                            style: TextStyle(
-                              color: fgColor,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        widget.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 150),
+                    child: Align(
+                      key: ValueKey(_celebrating),
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _celebrating ? widget.successTitle : widget.title,
                         style: TextStyle(
-                          color: fgColor.withValues(alpha: 0.86),
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
+                          color: fgColor,
+                          fontSize: 21,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.3,
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
                 AnimatedContainer(

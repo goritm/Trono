@@ -407,7 +407,7 @@ void main() {
       expect(find.byKey(const ValueKey('home_cancel_timer_btn')), findsOneWidget);
       expect(find.byKey(const ValueKey('home_start_timer_btn')), findsNothing);
       expect(find.text('00:00'), findsOneWidget);
-      expect(find.textContaining('€0.00'), findsOneWidget);
+      expect(find.textContaining('+€0.00'), findsOneWidget);
 
       // 3. Cancel timer returns cleanly to idle Claim Throne hero
       await tester.tap(find.byKey(const ValueKey('home_cancel_timer_btn')));

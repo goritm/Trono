@@ -47,6 +47,7 @@ class AppStrings {
   String get todayCountLabel => _t('Hoy', 'Today');
   String get dailyAvgLabel => _t('Prom/día', 'Avg/day');
   String get streakLabel => _t('Racha', 'Streak');
+  String levelBadge(int level) => _t('NV.$level', 'LVL.$level');
   String daysShort(int n) => _t('${n}d', '${n}d');
   String get addPastVisit => _t('Registrar visita pasada', 'Log past visit');
   String get pastVisitShort => _t('Pasada', 'Past');

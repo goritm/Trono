@@ -1918,7 +1918,7 @@ class _FeedItemCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(7),
                           ),
                           child: Text(
-                            'NV.${item.rankLevel}',
+                            s.levelBadge(item.rankLevel),
                             style: const TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w900,

@@ -149,7 +149,7 @@ class _WrappedScreenState extends State<WrappedScreen> {
                       ),
                       const Spacer(),
                       Text(
-                        '${gam.currentRank.emoji} NV.${gam.currentRank.level}',
+                        '${gam.currentRank.emoji} ${s.levelBadge(gam.currentRank.level)}',
                         style: const TextStyle(
                           color: TronoColors.gold,
                           fontWeight: FontWeight.w900,

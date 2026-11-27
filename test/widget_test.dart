@@ -1249,10 +1249,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('THIS MONTH VS LAST MONTH'), findsOneWidget);
 
-      // Back to Log, tap NV.1 badge -> jumps directly to Stats > Awards
+      // Back to Log, tap LVL.1 pill -> jumps directly to Stats > Awards
       await tester.tap(find.text('Log'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('NV.1'));
+      await tester.tap(find.text('LVL.1'));
       await tester.pumpAndSettle();
       expect(find.text('RANK LADDER'), findsOneWidget);
 
