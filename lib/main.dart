@@ -245,7 +245,10 @@ class _TronoShellState extends State<_TronoShell> with WidgetsBindingObserver {
         isRootTab: true,
         onOpenSettings: () => _openSettings(context),
       ),
-      SocialScreen(social: widget.socialController),
+      SocialScreen(
+        social: widget.socialController,
+        onOpenSettings: () => _openSettings(context),
+      ),
     ];
 
     return Scaffold(

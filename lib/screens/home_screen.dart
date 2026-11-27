@@ -212,8 +212,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return CustomScrollView(
       slivers: [
         SliverAppBar(
-          floating: true,
-          toolbarHeight: 62,
+          pinned: true,
+          toolbarHeight: 60,
           title: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -267,6 +267,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: widget.onOpenSettings,
                 icon: const Icon(Icons.settings_outlined),
               ),
+              const SizedBox(width: 4),
             ] else
               const SizedBox(width: 16),
           ],

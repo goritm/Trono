@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../config/feature_flags.dart';
 import '../l10n/app_strings.dart';
 import '../models/bathroom_log.dart';
 import '../models/insights.dart';
@@ -268,17 +269,18 @@ class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
       appBar: AppBar(
         title: Text(s.navStats),
         actions: [
-          IconButton(
-            tooltip: s.wrappedTitle,
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => WrappedScreen(controller: widget.controller),
-                ),
-              );
-            },
-            icon: const Icon(Icons.auto_awesome_rounded),
-          ),
+          if (FeatureFlags.showWrapped)
+            IconButton(
+              tooltip: s.wrappedTitle,
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => WrappedScreen(controller: widget.controller),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.auto_awesome_rounded),
+            ),
           if (widget.onOpenSettings != null)
             IconButton(
               tooltip: s.navSettings,
@@ -453,59 +455,60 @@ class _CalendarStatsScreenState extends State<CalendarStatsScreen> {
           const SizedBox(height: 16),
         ],
 
-        // 6. Shareable Trono Wrapped Banner
-        ChunkyButton(
-          width: double.infinity,
-          color: TronoColors.obsidian,
-          lipColor: TronoColors.obsidianLip,
-          borderColor: TronoColors.gold.withValues(alpha: 0.5),
-          lipHeight: 4,
-          borderRadius: 20,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 18,
-            vertical: 14,
-          ),
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) =>
-                    WrappedScreen(controller: widget.controller),
-              ),
-            );
-          },
-          child: Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: TronoColors.gold.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
+        // 7. Shareable Trono Wrapped Banner (gated by seasonal FeatureFlags.showWrapped)
+        if (FeatureFlags.showWrapped)
+          ChunkyButton(
+            width: double.infinity,
+            color: TronoColors.obsidian,
+            lipColor: TronoColors.obsidianLip,
+            borderColor: TronoColors.gold.withValues(alpha: 0.5),
+            lipHeight: 4,
+            borderRadius: 20,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 18,
+              vertical: 14,
+            ),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      WrappedScreen(controller: widget.controller),
                 ),
-                child: const Icon(
-                  Icons.auto_awesome_rounded,
-                  color: TronoColors.gold,
-                  size: 21,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  s.wrappedButtonLabel,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 15,
+              );
+            },
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: TronoColors.gold.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.auto_awesome_rounded,
+                    color: TronoColors.gold,
+                    size: 21,
                   ),
                 ),
-              ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: TronoColors.gold,
-              ),
-            ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    s.wrappedButtonLabel,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: TronoColors.gold,
+                ),
+              ],
+            ),
           ),
-        ),
       ],
     );
   }

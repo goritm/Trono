@@ -1078,6 +1078,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               }
                             },
                     ),
+                    const Divider(height: 1),
+                    ListTile(
+                      key: const ValueKey('settings_changelog_tile'),
+                      leading: _ColorIcon(
+                        Icons.auto_awesome_rounded,
+                        TronoColors.terracotta,
+                      ),
+                      title: Text(
+                        s.changelogMenuTitle,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      subtitle: Text('v${ctrl.installedVersion}'),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () async {
+                        final release = await ctrl.fetchInstalledReleaseNotes();
+                        if (!context.mounted) return;
+                        if (release != null &&
+                            ReleaseNotesFormatter.extractLines(
+                              release.releaseNotes,
+                            ).isNotEmpty) {
+                          await showReleaseNotesSheet(
+                            context,
+                            release: release,
+                          );
+                        } else {
+                          showTronoToast(context, s.changelogUnavailableToast);
+                        }
+                      },
+                    ),
                   ],
                 ),
               ),

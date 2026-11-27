@@ -5,12 +5,13 @@ import '../models/app_update.dart';
 import '../theme/app_theme.dart';
 import 'chunky_widgets.dart';
 
-/// Displays formatted GitHub Release notes in a tactile bottom sheet with a
-/// direct Download CTA.
+/// Displays formatted GitHub Release notes in a tactile bottom sheet.
+/// When [onDownload] is provided, displays a primary Download CTA alongside Close;
+/// when omitted (e.g., viewing the installed version's changelog), shows a single Close CTA.
 Future<void> showReleaseNotesSheet(
   BuildContext context, {
   required AppReleaseInfo release,
-  required VoidCallback onDownload,
+  VoidCallback? onDownload,
 }) {
   final s = AppStrings.of(context);
   final lines = ReleaseNotesFormatter.extractLines(release.releaseNotes);
@@ -60,15 +61,17 @@ Future<void> showReleaseNotesSheet(
                             color: TronoColors.ink(sheetCtx),
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          s.updateAvailableSub,
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: TronoColors.muted(sheetCtx),
+                        if (onDownload != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            s.updateAvailableSub,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: TronoColors.muted(sheetCtx),
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -116,54 +119,75 @@ Future<void> showReleaseNotesSheet(
                 ),
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(sheetCtx).pop(),
+              if (onDownload != null)
+                Row(
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(sheetCtx).pop(),
+                      child: Text(
+                        s.releaseNotesCloseBtn,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          color: TronoColors.muted(sheetCtx),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ChunkyButton(
+                        key: const ValueKey('release_notes_download_btn'),
+                        color: TronoColors.terracotta,
+                        lipColor: TronoColors.terracottaLip,
+                        lipHeight: 4,
+                        borderRadius: 16,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        onPressed: () {
+                          Navigator.of(sheetCtx).pop();
+                          onDownload();
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.download_rounded,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              s.updateDownloadBtn,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              else
+                ChunkyButton(
+                  width: double.infinity,
+                  color: TronoColors.terracotta,
+                  lipColor: TronoColors.terracottaLip,
+                  lipHeight: 4,
+                  borderRadius: 16,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  onPressed: () => Navigator.of(sheetCtx).pop(),
+                  child: Center(
                     child: Text(
                       s.releaseNotesCloseBtn,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: TronoColors.muted(sheetCtx),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ChunkyButton(
-                      key: const ValueKey('release_notes_download_btn'),
-                      color: TronoColors.terracotta,
-                      lipColor: TronoColors.terracottaLip,
-                      lipHeight: 4,
-                      borderRadius: 16,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      onPressed: () {
-                        Navigator.of(sheetCtx).pop();
-                        onDownload();
-                      },
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.download_rounded,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            s.updateDownloadBtn,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
             ],
           ),
         ),

@@ -51,12 +51,46 @@ class UpdateCheckerService {
   );
   static const Duration autoCheckThrottle = Duration(hours: 12);
 
+  static Uri releaseByTagUri(String versionOrTag) {
+    final parsed = SemVer.tryParse(versionOrTag);
+    final normalizedTag = parsed != null
+        ? 'v$parsed'
+        : (versionOrTag.trim().startsWith('v')
+            ? versionOrTag.trim()
+            : 'v${versionOrTag.trim()}');
+    return Uri.parse(
+      'https://api.github.com/repos/goritm/Trono/releases/tags/$normalizedTag',
+    );
+  }
+
   final SettingsService _settings;
   final VersionProviderFn _versionProvider;
   final HttpGetFn _httpGet;
   final NowProviderFn _nowProvider;
+  final Map<String, AppReleaseInfo> _tagCache = {};
 
   Future<String> getInstalledVersion() => _versionProvider();
+
+  /// Fetches (and caches in memory) the GitHub Release metadata & release notes
+  /// for a specific version/tag (e.g. `'2.5.0'` or `'v2.5.0'`).
+  Future<AppReleaseInfo?> fetchReleaseByTag(String versionOrTag) async {
+    final uri = releaseByTagUri(versionOrTag);
+    final cacheKey = uri.toString();
+    final cached = _tagCache[cacheKey];
+    if (cached != null) return cached;
+
+    try {
+      final body = await _httpGet(uri);
+      if (body == null || body.isEmpty) return null;
+      final parsed = AppUpdateParser.parseLatestRelease(body);
+      if (parsed != null) {
+        _tagCache[cacheKey] = parsed;
+      }
+      return parsed;
+    } catch (_) {
+      return null;
+    }
+  }
 
   bool shouldShowHomeBanner(AppReleaseInfo? release) {
     if (release == null) return false;
@@ -128,7 +162,7 @@ class UpdateCheckerService {
       final info = await PackageInfo.fromPlatform();
       return info.version;
     } catch (_) {
-      return '2.4.0';
+      return '2.5.0';
     }
   }
 

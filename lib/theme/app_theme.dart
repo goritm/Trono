@@ -80,6 +80,7 @@ class AppTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: TronoColors.lightBg,
       appBarTheme: const AppBarTheme(
+        toolbarHeight: 60,
         backgroundColor: TronoColors.lightBg,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -175,6 +176,7 @@ class AppTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: TronoColors.darkBg,
       appBarTheme: const AppBarTheme(
+        toolbarHeight: 60,
         backgroundColor: TronoColors.darkBg,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
