@@ -1036,6 +1036,44 @@ class AppStrings {
     'Siempre podrás conectar o quitar tu cuenta más tarde desde Ajustes.',
     'You can always connect or remove your account later in Settings.',
   );
+
+  // V2.8 Social Push Notifications & Android Channels
+  String get socialNotificationsSection => _t(
+    'Notificaciones de amigos',
+    'Friend notifications',
+  );
+  String get pushFriendThronesLabel => _t(
+    '👑 Tronos de amigos',
+    '👑 Friend thrones',
+  );
+  String get pushFriendThronesSub => _t(
+    'Avísame cuando alguien de mi grupo vaya al trono',
+    'Notify me when someone in my group claims a throne',
+  );
+  String get pushFriendCommentsLabel => _t(
+    '💬 Mensajes y comentarios',
+    '💬 Messages & comments',
+  );
+  String get pushFriendCommentsSub => _t(
+    'Avísame cuando lleguen mensajes en el feed',
+    'Notify me when new comments arrive on the feed',
+  );
+  String get pushFriendReactionsLabel => _t(
+    '🔥 Reacciones',
+    '🔥 Reactions',
+  );
+  String get pushFriendReactionsSub => _t(
+    'Avísame cuando reaccionen a mis tronos',
+    'Notify me when friends react to my thrones',
+  );
+  String get androidNotifSettingsLabel => _t(
+    'Canales de notificación en Android',
+    'Android notification channels',
+  );
+  String get androidNotifSettingsSub => _t(
+    'Personaliza sonido, vibración o silencia cada categoría en el sistema',
+    'Customize sound, vibration, or mute each category in system settings',
+  );
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

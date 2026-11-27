@@ -678,6 +678,98 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 18),
 
+              _SectionTitle(s.socialNotificationsSection),
+              ListenableBuilder(
+                listenable: widget.social,
+                builder: (context, _) {
+                  final prefs = widget.social.socialNotificationPrefs;
+                  return ChunkyCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        SwitchListTile(
+                          key: const ValueKey('push_friend_thrones_switch'),
+                          secondary: const _ColorIcon(
+                            Icons.workspace_premium_rounded,
+                            TronoColors.terracotta,
+                          ),
+                          title: Text(
+                            s.pushFriendThronesLabel,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          subtitle: Text(s.pushFriendThronesSub),
+                          value: prefs.friendThrones,
+                          onChanged: (v) =>
+                              widget.social.setSocialNotificationPrefs(
+                                prefs.copyWith(friendThrones: v),
+                              ),
+                        ),
+                        const Divider(height: 1),
+                        SwitchListTile(
+                          key: const ValueKey('push_friend_comments_switch'),
+                          secondary: const _ColorIcon(
+                            Icons.chat_bubble_rounded,
+                            TronoColors.sage,
+                          ),
+                          title: Text(
+                            s.pushFriendCommentsLabel,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          subtitle: Text(s.pushFriendCommentsSub),
+                          value: prefs.friendComments,
+                          onChanged: (v) =>
+                              widget.social.setSocialNotificationPrefs(
+                                prefs.copyWith(friendComments: v),
+                              ),
+                        ),
+                        const Divider(height: 1),
+                        SwitchListTile(
+                          key: const ValueKey('push_friend_reactions_switch'),
+                          secondary: const _ColorIcon(
+                            Icons.local_fire_department_rounded,
+                            TronoColors.gold,
+                          ),
+                          title: Text(
+                            s.pushFriendReactionsLabel,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          subtitle: Text(s.pushFriendReactionsSub),
+                          value: prefs.friendReactions,
+                          onChanged: (v) =>
+                              widget.social.setSocialNotificationPrefs(
+                                prefs.copyWith(friendReactions: v),
+                              ),
+                        ),
+                        const Divider(height: 1),
+                        Material(
+                          type: MaterialType.transparency,
+                          child: ListTile(
+                            key: const ValueKey(
+                              'open_android_notif_settings_tile',
+                            ),
+                            leading: const _ColorIcon(
+                              Icons.tune_rounded,
+                              TronoColors.obsidian,
+                            ),
+                            title: Text(
+                              s.androidNotifSettingsLabel,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            subtitle: Text(s.androidNotifSettingsSub),
+                            trailing: const Icon(Icons.open_in_new_rounded),
+                            onTap: () =>
+                                widget.social.openSystemNotificationSettings(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 18),
+
               _SectionTitle(s.locationSettingsSection),
               ChunkyCard(
                 padding: EdgeInsets.zero,

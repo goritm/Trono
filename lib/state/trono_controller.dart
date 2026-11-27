@@ -17,6 +17,7 @@ import '../models/trigger_lab.dart';
 import '../services/live_timer_notification_service.dart';
 import '../services/local_reminder_service.dart';
 import '../services/location_service.dart';
+import '../services/push_notification_service.dart';
 import '../services/settings_service.dart';
 import '../services/update_checker_service.dart';
 import '../services/widget_sync_service.dart';
@@ -617,6 +618,7 @@ class TronoController extends ChangeNotifier {
     _locale = locale;
     await _settings.setLocale(locale);
     notifyListeners();
+    unawaited(PushNotificationService().ensureChannels(locale: locale));
     if (_activeTimerStart != null) {
       unawaited(
         _liveTimerNotification.showTimer(_activeTimerStart!, locale: _locale),

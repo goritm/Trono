@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../data/database_helper.dart';
 import '../models/bathroom_log.dart';
+import '../models/push_notification_config.dart';
 import '../models/social_models.dart';
 
 enum AuthOutcomeStatus {
@@ -121,6 +122,40 @@ class SupabaseSyncService {
     final c = client;
     if (c == null) return;
     await c.auth.signOut();
+  }
+
+  // ---------------- Push Tokens (FCM) ----------------
+
+  Future<void> upsertMyPushToken({
+    required String token,
+    required String locale,
+    required SocialNotificationPrefs prefs,
+    String platform = 'android',
+  }) async {
+    final c = client;
+    if (c == null || !isSignedIn) return;
+    final cleanToken = token.trim();
+    if (cleanToken.length < 20) return;
+
+    await c.rpc(
+      'upsert_my_push_token',
+      params: {
+        'p_token': cleanToken,
+        'p_platform': platform,
+        'p_locale': locale.startsWith('es') ? 'es' : 'en',
+        'p_notify_friend_thrones': prefs.friendThrones,
+        'p_notify_friend_comments': prefs.friendComments,
+        'p_notify_friend_reactions': prefs.friendReactions,
+      },
+    );
+  }
+
+  Future<void> deletePushToken(String token) async {
+    final c = client;
+    if (c == null || !isSignedIn) return;
+    final cleanToken = token.trim();
+    if (cleanToken.isEmpty) return;
+    await c.from('push_tokens').delete().eq('token', cleanToken);
   }
 
   // ---------------- Profile ----------------

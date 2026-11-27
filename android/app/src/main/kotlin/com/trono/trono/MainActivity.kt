@@ -11,6 +11,8 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import com.google.firebase.FirebaseApp
+import com.google.firebase.messaging.FirebaseMessaging
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
@@ -27,10 +29,12 @@ class MainActivity : FlutterFragmentActivity() {
     )
 
     companion object {
+        const val EXTRA_OPEN_TAB = "open_tab"
         private const val SHORTCUT_CHANNEL = "com.trono.trono/shortcuts"
         private const val EXTRA_SHORTCUT_ACTION = "shortcut_action"
         private const val REMINDERS_CHANNEL = "com.trono.trono/reminders"
         private const val LIVE_TIMER_CHANNEL = "com.trono.trono/live_timer"
+        private const val PUSH_CHANNEL = "com.trono.trono/push"
         private const val REQUEST_CODE_NOTIFICATIONS = 2501
         private const val REQUEST_CODE_LIVE_TIMER_NOTIFICATIONS = 2605
         private const val PREFS_LIVE_TIMER = "trono_live_timer_prefs"
@@ -39,6 +43,8 @@ class MainActivity : FlutterFragmentActivity() {
         private val mainHandler = Handler(Looper.getMainLooper())
         @Volatile
         private var activeLiveTimerChannel: MethodChannel? = null
+        @Volatile
+        private var activePushChannel: MethodChannel? = null
 
         fun notifyLiveTimerAction(action: String) {
             val channel = activeLiveTimerChannel ?: return
@@ -49,21 +55,35 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             }
         }
+
+        fun notifyFcmToken(token: String) {
+            val channel = activePushChannel ?: return
+            mainHandler.post {
+                try {
+                    channel.invokeMethod("onFcmToken", token)
+                } catch (_: Exception) {
+                }
+            }
+        }
     }
 
     private var shortcutChannel: MethodChannel? = null
     private var pendingShortcutAction: String? = null
+    private var pendingOpenTab: String? = null
     private var pendingNotificationPermissionResult: MethodChannel.Result? = null
     private var pendingLiveTimerResult: MethodChannel.Result? = null
     private var pendingLiveTimerPayload: PendingLiveTimer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        TronoNotificationChannels.ensureAll(this)
         extractShortcutAction(intent)?.let { pendingShortcutAction = it }
+        extractOpenTab(intent)?.let { pendingOpenTab = it }
     }
 
     override fun onDestroy() {
         activeLiveTimerChannel = null
+        activePushChannel = null
         super.onDestroy()
     }
 
@@ -116,11 +136,56 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             }
         }
+
+        activePushChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            PUSH_CHANNEL
+        ).also { channel ->
+            channel.setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "ensureChannels" -> {
+                        val locale = call.argument<String>("locale")
+                        val thrones = call.argument<Boolean>("notifyFriendThrones")
+                        val comments = call.argument<Boolean>("notifyFriendComments")
+                        val reactions = call.argument<Boolean>("notifyFriendReactions")
+                        TronoNotificationChannels.savePreferences(
+                            context = this,
+                            locale = locale,
+                            notifyThrones = thrones,
+                            notifyComments = comments,
+                            notifyReactions = reactions
+                        )
+                        TronoNotificationChannels.ensureAll(this, locale)
+                        result.success(null)
+                    }
+                    "getFcmToken" -> handleGetFcmToken(result)
+                    "openNotificationSettings" -> {
+                        val channelId = call.argument<String>("channelId")
+                        val ok = TronoNotificationChannels.openSystemSettings(this, channelId)
+                        result.success(ok)
+                    }
+                    "getInitialOpenTab" -> {
+                        val tab = pendingOpenTab
+                        pendingOpenTab = null
+                        result.success(tab)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        extractOpenTab(intent)?.let { tab ->
+            val pChannel = activePushChannel
+            if (pChannel != null) {
+                pChannel.invokeMethod("onOpenTab", tab)
+            } else {
+                pendingOpenTab = tab
+            }
+        }
         val action = extractShortcutAction(intent) ?: return
         val channel = shortcutChannel
         if (channel != null) {
@@ -310,8 +375,35 @@ class MainActivity : FlutterFragmentActivity() {
         }
     }
 
+    private fun handleGetFcmToken(result: MethodChannel.Result) {
+        try {
+            if (FirebaseApp.getApps(this).isEmpty()) {
+                result.success(TronoNotificationChannels.readSavedFcmToken(this))
+                return
+            }
+            FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val token = task.result?.trim().orEmpty()
+                    if (token.isNotEmpty()) {
+                        TronoNotificationChannels.saveFcmToken(this, token)
+                        result.success(token)
+                        return@addOnCompleteListener
+                    }
+                }
+                result.success(TronoNotificationChannels.readSavedFcmToken(this))
+            }
+        } catch (_: Exception) {
+            result.success(TronoNotificationChannels.readSavedFcmToken(this))
+        }
+    }
+
     private fun extractShortcutAction(intent: Intent?): String? {
         val raw = intent?.getStringExtra(EXTRA_SHORTCUT_ACTION)?.trim()
+        return if (raw.isNullOrEmpty()) null else raw
+    }
+
+    private fun extractOpenTab(intent: Intent?): String? {
+        val raw = intent?.getStringExtra(EXTRA_OPEN_TAB)?.trim()
         return if (raw.isNullOrEmpty()) null else raw
     }
 }

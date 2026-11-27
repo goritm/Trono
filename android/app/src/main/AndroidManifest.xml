@@ -62,6 +62,22 @@
             android:name=".TronoReminderReceiver"
             android:exported="false" />
 
+        <!-- Firebase Cloud Messaging (Instant Social Push Notifications) -->
+        <service
+            android:name=".TronoMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="trono_friend_thrones" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher" />
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

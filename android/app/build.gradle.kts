@@ -63,3 +63,14 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:33.12.0"))
+    implementation("com.google.firebase:firebase-messaging")
+}
+
+// Apply Google Services plugin automatically whenever google-services.json is present
+// (keeps local dev and PR CI green even before Firebase config is added).
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
