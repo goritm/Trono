@@ -484,10 +484,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 16),
               ],
-              // Clean Bold Numbers Strip (Today + 7d Avg)
+              // Clean Bold 3-Column Numbers Strip (Today | Avg/day | Paid)
               ChunkyCard(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
+                  horizontal: 16,
                   vertical: 16,
                 ),
                 child: Row(
@@ -498,129 +498,139 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Text(
                             s.todayCountLabel.toUpperCase(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 11.5,
+                              fontSize: 11,
                               fontWeight: FontWeight.w800,
-                              letterSpacing: 0.8,
+                              letterSpacing: 0.7,
                               color: TronoColors.muted(context),
                             ),
                           ),
                           const SizedBox(height: 2),
-                          Text(
-                            '${stats.todayPoop}',
-                            style: const TextStyle(
-                              fontSize: 38,
-                              height: 1.05,
-                              fontWeight: FontWeight.w900,
-                              color: TronoColors.terracotta,
-                              fontFeatures: [FontFeature.tabularFigures()],
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              '${stats.todayPoop}',
+                              style: const TextStyle(
+                                fontSize: 34,
+                                height: 1.08,
+                                fontWeight: FontWeight.w900,
+                                color: TronoColors.terracotta,
+                                fontFeatures: [FontFeature.tabularFigures()],
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
+                    const SizedBox(width: 12),
                     Container(
                       width: 2,
                       height: 46,
                       color: TronoColors.border(context),
                     ),
-                    const SizedBox(width: 20),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             s.dailyAvgLabel.toUpperCase(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 11.5,
+                              fontSize: 11,
                               fontWeight: FontWeight.w800,
-                              letterSpacing: 0.8,
+                              letterSpacing: 0.7,
                               color: TronoColors.muted(context),
                             ),
                           ),
                           const SizedBox(height: 2),
-                          Text(
-                            stats.weeklyAvg.avgPoopPerDay.toStringAsFixed(1),
-                            style: TextStyle(
-                              fontSize: 38,
-                              height: 1.05,
-                              fontWeight: FontWeight.w900,
-                              color: TronoColors.ink(context),
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              stats.weeklyAvg.avgPoopPerDay.toStringAsFixed(1),
+                              style: TextStyle(
+                                fontSize: 34,
+                                height: 1.08,
+                                fontWeight: FontWeight.w900,
+                                color: TronoColors.ink(context),
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    if (controller.hasHourlyRate)
-                      GestureDetector(
-                        key: const ValueKey('home_today_paid_pill'),
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          widget.onOpenInsights?.call();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF2B2618)
-                                : const Color(0xFFFFF8E6),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: TronoColors.gold.withValues(alpha: 0.45),
-                              width: 1.2,
-                            ),
-                          ),
-                          child: Text(
-                            '💰 ${controller.currencySymbol}${displayedTodayPaid.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
-                              color: isDark
-                                  ? TronoColors.gold
-                                  : TronoColors.goldLip,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
-                            ),
-                          ),
+                    const SizedBox(width: 12),
+                    Container(
+                      width: 2,
+                      height: 46,
+                      color: TronoColors.border(context),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        key: ValueKey(
+                          controller.hasHourlyRate
+                              ? 'home_today_paid_pill'
+                              : 'home_setup_salary_pill',
                         ),
-                      )
-                    else
-                      GestureDetector(
-                        key: const ValueKey('home_setup_salary_pill'),
+                        behavior: HitTestBehavior.opaque,
                         onTap: () {
                           HapticFeedback.selectionClick();
-                          showSalaryConfigDialog(context, controller);
+                          if (controller.hasHourlyRate) {
+                            widget.onOpenInsights?.call();
+                          } else {
+                            showSalaryConfigDialog(context, controller);
+                          }
                         },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: TronoColors.bg(context),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: TronoColors.border(context),
-                              width: 1.2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              s.todayPaidLabel.toUpperCase(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.7,
+                                color: TronoColors.muted(context),
+                              ),
                             ),
-                          ),
-                          child: Text(
-                            '💰 +${controller.currencySymbol}',
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w800,
-                              color: TronoColors.muted(context),
+                            const SizedBox(height: 2),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                controller.hasHourlyRate
+                                    ? '${controller.currencySymbol}${displayedTodayPaid.toStringAsFixed(2)}'
+                                    : '+${controller.currencySymbol}',
+                                style: TextStyle(
+                                  fontSize: 34,
+                                  height: 1.08,
+                                  fontWeight: FontWeight.w900,
+                                  color: controller.hasHourlyRate
+                                      ? (isDark
+                                          ? TronoColors.gold
+                                          : TronoColors.goldLip)
+                                      : TronoColors.muted(context),
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ),
+                    ),
                   ],
                 ),
               ),
@@ -688,6 +698,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ] else ...[
                 _AnimatedHeroLogButton(
+                  key: const ValueKey('home_hero_claim_btn'),
                   title: s.heroLogTitle.toUpperCase(),
                   successTitle: s.heroLoggedFlash.toUpperCase(),
                   onConfirmedTap: () => _handleQuickTap(
@@ -862,6 +873,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class _AnimatedHeroLogButton extends StatefulWidget {
   const _AnimatedHeroLogButton({
+    super.key,
     required this.title,
     required this.successTitle,
     required this.onConfirmedTap,
@@ -1314,24 +1326,24 @@ class _LiveTimerHeroButton extends StatelessWidget {
       color: TronoColors.obsidian,
       lipColor: TronoColors.obsidianLip,
       borderColor: TronoColors.gold,
-      lipHeight: 6,
+      lipHeight: 7,
       borderRadius: 26,
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 22),
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
       onPressed: onFinishTap,
       child: Row(
         children: [
           Container(
-            width: 60,
-            height: 60,
+            width: 64,
+            height: 64,
             decoration: BoxDecoration(
               color: TronoColors.gold.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(20),
             ),
             alignment: Alignment.center,
             child: const Icon(
               Icons.timer_rounded,
               color: TronoColors.gold,
-              size: 32,
+              size: 34,
             ),
           ),
           const SizedBox(width: 16),
