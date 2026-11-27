@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../l10n/app_strings.dart';
 import '../models/app_update.dart';
 import '../models/bathroom_log.dart';
+import '../models/reminder_schedule.dart';
 import '../services/backup_service.dart';
 import '../services/update_checker_service.dart';
 import '../state/social_controller.dart';
@@ -576,6 +577,101 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           }
                         },
                       ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              _SectionTitle(s.remindersSection),
+              ChunkyCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SwitchListTile(
+                      key: const ValueKey('streak_reminder_switch'),
+                      secondary: const _ColorIcon(
+                        Icons.local_fire_department_rounded,
+                        TronoColors.terracotta,
+                      ),
+                      title: Text(
+                        s.streakReminderLabel,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      subtitle: Text(
+                        s.streakReminderSub(ctrl.streakReminderHour),
+                      ),
+                      value: ctrl.streakReminderEnabled,
+                      onChanged: (enabled) async {
+                        final ok = await ctrl.setStreakReminderEnabled(enabled);
+                        if (!ok && context.mounted) {
+                          showTronoToast(
+                            context,
+                            s.reminderPermissionDeniedToast,
+                          );
+                        }
+                      },
+                    ),
+                    if (ctrl.streakReminderEnabled)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              s.reminderTimeLabel,
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w800,
+                                color: TronoColors.muted(context),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: ReminderConfig.selectableStreakHours
+                                  .map((hour) {
+                                    final label =
+                                        '${hour.toString().padLeft(2, '0')}:00';
+                                    return ChoiceChip(
+                                      key: ValueKey('streak_hour_chip_$hour'),
+                                      label: Text(label),
+                                      selected: ctrl.streakReminderHour == hour,
+                                      onSelected: (_) =>
+                                          ctrl.setStreakReminderHour(hour),
+                                    );
+                                  })
+                                  .toList(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const Divider(height: 1),
+                    SwitchListTile(
+                      key: const ValueKey('weekly_recap_switch'),
+                      secondary: const _ColorIcon(
+                        Icons.auto_awesome_rounded,
+                        TronoColors.gold,
+                      ),
+                      title: Text(
+                        s.weeklyRecapReminderLabel,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      subtitle: Text(s.weeklyRecapReminderSub),
+                      value: ctrl.weeklyRecapReminderEnabled,
+                      onChanged: (enabled) async {
+                        final ok = await ctrl.setWeeklyRecapReminderEnabled(
+                          enabled,
+                        );
+                        if (!ok && context.mounted) {
+                          showTronoToast(
+                            context,
+                            s.reminderPermissionDeniedToast,
+                          );
+                        }
+                      },
                     ),
                   ],
                 ),

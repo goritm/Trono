@@ -607,6 +607,56 @@ class AppStrings {
   String get themeLight => _t('Claro', 'Light');
   String get themeDark => _t('Oscuro', 'Dark');
 
+  // V2.5 Local Smart Reminders
+  String get remindersSection => _t('Recordatorios', 'Reminders');
+  String get streakReminderLabel =>
+      _t('🔥 Recordatorio de racha', '🔥 Streak reminder');
+  String streakReminderSub(int hour) {
+    final hh = '${hour.toString().padLeft(2, '0')}:00';
+    return _t(
+      'Aviso a las $hh · se omite si ya registraste hoy',
+      'Check-in at $hh · skipped if you already logged today',
+    );
+  }
+
+  String get reminderTimeLabel => _t('Hora del aviso', 'Reminder time');
+  String get weeklyRecapReminderLabel =>
+      _t('✨ Resumen semanal del domingo', '✨ Sunday Wrapped recap');
+  String get weeklyRecapReminderSub => _t(
+    'Domingos a las 19:00 · revisa tus stats y tu Trono Wrapped',
+    'Sundays at 19:00 · check your weekly stats & Wrapped card',
+  );
+  String get reminderPermissionDeniedToast => _t(
+    'Activa las notificaciones en los ajustes de Android para usar recordatorios',
+    'Enable notifications in Android settings to use reminders',
+  );
+  String get streakReminderNotifTitle => _t(
+    '¿Mantienes tu racha en Trono? 👑',
+    'Keep your Trono streak alive? 👑',
+  );
+  String streakReminderNotifBody(int streak) {
+    if (streak > 0) {
+      final daysEs = streak == 1 ? '1 día seguido' : '$streak días seguidos';
+      return _t(
+        'Llevas $daysEs. Registra tu trono antes de medianoche.',
+        'You’re on a $streak-day streak! Claim your throne before midnight.',
+      );
+    }
+    return _t(
+      'Aún no has registrado hoy. Un toque rápido y empieza una nueva racha.',
+      'No throne logged today yet. One quick tap starts a fresh streak.',
+    );
+  }
+
+  String get weeklyRecapNotifTitle => _t(
+    'Tu Trono Wrapped semanal está listo ✨',
+    'Your weekly Trono Wrapped is ready ✨',
+  );
+  String get weeklyRecapNotifBody => _t(
+    'Abre Trono para ver tus estadísticas de la semana y tu tarjeta Wrapped 👑',
+    'Open Trono to see your weekly stats and Wrapped card 👑',
+  );
+
   String get securitySection => _t('Seguridad y Privacidad', 'Security & Privacy');
   String get appLockLabel => _t('Bloqueo al abrir Trono', 'Lock Trono on launch');
   String get appLockSubtitle => _t(

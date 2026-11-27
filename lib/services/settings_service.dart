@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/bathroom_log.dart';
 import '../models/favorite_place.dart';
+import '../models/reminder_schedule.dart';
 
 class SettingsService {
   static const _kThemeMode = 'theme_mode';
@@ -27,6 +28,9 @@ class SettingsService {
   static const _kFavoritePlaces = 'favorite_places';
   static const _kUpdateLastCheckedMs = 'update_last_checked_ms';
   static const _kUpdateDismissedTag = 'update_dismissed_tag';
+  static const _kStreakReminderEnabled = 'streak_reminder_enabled';
+  static const _kStreakReminderHour = 'streak_reminder_hour';
+  static const _kWeeklyRecapReminderEnabled = 'weekly_recap_reminder_enabled';
 
   late final SharedPreferences _prefs;
 
@@ -227,4 +231,32 @@ class SettingsService {
       await _prefs.setString(_kUpdateDismissedTag, tag);
     }
   }
+
+  // V2.5 Local Smart Reminders (100% on-device)
+  bool get streakReminderEnabled =>
+      _prefs.getBool(_kStreakReminderEnabled) ?? false;
+
+  Future<void> setStreakReminderEnabled(bool enabled) async {
+    await _prefs.setBool(_kStreakReminderEnabled, enabled);
+  }
+
+  int get streakReminderHour =>
+      _prefs.getInt(_kStreakReminderHour) ?? ReminderConfig.defaultStreakHour;
+
+  Future<void> setStreakReminderHour(int hour) async {
+    await _prefs.setInt(_kStreakReminderHour, hour.clamp(0, 23));
+  }
+
+  bool get weeklyRecapReminderEnabled =>
+      _prefs.getBool(_kWeeklyRecapReminderEnabled) ?? false;
+
+  Future<void> setWeeklyRecapReminderEnabled(bool enabled) async {
+    await _prefs.setBool(_kWeeklyRecapReminderEnabled, enabled);
+  }
+
+  ReminderConfig get reminderConfig => ReminderConfig(
+    streakEnabled: streakReminderEnabled,
+    streakHour: streakReminderHour,
+    weeklyEnabled: weeklyRecapReminderEnabled,
+  );
 }
