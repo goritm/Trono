@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/supabase_config.dart';
@@ -34,6 +35,10 @@ class SyncReport {
 /// reactions, leaderboards, and Realtime subscriptions for Trono V2.
 class SupabaseSyncService {
   SupabaseSyncService._();
+
+  @visibleForTesting
+  SupabaseSyncService.forTesting();
+
   static final SupabaseSyncService instance = SupabaseSyncService._();
 
   bool _initialized = false;
@@ -368,16 +373,29 @@ class SupabaseSyncService {
     if (logRows.isEmpty) return const [];
 
     final logIds = logRows.map((r) => r['log_id'].toString()).toList();
-    final reactionsRaw = await c
-        .from('log_reactions')
-        .select()
-        .inFilter('log_id', logIds);
-    final reactionRows = List<Map<String, dynamic>>.from(reactionsRaw as List);
+    final extras = await Future.wait<dynamic>([
+      c.from('log_reactions').select().inFilter('log_id', logIds),
+      c
+          .from('log_comments')
+          .select(
+            'id, log_id, user_id, body, created_at, profiles(display_name, avatar_emoji)',
+          )
+          .inFilter('log_id', logIds)
+          .order('created_at', ascending: true),
+    ]);
+    final reactionRows = List<Map<String, dynamic>>.from(extras[0] as List);
+    final commentRows = List<Map<String, dynamic>>.from(extras[1] as List);
 
     final reactionsByLog = <String, List<LogReaction>>{};
     for (final row in reactionRows) {
       final reaction = LogReaction.fromMap(row);
       reactionsByLog.putIfAbsent(reaction.logId, () => []).add(reaction);
+    }
+
+    final commentsByLog = <String, List<LogComment>>{};
+    for (final row in commentRows) {
+      final comment = LogComment.fromMap(row);
+      commentsByLog.putIfAbsent(comment.logId, () => []).add(comment);
     }
 
     return logRows.map((row) {
@@ -397,6 +415,7 @@ class SupabaseSyncService {
         row,
         author: author,
         reactions: reactionsByLog[logId] ?? const [],
+        comments: commentsByLog[logId] ?? const [],
       );
     }).toList();
   }
@@ -429,6 +448,40 @@ class SupabaseSyncService {
         .eq('log_id', logId)
         .eq('user_id', uid)
         .eq('emoji', emoji);
+  }
+
+  Future<LogComment> addComment({
+    required String logId,
+    required String body,
+  }) async {
+    final cleanBody = LogComment.validateBody(body);
+    if (cleanBody == null) {
+      throw ArgumentError('INVALID_COMMENT_BODY');
+    }
+    final c = _requireClient();
+    final uid = _requireUserId();
+    final row = await c
+        .from('log_comments')
+        .insert({
+          'log_id': logId,
+          'user_id': uid,
+          'body': cleanBody,
+        })
+        .select(
+          'id, log_id, user_id, body, created_at, profiles(display_name, avatar_emoji)',
+        )
+        .single();
+    return LogComment.fromMap(row);
+  }
+
+  Future<void> deleteComment(String commentId) async {
+    final c = _requireClient();
+    final uid = _requireUserId();
+    await c
+        .from('log_comments')
+        .delete()
+        .eq('id', commentId)
+        .eq('user_id', uid);
   }
 
   // ---------------- Leaderboard ----------------
@@ -468,6 +521,12 @@ class SupabaseSyncService {
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'log_reactions',
+          callback: (_) => onUpdate(),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'log_comments',
           callback: (_) => onUpdate(),
         )
         .onPostgresChanges(
