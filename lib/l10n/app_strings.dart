@@ -631,6 +631,12 @@ class AppStrings {
 
   // Settings & Lock
   String get settingsTitle => _t('Ajustes', 'Settings');
+  String get settingsTabAccount => _t('Cuenta', 'Account');
+  String get settingsTabAppearance => _t('Apariencia', 'Appearance');
+  String get settingsTabAlerts => _t('Avisos', 'Alerts');
+  String get settingsTabLocation => _t('Ubicación', 'Location');
+  String get settingsTabSecurity => _t('Seguridad', 'Security');
+  String get settingsTabData => _t('Datos', 'Data');
   String get appearanceSection => _t('Apariencia e Idioma', 'Appearance & Language');
   String get languageLabel => _t('Idioma', 'Language');
   String get themeLabel => _t('Tema', 'Theme');

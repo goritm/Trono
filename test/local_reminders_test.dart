@@ -396,7 +396,11 @@ void main() {
       await tester.pumpAndSettle();
 
       final streakSwitch = find.byKey(const ValueKey('streak_reminder_switch'));
-      await tester.scrollUntilVisible(streakSwitch, 300);
+      await tester.scrollUntilVisible(
+        streakSwitch,
+        300,
+        scrollable: find.byType(Scrollable).last,
+      );
       expect(streakSwitch, findsOneWidget);
       expect(find.byKey(const ValueKey('streak_hour_chip_21')), findsNothing);
 
@@ -405,7 +409,11 @@ void main() {
 
       expect(ctrl.streakReminderEnabled, isTrue);
       final chip21 = find.byKey(const ValueKey('streak_hour_chip_21'));
-      await tester.scrollUntilVisible(chip21, 150);
+      await tester.scrollUntilVisible(
+        chip21,
+        150,
+        scrollable: find.byType(Scrollable).last,
+      );
       expect(chip21, findsOneWidget);
 
       await tester.tap(chip21);
@@ -443,7 +451,11 @@ void main() {
       await tester.pumpAndSettle();
 
       final weeklySwitch = find.byKey(const ValueKey('weekly_recap_switch'));
-      await tester.scrollUntilVisible(weeklySwitch, 300);
+      await tester.scrollUntilVisible(
+        weeklySwitch,
+        300,
+        scrollable: find.byType(Scrollable).last,
+      );
       await tester.tap(weeklySwitch);
       await tester.pumpAndSettle();
 
@@ -489,7 +501,11 @@ void main() {
       await tester.pumpAndSettle();
 
       final streakSwitch = find.byKey(const ValueKey('streak_reminder_switch'));
-      await tester.scrollUntilVisible(streakSwitch, 300);
+      await tester.scrollUntilVisible(
+        streakSwitch,
+        300,
+        scrollable: find.byType(Scrollable).last,
+      );
       expect(find.text('🔥 Recordatorio de racha'), findsOneWidget);
       expect(find.text('✨ Resumen semanal del domingo'), findsOneWidget);
 

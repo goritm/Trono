@@ -697,5 +697,86 @@ void main() {
         );
       },
     );
+
+    testWidgets(
+      'SettingsScreen renders anchor tabs, removes Awards & Replay Welcome, and aligns Default Privacy left',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        late TronoController ctrl;
+        late SocialController social;
+        await tester.runAsync(() async {
+          final repo = _MemoryRepo();
+          final settings = SettingsService();
+          await settings.init();
+          ctrl = TronoController(
+            repository: repo,
+            settings: settings,
+            updateChecker: UpdateCheckerService(
+              settings: settings,
+              currentVersionProvider: () async => '2.8.5',
+              httpGet: (_) async => null,
+            ),
+            onTimerSynced: (_) async {},
+            readExternalTimerStart: () async => null,
+          );
+          await ctrl.init();
+          social = SocialController(
+            tronoController: ctrl,
+            repository: repo,
+            settings: settings,
+            service: SupabaseSyncService.forTesting(),
+          );
+          await social.init();
+        });
+        addTearDown(() {
+          social.dispose();
+          ctrl.dispose();
+        });
+
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('en'),
+            supportedLocales: const [Locale('en'), Locale('es')],
+            localizationsDelegates: const [
+              AppStrings.delegate,
+              ...GlobalMaterialLocalizations.delegates,
+            ],
+            theme: AppTheme.light(),
+            home: SettingsScreen(controller: ctrl, social: social),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Pinned horizontal anchor tabs exist
+        expect(
+          find.byKey(const ValueKey('settings_anchor_account')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('settings_anchor_appearance')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('settings_anchor_security')),
+          findsOneWidget,
+        );
+
+        // Removed clutter items
+        expect(find.text('Awards & Ranks'), findsNothing);
+        expect(find.text('Replay welcome'), findsNothing);
+
+        // Tapping Security anchor smoothly brings Lock Trono & Default privacy into view
+        await tester.tap(
+          find.byKey(const ValueKey('settings_anchor_security')),
+        );
+        await tester.pumpAndSettle();
+        final lockRect = tester.getRect(find.text('Lock Trono on launch'));
+        final privacyRect = tester.getRect(
+          find.text('Default privacy in groups'),
+        );
+        // Both labels should be cleanly left-aligned inside their card
+        expect((lockRect.left - privacyRect.left).abs(), lessThan(4.0));
+      },
+    );
   });
 }
