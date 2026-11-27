@@ -223,7 +223,7 @@ class SocialScreen extends StatefulWidget {
 }
 
 class _SocialScreenState extends State<SocialScreen> {
-  int _subTab = 0; // 0 = Feed, 1 = Challenges, 2 = Ranking
+  int _subTab = 0; // 0 = Feed, 1 = Ranking, 2 = Challenges
 
   Future<void> _showCreateGroupDialog() async {
     final s = AppStrings.of(context);
@@ -752,11 +752,11 @@ class _SocialScreenState extends State<SocialScreen> {
                                 ),
                                 ButtonSegment(
                                   value: 1,
-                                  label: Text(s.socialTabChallenges),
+                                  label: Text(s.socialTabRanking),
                                 ),
                                 ButtonSegment(
                                   value: 2,
-                                  label: Text(s.socialTabRanking),
+                                  label: Text(s.socialTabChallenges),
                                 ),
                               ],
                               selected: {_subTab},
@@ -779,8 +779,8 @@ class _SocialScreenState extends State<SocialScreen> {
                                     social,
                                     activeGroup,
                                   ),
-                                1 => _buildChallengesWidgets(context, social),
-                                _ => _buildLeaderboardWidgets(context, social),
+                                1 => _buildLeaderboardWidgets(context, social),
+                                _ => _buildChallengesWidgets(context, social),
                               },
                             ),
                           ),
@@ -2054,16 +2054,6 @@ class _FeedItemCard extends StatelessWidget {
                 ),
               ),
             ],
-          ] else ...[
-            const SizedBox(height: 8),
-            Text(
-              '👥 ${s.summaryOnlyBadge}',
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                color: TronoColors.muted(context),
-              ),
-            ),
           ],
 
           const SizedBox(height: 10),

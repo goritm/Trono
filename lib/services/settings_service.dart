@@ -65,8 +65,11 @@ class SettingsService {
     await _prefs.setString(_kLocaleCode, locale.languageCode);
   }
 
-  ShareLevel get defaultShareLevel =>
-      ShareLevel.fromDb(_prefs.getString(_kDefaultShareLevel));
+  ShareLevel get defaultShareLevel {
+    final raw = _prefs.getString(_kDefaultShareLevel);
+    if (raw == 'private') return ShareLevel.private;
+    return ShareLevel.full;
+  }
 
   Future<void> setDefaultShareLevel(ShareLevel level) async {
     await _prefs.setString(_kDefaultShareLevel, level.dbValue);

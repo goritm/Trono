@@ -869,10 +869,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Wrap(
                             spacing: 8,
                             runSpacing: 8,
-                            children: ShareLevel.values.map((lvl) {
+                            children: ShareLevel.selectableValues.map((lvl) {
                               return ChoiceChip(
                                 label: Text(s.shareLevelName(lvl)),
-                                selected: ctrl.defaultShareLevel == lvl,
+                                selected:
+                                    ctrl.defaultShareLevel.normalizedForUi ==
+                                    lvl,
                                 onSelected: (_) =>
                                     ctrl.setDefaultShareLevel(lvl),
                               );

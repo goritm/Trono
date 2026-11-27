@@ -29,7 +29,7 @@ Future<LogDetailSheetResult?> showLogDetailSheet(
   required LogSheetMode mode,
   BathroomLog? initialLog,
   DateTime? initialDate,
-  ShareLevel defaultShareLevel = ShareLevel.summaryOnly,
+  ShareLevel defaultShareLevel = ShareLevel.full,
   List<FavoritePlace> favoritePlaces = const [],
 }) {
   return showModalBottomSheet<LogDetailSheetResult>(
@@ -125,7 +125,7 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
     _latitude = log?.latitude;
     _longitude = log?.longitude;
     _rating = log?.rating;
-    _shareLevel = log?.shareLevel ?? widget.defaultShareLevel;
+    _shareLevel = (log?.shareLevel ?? widget.defaultShareLevel).normalizedForUi;
   }
 
   @override
@@ -748,10 +748,10 @@ class _LogDetailSheetBodyState extends State<_LogDetailSheetBody> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: ShareLevel.values.map((lvl) {
+                      children: ShareLevel.selectableValues.map((lvl) {
                         return ChoiceChip(
                           label: Text(s.shareLevelName(lvl)),
-                          selected: _shareLevel == lvl,
+                          selected: _shareLevel.normalizedForUi == lvl,
                           onSelected: (_) => setState(() => _shareLevel = lvl),
                         );
                       }).toList(),

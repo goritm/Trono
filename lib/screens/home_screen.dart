@@ -415,154 +415,137 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 16),
 
-              // THE SINGLE ANIMATED 3D HERO BUTTON (with juicy click feedback + brief delay before sheet)
-              _AnimatedHeroLogButton(
-                title: s.heroLogTitle.toUpperCase(),
-                successTitle: s.heroLoggedFlash.toUpperCase(),
-                subtitle: heroSub,
-                onConfirmedTap: () => _handleQuickTap(
-                  context,
-                  BathroomType.poop,
-                  locationKind: _selectedLocationKind,
-                  tags: _selectedInitialTags,
-                  sheetDelay: const Duration(milliseconds: 360),
+              // THE DUAL-MODE 3D HERO BUTTON (Instant Claim OR Active Live Session Timer)
+              if (controller.isTimerRunning) ...[
+                _LiveTimerHeroButton(
+                  key: const ValueKey('home_hero_timer_btn'),
+                  clockText: _formatClock(controller.elapsedTimerSeconds),
+                  subtitle: s.timerFinishSubtitle,
+                  liveEarningsText: (controller.hasHourlyRate &&
+                          (_locationMode == _QuickLocationMode.wfh ||
+                              _locationMode == _QuickLocationMode.work))
+                      ? '💰 +${controller.currencySymbol}${((controller.elapsedTimerSeconds / 3600.0) * controller.hourlyRate!).toStringAsFixed(2)}'
+                      : null,
+                  onFinishTap: () => _handleQuickTap(
+                    context,
+                    BathroomType.poop,
+                    locationKind: _selectedLocationKind,
+                    tags: _selectedInitialTags,
+                    sheetDelay: const Duration(milliseconds: 200),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 18),
-
-              // Active Live Timer Pill OR Clean Subtle Utility Strip
-              if (controller.isTimerRunning)
-                ChunkyCard(
-                  color: TronoColors.obsidian,
-                  borderColor: TronoColors.gold.withValues(alpha: 0.6),
-                  lipColor: TronoColors.obsidianLip,
+                const SizedBox(height: 10),
+                Center(
+                  child: TextButton.icon(
+                    key: const ValueKey('home_cancel_timer_btn'),
+                    onPressed: controller.cancelTimer,
+                    style: TextButton.styleFrom(
+                      foregroundColor: TronoColors.muted(context),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                    ),
+                    icon: const Icon(Icons.close_rounded, size: 17),
+                    label: Text(
+                      s.cancelTimerFull,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ] else ...[
+                _AnimatedHeroLogButton(
+                  title: s.heroLogTitle.toUpperCase(),
+                  successTitle: s.heroLoggedFlash.toUpperCase(),
+                  subtitle: heroSub,
+                  onConfirmedTap: () => _handleQuickTap(
+                    context,
+                    BathroomType.poop,
+                    locationKind: _selectedLocationKind,
+                    tags: _selectedInitialTags,
+                    sheetDelay: const Duration(milliseconds: 360),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                ChunkyButton(
+                  key: const ValueKey('home_start_timer_btn'),
+                  width: double.infinity,
+                  color: TronoColors.surface(context),
+                  lipColor: TronoColors.lip(context),
+                  borderColor: TronoColors.border(context),
+                  lipHeight: 3,
+                  borderRadius: 18,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 12,
                   ),
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    controller.startTimer();
+                  },
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: TronoColors.gold.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.timer_rounded,
-                          color: TronoColors.gold,
-                          size: 20,
-                        ),
+                      const Icon(
+                        Icons.timer_outlined,
+                        size: 19,
+                        color: TronoColors.terracotta,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${s.timerRunning} ${_formatClock(controller.elapsedTimerSeconds)}',
-                              style: const TextStyle(
-                                fontSize: 15.5,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                                fontFeatures: [FontFeature.tabularFigures()],
-                              ),
-                            ),
-                            Text(
-                              s.timerHint,
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white.withValues(alpha: 0.72),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: controller.cancelTimer,
-                        tooltip: s.cancelTimer,
-                        icon: const Icon(
-                          Icons.close_rounded,
-                          color: Colors.white,
+                      const SizedBox(width: 8),
+                      Text(
+                        s.startTimer,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w800,
+                          color: TronoColors.ink(context),
                         ),
                       ),
                     ],
                   ),
-                )
-              else
-                Container(
-                  decoration: BoxDecoration(
-                    color: TronoColors.surface(context),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: TronoColors.border(context),
-                      width: 1.6,
-                    ),
-                  ),
-                  child: IntrinsicHeight(
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _UtilityAction(
-                            icon: Icons.timer_outlined,
-                            label: s.timerShort,
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              controller.startTimer();
-                            },
-                          ),
-                        ),
-                        VerticalDivider(
-                          width: 1,
-                          thickness: 1.4,
-                          indent: 10,
-                          endIndent: 10,
-                          color: TronoColors.border(context),
-                        ),
-                        Expanded(
-                          child: _UtilityAction(
-                            icon: Icons.air_rounded,
-                            label: s.typeName(BathroomType.falseAlarm),
-                            onTap: () => _handleQuickTap(
-                              context,
-                              BathroomType.falseAlarm,
-                              locationKind: _selectedLocationKind,
-                              tags: _selectedInitialTags,
-                            ),
-                          ),
-                        ),
-                        VerticalDivider(
-                          width: 1,
-                          thickness: 1.4,
-                          indent: 10,
-                          endIndent: 10,
-                          color: TronoColors.border(context),
-                        ),
-                        Expanded(
-                          child: _UtilityAction(
-                            icon: Icons.history_rounded,
-                            label: s.pastVisitShort,
-                            onTap: () => _handleAddPast(context),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
-              const SizedBox(height: 28),
+              ],
+              const SizedBox(height: 26),
 
-              // Today / Recent History Header
-              Text(
-                (todayLogs.isNotEmpty ? s.todayHistory : s.recentHistory)
-                    .toUpperCase(),
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.8,
-                  color: TronoColors.muted(context),
-                ),
+              // Today / Recent History Header + discreet "+ Past" shortcut
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      (todayLogs.isNotEmpty ? s.todayHistory : s.recentHistory)
+                          .toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.8,
+                        color: TronoColors.muted(context),
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    key: const ValueKey('home_add_past_btn'),
+                    onPressed: () => _handleAddPast(context),
+                    style: TextButton.styleFrom(
+                      foregroundColor: TronoColors.terracotta,
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      s.addPastShortBtn,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
 
@@ -990,44 +973,122 @@ class _ModeTab extends StatelessWidget {
   }
 }
 
-class _UtilityAction extends StatelessWidget {
-  const _UtilityAction({
-    required this.icon,
-    required this.label,
-    required this.onTap,
+class _LiveTimerHeroButton extends StatelessWidget {
+  const _LiveTimerHeroButton({
+    super.key,
+    required this.clockText,
+    required this.subtitle,
+    required this.onFinishTap,
+    this.liveEarningsText,
   });
 
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
+  final String clockText;
+  final String subtitle;
+  final String? liveEarningsText;
+  final VoidCallback onFinishTap;
 
   @override
   Widget build(BuildContext context) {
-    final muted = TronoColors.muted(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 17, color: muted),
-            const SizedBox(width: 5),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w800,
-                  color: TronoColors.ink(context),
-                ),
-              ),
+    return ChunkyButton(
+      width: double.infinity,
+      color: TronoColors.obsidian,
+      lipColor: TronoColors.obsidianLip,
+      borderColor: TronoColors.gold,
+      lipHeight: 6,
+      borderRadius: 26,
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 22),
+      onPressed: onFinishTap,
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: TronoColors.gold.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(18),
             ),
-          ],
-        ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.timer_rounded,
+              color: TronoColors.gold,
+              size: 32,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    Text(
+                      clockText,
+                      style: const TextStyle(
+                        color: TronoColors.gold,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.6,
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    if (liveEarningsText != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2B2618),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: TronoColors.gold.withValues(alpha: 0.6),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Text(
+                          liveEarningsText!,
+                          style: const TextStyle(
+                            color: TronoColors.gold,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            fontFeatures: [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.86),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            width: 46,
+            height: 46,
+            decoration: const BoxDecoration(
+              color: TronoColors.sage,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.check_rounded,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+        ],
       ),
     );
   }
