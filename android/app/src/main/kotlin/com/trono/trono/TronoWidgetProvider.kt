@@ -249,6 +249,7 @@ class TronoWidgetProvider : HomeWidgetProvider() {
                     .putLong(TIMER_START_MS_KEY, nowMs)
                     .remove(FLASH_UNTIL_KEY)
                     .apply()
+                TronoLiveTimerNotification.show(context, nowMs)
 
                 pendingResetRunnable?.let { mainHandler.removeCallbacks(it) }
                 val (manager, ids) = getWidgetIds(context)
@@ -272,6 +273,7 @@ class TronoWidgetProvider : HomeWidgetProvider() {
             }
             ACTION_FINISH_TIMER -> {
                 performClickHaptic(context)
+                TronoLiveTimerNotification.dismiss(context)
                 val prefs = HomeWidgetPlugin.getData(context)
                 val startMs = readActiveTimerStartMs(prefs)
                 val durationSecs = if (startMs > 0L) {
@@ -281,16 +283,19 @@ class TronoWidgetProvider : HomeWidgetProvider() {
                     1L
                 }
                 prefs.edit().putLong(TIMER_START_MS_KEY, 0L).apply()
+                MainActivity.notifyLiveTimerAction("finish")
                 handleLogAndFlash(context, durationSeconds = durationSecs)
                 return
             }
             ACTION_CANCEL_TIMER -> {
                 performClickHaptic(context)
+                TronoLiveTimerNotification.dismiss(context)
                 val prefs = HomeWidgetPlugin.getData(context)
                 prefs.edit()
                     .putLong(TIMER_START_MS_KEY, 0L)
                     .remove(FLASH_UNTIL_KEY)
                     .apply()
+                MainActivity.notifyLiveTimerAction("cancel")
 
                 val (manager, ids) = getWidgetIds(context)
                 for (id in ids) {
@@ -316,6 +321,7 @@ class TronoWidgetProvider : HomeWidgetProvider() {
     }
 
     private fun handleLogAndFlash(context: Context, durationSeconds: Long?) {
+        TronoLiveTimerNotification.dismiss(context)
         val widgetData = HomeWidgetPlugin.getData(context)
         val currentToday = readTodayPoop(widgetData)
         val newToday = currentToday + 1

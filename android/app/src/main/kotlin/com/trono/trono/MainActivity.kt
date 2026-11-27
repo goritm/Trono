@@ -9,26 +9,62 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterFragmentActivity() {
+    private data class PendingLiveTimer(
+        val startMillis: Long,
+        val title: String?,
+        val body: String?,
+        val saveLabel: String?,
+        val cancelLabel: String?,
+        val locale: String?
+    )
+
     companion object {
         private const val SHORTCUT_CHANNEL = "com.trono.trono/shortcuts"
         private const val EXTRA_SHORTCUT_ACTION = "shortcut_action"
         private const val REMINDERS_CHANNEL = "com.trono.trono/reminders"
+        private const val LIVE_TIMER_CHANNEL = "com.trono.trono/live_timer"
         private const val REQUEST_CODE_NOTIFICATIONS = 2501
+        private const val REQUEST_CODE_LIVE_TIMER_NOTIFICATIONS = 2605
+        private const val PREFS_LIVE_TIMER = "trono_live_timer_prefs"
+        private const val KEY_ASKED_LIVE_TIMER_PERM = "asked_live_timer_notif_perm"
+
+        private val mainHandler = Handler(Looper.getMainLooper())
+        @Volatile
+        private var activeLiveTimerChannel: MethodChannel? = null
+
+        fun notifyLiveTimerAction(action: String) {
+            val channel = activeLiveTimerChannel ?: return
+            mainHandler.post {
+                try {
+                    channel.invokeMethod("onTimerAction", action)
+                } catch (_: Exception) {
+                }
+            }
+        }
     }
 
     private var shortcutChannel: MethodChannel? = null
     private var pendingShortcutAction: String? = null
     private var pendingNotificationPermissionResult: MethodChannel.Result? = null
+    private var pendingLiveTimerResult: MethodChannel.Result? = null
+    private var pendingLiveTimerPayload: PendingLiveTimer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         extractShortcutAction(intent)?.let { pendingShortcutAction = it }
+    }
+
+    override fun onDestroy() {
+        activeLiveTimerChannel = null
+        super.onDestroy()
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -61,6 +97,25 @@ class MainActivity : FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        activeLiveTimerChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            LIVE_TIMER_CHANNEL
+        ).also { channel ->
+            channel.setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "showLiveTimer" -> handleShowLiveTimer(call, result)
+                    "dismissLiveTimer" -> {
+                        pendingLiveTimerPayload = null
+                        pendingLiveTimerResult?.success(false)
+                        pendingLiveTimerResult = null
+                        TronoLiveTimerNotification.dismiss(this)
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -81,12 +136,85 @@ class MainActivity : FlutterFragmentActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        val granted = grantResults.isNotEmpty() &&
+            grantResults[0] == PackageManager.PERMISSION_GRANTED
         if (requestCode == REQUEST_CODE_NOTIFICATIONS) {
-            val granted = grantResults.isNotEmpty() &&
-                grantResults[0] == PackageManager.PERMISSION_GRANTED
             pendingNotificationPermissionResult?.success(granted)
             pendingNotificationPermissionResult = null
+        } else if (requestCode == REQUEST_CODE_LIVE_TIMER_NOTIFICATIONS) {
+            val payload = pendingLiveTimerPayload
+            pendingLiveTimerPayload = null
+            val shown = if (granted && payload != null) {
+                TronoLiveTimerNotification.show(
+                    context = this,
+                    startMillis = payload.startMillis,
+                    title = payload.title,
+                    body = payload.body,
+                    saveLabel = payload.saveLabel,
+                    cancelLabel = payload.cancelLabel,
+                    locale = payload.locale
+                )
+            } else {
+                false
+            }
+            pendingLiveTimerResult?.success(shown)
+            pendingLiveTimerResult = null
         }
+    }
+
+    private fun handleShowLiveTimer(call: MethodCall, result: MethodChannel.Result) {
+        val startMillis = call.argument<Number>("startMillis")?.toLong() ?: 0L
+        if (startMillis <= 0L) {
+            TronoLiveTimerNotification.dismiss(this)
+            result.success(false)
+            return
+        }
+        val title = call.argument<String>("title")
+        val body = call.argument<String>("body")
+        val saveLabel = call.argument<String>("saveLabel")
+        val cancelLabel = call.argument<String>("cancelLabel")
+        val locale = call.argument<String>("locale")
+
+        if (TronoLiveTimerNotification.hasPermission(this)) {
+            val shown = TronoLiveTimerNotification.show(
+                context = this,
+                startMillis = startMillis,
+                title = title,
+                body = body,
+                saveLabel = saveLabel,
+                cancelLabel = cancelLabel,
+                locale = locale
+            )
+            result.success(shown)
+            return
+        }
+
+        // Persist start & locale even if notification permission is missing
+        TronoLiveTimerNotification.persistStartAndLocale(this, startMillis, locale)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val prefs = getSharedPreferences(PREFS_LIVE_TIMER, Context.MODE_PRIVATE)
+            val alreadyAsked = prefs.getBoolean(KEY_ASKED_LIVE_TIMER_PERM, false)
+            if (!alreadyAsked) {
+                prefs.edit().putBoolean(KEY_ASKED_LIVE_TIMER_PERM, true).apply()
+                pendingLiveTimerResult?.success(false)
+                pendingLiveTimerResult = result
+                pendingLiveTimerPayload = PendingLiveTimer(
+                    startMillis = startMillis,
+                    title = title,
+                    body = body,
+                    saveLabel = saveLabel,
+                    cancelLabel = cancelLabel,
+                    locale = locale
+                )
+                requestPermissions(
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    REQUEST_CODE_LIVE_TIMER_NOTIFICATIONS
+                )
+                return
+            }
+        }
+        result.success(false)
     }
 
     private fun handleRequestNotificationPermission(result: MethodChannel.Result) {
