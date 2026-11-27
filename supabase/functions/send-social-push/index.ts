@@ -50,6 +50,37 @@ function base64UrlEncode(input: Uint8Array | string): string {
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+function parseServiceAccount(raw: string): FirebaseServiceAccount {
+  let trimmed = raw.trim();
+  // Support base64-encoded JSON if someone pasted base64
+  if (!trimmed.startsWith("{") && !trimmed.startsWith('"')) {
+    try {
+      const decoded = atob(trimmed);
+      if (decoded.trim().startsWith("{")) trimmed = decoded.trim();
+    } catch {
+      // Not base64; fall through to JSON.parse
+    }
+  }
+  let parsed: unknown = JSON.parse(trimmed);
+  if (typeof parsed === "string") {
+    parsed = JSON.parse(parsed);
+  }
+  const obj = parsed as Partial<FirebaseServiceAccount> | null;
+  const projectId = obj?.project_id?.trim() ?? "";
+  const clientEmail = obj?.client_email?.trim() ?? "";
+  const privateKey = (obj?.private_key ?? "").replace(/\\n/g, "\n").trim();
+  if (!projectId || !clientEmail || !privateKey) {
+    throw new Error(
+      "FIREBASE_SERVICE_ACCOUNT_JSON is missing project_id, client_email, or private_key (use Firebase Service Accounts -> Generate new private key, not google-services.json)",
+    );
+  }
+  return {
+    project_id: projectId,
+    client_email: clientEmail,
+    private_key: privateKey,
+  };
+}
+
 function pemToArrayBuffer(pem: string): ArrayBuffer {
   const clean = pem
     .replace(/-----BEGIN PRIVATE KEY-----/g, "")
@@ -252,7 +283,17 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  const serviceAccount = JSON.parse(rawServiceAccount) as FirebaseServiceAccount;
+  let serviceAccount: FirebaseServiceAccount;
+  try {
+    serviceAccount = parseServiceAccount(rawServiceAccount);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(msg);
+    return new Response(JSON.stringify({ ok: false, error: msg }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
   const accessToken = await getFcmAccessToken(serviceAccount);
   const fcmUrl = `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`;
   const channelId = CHANNEL_BY_EVENT[payload.event];
