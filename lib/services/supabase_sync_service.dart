@@ -6,6 +6,7 @@ import '../data/database_helper.dart';
 import '../models/bathroom_log.dart';
 import '../models/push_notification_config.dart';
 import '../models/social_models.dart';
+import 'google_native_auth_service.dart';
 
 enum AuthOutcomeStatus {
   signedIn,
@@ -118,10 +119,27 @@ class SupabaseSyncService {
     );
   }
 
-  /// Launches Supabase Google OAuth (PKCE) in the system browser / Custom Tab
-  /// and returns back to `com.trono.trono://login-callback`.
+  /// Signs in with Google using Android's native 1-tap Credential Manager
+  /// (`signInWithIdToken`) when available, automatically falling back to the
+  /// PKCE browser OAuth flow (`com.trono.trono://login-callback`) otherwise.
   Future<bool> signInWithGoogle() async {
     final c = _requireClient();
+    if (!kIsWeb) {
+      final nativeResult = await GoogleNativeAuthService()
+          .requestIdToken(serverClientId: SupabaseConfig.googleWebClientId);
+      if (nativeResult.status == GoogleNativeAuthStatus.ok &&
+          nativeResult.idToken != null) {
+        await c.auth.signInWithIdToken(
+          provider: OAuthProvider.google,
+          idToken: nativeResult.idToken!,
+          nonce: nativeResult.rawNonce,
+        );
+        return true;
+      }
+      if (nativeResult.status == GoogleNativeAuthStatus.cancelled) {
+        throw const GoogleSignInCancelledException();
+      }
+    }
     return c.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: kIsWeb ? null : SupabaseConfig.oauthRedirectUrl,

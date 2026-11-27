@@ -35,6 +35,7 @@ class MainActivity : FlutterFragmentActivity() {
         private const val REMINDERS_CHANNEL = "com.trono.trono/reminders"
         private const val LIVE_TIMER_CHANNEL = "com.trono.trono/live_timer"
         private const val PUSH_CHANNEL = "com.trono.trono/push"
+        private const val GOOGLE_AUTH_CHANNEL = "com.trono.trono/google_auth"
         private const val REQUEST_CODE_NOTIFICATIONS = 2501
         private const val REQUEST_CODE_LIVE_TIMER_NOTIFICATIONS = 2605
         private const val PREFS_LIVE_TIMER = "trono_live_timer_prefs"
@@ -212,6 +213,22 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                     else -> result.notImplemented()
                 }
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            GOOGLE_AUTH_CHANNEL
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "signInWithGoogleNative" -> {
+                    val nonce = call.argument<String>("nonce")
+                    val serverClientId = call.argument<String>("serverClientId")
+                    TronoGoogleAuth.signIn(this, serverClientId, nonce) { payload ->
+                        result.success(payload)
+                    }
+                }
+                else -> result.notImplemented()
             }
         }
     }
